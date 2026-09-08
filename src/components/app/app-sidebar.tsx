@@ -32,7 +32,7 @@ export function AppSidebar({ user, companyName }: { user: SessionUser; companyNa
           className="flex h-10 items-center gap-2 rounded-md px-2 group-data-[collapsible=icon]:justify-center"
           onClick={() => setOpenMobile(false)}
         >
-          <span className="bg-primary text-primary-foreground flex size-7 shrink-0 items-center justify-center rounded-md text-xs font-bold">
+          <span className="bg-highlight text-highlight-foreground flex size-7 shrink-0 items-center justify-center rounded-md text-xs font-bold">
             LP
           </span>
           <span className="truncate text-sm font-semibold group-data-[collapsible=icon]:hidden">{companyName}</span>
@@ -48,6 +48,7 @@ export function AppSidebar({ user, companyName }: { user: SessionUser; companyNa
                     isActive={isNavActive(item, pathname)}
                     tooltip={item.label}
                     size="lg"
+                    className="data-active:shadow-[inset_3px_0_0_var(--highlight)]"
                     render={<Link href={item.href} onClick={() => setOpenMobile(false)} />}
                   >
                     <item.icon />
