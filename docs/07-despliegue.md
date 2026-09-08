@@ -25,7 +25,7 @@ DATABASE_URL="<pooler 6543>" ADMIN_EMAIL="tu@correo.com" ADMIN_PASSWORD="Contras
 
    En PowerShell: `$env:DATABASE_URL="..."; $env:DIRECT_URL="..."; pnpm db:migrate` y luego `pnpm db:seed` con `ADMIN_EMAIL` y `ADMIN_PASSWORD`.
 
-6. Plan: el plan gratuito sirve para empezar. No tiene respaldos automáticos: la app hace un respaldo semanal a Storage y permite exportar. Al operar en serio, pasar al plan Pro (respaldos diarios).
+6. Plan: la organización está en **Pro** (25 US$/mes más unos 10 US$/mes de cómputo por proyecto; el plan incluye 10 US$ de crédito). Incluye respaldos diarios con 7 días de retención y el proyecto no se pausa. Además la app guarda un respaldo semanal en Storage y permite exportar. Spend cap activado: sin cargos sorpresa.
 
 ## 2. GitHub (código)
 

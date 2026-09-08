@@ -171,7 +171,7 @@ Arranque sin historial: los primeros 30 días se usan el mínimo y máximo manua
 
 ## 9. Riesgos y avisos
 
-- **Respaldos:** el plan gratuito de Supabase no incluye respaldos automáticos. La app tendrá exportación completa a Excel/JSON y un respaldo semanal automático a Storage. Al empezar a vender en serio conviene pasar al plan Pro de Supabase (respaldos diarios).
+- **Respaldos:** Supabase está en plan Pro (respaldos diarios, 7 días de retención). La app además exporta a Excel/JSON y guarda un respaldo semanal en Storage.
 - **Internet:** sin conexión no se puede vender hasta la Fase 2 (modo offline). Recomendación: datos móviles de respaldo en el local.
 - **Factura legal:** en Venezuela la factura al detal normalmente sale de una máquina fiscal. Mientras no se integre, la app emite ticket o nota de entrega; verificar con el contador qué exige el negocio.
 - **Licencia AGPL** de la librería de recorte: sin problema para uso interno; si algún día la app se vende a terceros, se cambia de librería.
