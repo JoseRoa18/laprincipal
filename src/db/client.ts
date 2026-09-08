@@ -9,17 +9,20 @@ const globalForDb = globalThis as unknown as {
 };
 
 /**
- * postgres.js client. `prepare: false` is required by the Supabase transaction
- * pooler (Supavisor) and harmless elsewhere. The client is cached on
- * globalThis in development so hot reloads do not leak connections.
+ * postgres.js client. In production DATABASE_URL must point to the Supabase
+ * SESSION pooler (port 5432): concurrent queries through the transaction pooler
+ * (6543) hang with this driver. `prepare: false` keeps both modes safe. The
+ * client is cached on globalThis in development so hot reloads do not leak
+ * connections; in serverless each instance keeps a small pool.
  */
 const client =
   globalForDb.__pgClient ??
   postgres(env.DATABASE_URL, {
     prepare: false,
-    max: isProd ? 5 : 10,
-    idle_timeout: 20,
+    max: isProd ? 3 : 10,
+    idle_timeout: isProd ? 10 : 20,
     connect_timeout: 10,
+    ssl: env.DATABASE_URL.includes("supabase.co") || env.DATABASE_URL.includes("supabase.com") ? "require" : undefined,
   });
 
 if (!isProd) globalForDb.__pgClient = client;
