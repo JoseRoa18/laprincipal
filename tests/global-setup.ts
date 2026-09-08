@@ -1,7 +1,7 @@
 import { config } from "dotenv";
-import { drizzle } from "drizzle-orm/postgres-js";
-import { migrate } from "drizzle-orm/postgres-js/migrator";
-import postgres from "postgres";
+import { drizzle } from "drizzle-orm/node-postgres";
+import { migrate } from "drizzle-orm/node-postgres/migrator";
+import { Pool } from "pg";
 
 /**
  * Vitest global setup: applies migrations to the test database before any
@@ -16,13 +16,13 @@ export default async function setup() {
     process.env.SKIP_DB_TESTS = "1";
     return;
   }
-  const client = postgres(url, { max: 1, prepare: false, connect_timeout: 3 });
+  const pool = new Pool({ connectionString: url, max: 1, connectionTimeoutMillis: 3000 });
   try {
-    await migrate(drizzle(client), { migrationsFolder: "./drizzle" });
+    await migrate(drizzle(pool), { migrationsFolder: "./drizzle" });
   } catch (err) {
     console.warn("[tests] test database not reachable, integration tests will be skipped:", (err as Error).message);
     process.env.SKIP_DB_TESTS = "1";
   } finally {
-    await client.end({ timeout: 2 }).catch(() => undefined);
+    await pool.end().catch(() => undefined);
   }
 }

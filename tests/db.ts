@@ -1,6 +1,8 @@
-import { drizzle } from "drizzle-orm/postgres-js";
-import postgres from "postgres";
+import { drizzle } from "drizzle-orm/node-postgres";
+import { Pool, types } from "pg";
 import * as schema from "@/db/schema";
+
+types.setTypeParser(types.builtins.DATE, (value) => value);
 
 /**
  * Integration-test database helper. Uses DATABASE_URL from .env.test
@@ -10,9 +12,9 @@ export function createTestDb() {
   const url = process.env.DATABASE_URL;
   if (!url) throw new Error("DATABASE_URL is not set for tests");
   if (!/test/i.test(url)) throw new Error(`Refusing to run integration tests against a non-test database: ${url}`);
-  const client = postgres(url, { max: 8, prepare: false });
-  const db = drizzle(client, { schema });
-  return { db, close: () => client.end({ timeout: 2 }) };
+  const pool = new Pool({ connectionString: url, max: 8 });
+  const db = drizzle(pool, { schema });
+  return { db, close: () => pool.end() };
 }
 
 export type TestDb = ReturnType<typeof createTestDb>["db"];

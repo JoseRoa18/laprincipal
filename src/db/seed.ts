@@ -213,7 +213,7 @@ async function main() {
       (select count(*) from payment_methods) as payment_methods,
       (select count(*) from document_series) as series
   `);
-  console.log("Done.", counts[0], { warehouse: warehouse.code });
+  console.log("Done.", counts.rows[0], { warehouse: warehouse.code });
   process.exit(0);
 }
 

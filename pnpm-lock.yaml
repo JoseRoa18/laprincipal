@@ -58,7 +58,7 @@ importers:
         version: 10.6.0
       drizzle-orm:
         specifier: ^0.45.2
-        version: 0.45.2(pg@8.23.0)(postgres@3.4.9)
+        version: 0.45.2(@types/pg@8.23.1)(pg@8.23.0)(postgres@3.4.9)
       exceljs:
         specifier: ^4.4.0
         version: 4.4.0
@@ -77,6 +77,9 @@ importers:
       next-themes:
         specifier: ^0.4.6
         version: 0.4.6(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      pg:
+        specifier: ^8.23.0
+        version: 8.23.0
       postgres:
         specifier: ^3.4.9
         version: 3.4.9
@@ -117,6 +120,9 @@ importers:
       '@types/node':
         specifier: ^20
         version: 20.19.43
+      '@types/pg':
+        specifier: ^8.23.1
+        version: 8.23.1
       '@types/react':
         specifier: ^19
         version: 19.2.18
@@ -1889,6 +1895,9 @@ packages:
 
   '@types/node@20.19.43':
     resolution: {integrity: sha512-6oYBAi5ikg4Pl+kGsoYtawUMBT2zZMCvPNF7pVLnHZfd1zf38DRiWn/gT01RYCdUqkv7Fhr+C9ot4/tb+2sVvA==}
+
+  '@types/pg@8.23.1':
+    resolution: {integrity: sha512-fKVHpikPdg4GKks3JuLEhvwSyvwzF23hnabPy6DD8ljVbC7+6J5dQzdv4arV6jqq57djnMgs1HKBxX4P8aBI3A==}
 
   '@types/react-dom@19.2.7':
     resolution: {integrity: sha512-I8bPpDLcHBv1qiIiXDCy71Rt8eQDKJP0sMSWJphDdAcdqiJ1sGpZamavoEIRZmYzjia9LuEb2HlYdDpmoENpvQ==}
@@ -6668,6 +6677,12 @@ snapshots:
     dependencies:
       undici-types: 6.21.0
 
+  '@types/pg@8.23.1':
+    dependencies:
+      '@types/node': 20.19.43
+      pg-protocol: 1.16.0
+      pg-types: 2.2.0
+
   '@types/react-dom@19.2.7(@types/react@19.2.18)':
     dependencies:
       '@types/react': 19.2.18
@@ -7455,8 +7470,9 @@ snapshots:
       esbuild: 0.25.12
       tsx: 4.23.13
 
-  drizzle-orm@0.45.2(pg@8.23.0)(postgres@3.4.9):
+  drizzle-orm@0.45.2(@types/pg@8.23.1)(pg@8.23.0)(postgres@3.4.9):
     optionalDependencies:
+      '@types/pg': 8.23.1
       pg: 8.23.0
       postgres: 3.4.9
 

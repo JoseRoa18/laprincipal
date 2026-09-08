@@ -13,7 +13,7 @@ Negocio nuevo de repuestos de electrodomésticos y refrigeración en Venezuela. 
 
 ## Stack
 
-Next.js 16 (App Router, Turbopack, `src/proxy.ts` en lugar de `middleware.ts`), React 19, TypeScript estricto, Tailwind 4, shadcn/ui v4 (estilo base-nova sobre Base UI, no Radix), Drizzle ORM + postgres.js, Auth.js v5 (credenciales, JWT), decimal.js, Vitest. PostgreSQL embebido en desarrollo (`pnpm db:start`), Supabase PostgreSQL + Storage y Vercel en producción.
+Next.js 16 (App Router, Turbopack, `src/proxy.ts` en lugar de `middleware.ts`), React 19, TypeScript estricto, Tailwind 4, shadcn/ui v4 (estilo base-nova sobre Base UI, no Radix), Drizzle ORM + pg (node-postgres), Auth.js v5 (credenciales, JWT), decimal.js, Vitest. PostgreSQL embebido en desarrollo (`pnpm db:start`), Supabase PostgreSQL + Storage y Vercel en producción.
 
 ## Comandos
 

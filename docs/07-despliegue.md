@@ -8,7 +8,8 @@ Guía paso a paso para poner la app en producción. Tiempo estimado: 30 minutos 
 
 1. Crear cuenta en https://supabase.com e iniciar un proyecto nuevo: nombre `la-principal-2050`, región **East US (North Virginia)**, contraseña de base de datos fuerte (guardarla).
 2. En **Project Settings → Database → Connection string** copiar dos cadenas:
-   - **Session pooler** (puerto 5432) → será `DATABASE_URL` **y también** `DIRECT_URL`. No usar el Transaction pooler (6543): con el driver postgres.js las consultas concurrentes se quedan colgadas y las páginas tardan 60 s.
+   - **Transaction pooler** (puerto 6543) → será `DATABASE_URL`. La app usa el driver `pg` (node-postgres), que funciona bien con este pooler; el driver postgres.js se descartó porque colgaba consultas concurrentes.
+   - **Session pooler** (puerto 5432) → será `DIRECT_URL`, solo para migraciones. No usarlo como `DATABASE_URL`: admite solo 15 clientes y Vercel lo agota.
    Reemplazar `[YOUR-PASSWORD]` por la contraseña del paso 1.
 3. En **Project Settings → API** copiar `Project URL` → `SUPABASE_URL` y la clave `service_role` → `SUPABASE_SERVICE_ROLE_KEY` (nunca se expone al navegador).
 4. En **Storage** crear dos buckets:
@@ -39,7 +40,7 @@ DATABASE_URL="<pooler 6543>" ADMIN_EMAIL="tu@correo.com" ADMIN_PASSWORD="Contras
 
 | Variable | Valor |
 |---|---|
-| `DATABASE_URL` | session pooler de Supabase (5432) |
+| `DATABASE_URL` | transaction pooler de Supabase (6543) |
 | `DIRECT_URL` | conexión directa (5432) |
 | `AUTH_SECRET` | `openssl rand -base64 32` |
 | `PIN_COOKIE_SECRET` | otro valor aleatorio |
