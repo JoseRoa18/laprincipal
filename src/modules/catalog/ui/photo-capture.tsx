@@ -1,13 +1,25 @@
 "use client";
 
 import { Camera, Check, ImageIcon, RotateCcw, Trash2, Upload, X } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "cn";
 import { compositeOnWhite, downscaleImage, makeThumb, removeBackgroundWithTimeout } from "./photo-pipeline";
+
+const COARSE_POINTER = "(pointer: coarse)";
+function subscribeCoarse(cb: () => void) {
+  const mql = window.matchMedia(COARSE_POINTER);
+  mql.addEventListener("change", cb);
+  return () => mql.removeEventListener("change", cb);
+}
+/** True on phones and tablets (touch), where the camera capture input opens the camera. */
+function useHasCamera() {
+  return useSyncExternalStore(subscribeCoarse, () => window.matchMedia(COARSE_POINTER).matches, () => true);
+}
+
 
 export type PhotoChoice = "processed" | "original";
 
@@ -190,19 +202,31 @@ export function PhotoCapture({ onChange, onAccept, disabled, className }: PhotoC
   const pending = drafts.filter((d) => d.choice === null);
   const accepted = drafts.filter((d) => d.choice !== null);
 
+  const hasCamera = useHasCamera();
   return (
     <div className={cn("space-y-4", className)}>
       <input ref={cameraRef} type="file" accept="image/*" capture="environment" hidden onChange={(e) => void handleFiles(e.target.files).then(() => (e.target.value = ""))} />
       <input ref={fileRef} type="file" accept="image/*" multiple hidden onChange={(e) => void handleFiles(e.target.files).then(() => (e.target.value = ""))} />
 
       <div className="flex flex-col gap-2 sm:flex-row">
-        <Button type="button" size="lg" className="h-12 flex-1 sm:flex-none" disabled={disabled} onClick={() => cameraRef.current?.click()}>
-          <Camera /> Tomar foto
-        </Button>
-        <Button type="button" size="lg" variant="outline" className="h-12 flex-1 sm:flex-none" disabled={disabled} onClick={() => fileRef.current?.click()}>
-          <ImageIcon /> Elegir de la galería
-        </Button>
+        {hasCamera ? (
+          <>
+            <Button type="button" size="lg" className="h-12 flex-1 sm:flex-none" disabled={disabled} onClick={() => cameraRef.current?.click()}>
+              <Camera /> Tomar foto
+            </Button>
+            <Button type="button" size="lg" variant="outline" className="h-12 flex-1 sm:flex-none" disabled={disabled} onClick={() => fileRef.current?.click()}>
+              <ImageIcon /> Elegir de la galería
+            </Button>
+          </>
+        ) : (
+          <Button type="button" size="lg" className="h-12 flex-1 sm:flex-none" disabled={disabled} onClick={() => fileRef.current?.click()}>
+            <ImageIcon /> Subir foto desde la PC
+          </Button>
+        )}
       </div>
+      {!hasCamera ? (
+        <p className="text-muted-foreground text-xs">Desde el celular puedes tomar la foto directamente con la cámara.</p>
+      ) : null}
       <p className="text-muted-foreground text-sm">
         Fondo claro y luz pareja mejoran el recorte. La app quita el fondo aquí mismo, en tu dispositivo; la primera vez descarga el modelo (unos 40 MB).
       </p>
