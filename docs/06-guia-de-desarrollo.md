@@ -6,7 +6,7 @@ Lee primero `CLAUDE.md`, `docs/01-contexto-y-alcance-mvp.md`, `docs/03-modelo-de
 
 - PostgreSQL local ya corre en `localhost:5433` (`pnpm db:start`, no lo reinicies). Base de desarrollo `lp2050`, base de pruebas `lp2050_test` (`pnpm exec tsx scripts/ensure-test-db.ts` si falta).
 - El servidor de desarrollo corre en http://localhost:3000 con recarga en caliente. No lo reinicies ni lances otro `pnpm dev` (Next bloquea instancias duplicadas).
-- Usuario admin: `admin@laprincipal2050.com` / `Admin2050*`, PIN `1234`.
+- Usuario admin: `jose.stylishkb@gmail.com` / `Stylish2026*`, PIN `1234`.
 - Verificación obligatoria antes de dar por terminado: `pnpm typecheck`, `pnpm test`, `pnpm lint`, `pnpm exec tsx scripts/smoke.ts` (agrega tus rutas a `scripts/smoke.ts` si son nuevas).
 - No cambies `src/db/schema/*` ni generes migraciones. Si tu módulo necesita un cambio de esquema, anótalo en `docs/05-progreso.md` en "Pendientes" con la justificación y sigue con una solución que no lo requiera.
 - No hagas commits ni cambies dependencias sin necesidad real. Si agregas una dependencia, dilo en tu reporte.

@@ -24,6 +24,6 @@ pnpm db:migrate && pnpm db:seed   # primera vez
 pnpm dev                          # terminal 2: http://localhost:3000
 ```
 
-Usuario inicial: `admin@laprincipal2050.com` / `Admin2050*` (PIN 1234). Cambiar al primer inicio.
+Usuario inicial: `jose.stylishkb@gmail.com` / `Stylish2026*` (PIN 1234). Cambiar al primer inicio.
 
 Verificaciones: `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm exec tsx scripts/smoke.ts`.

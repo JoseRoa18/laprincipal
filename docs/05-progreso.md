@@ -16,7 +16,7 @@ Actualizado: 2026-09-08. **Estado: Fase 1 completa en local y verificada** (type
 ## Cómo probar
 
 1. `pnpm db:start` en una terminal y `pnpm dev` en otra (o `pnpm dev:all`). Abrir http://localhost:3000.
-2. Entrar con `admin@laprincipal2050.com` / `Admin2050*` (PIN `1234`). Cambiar la contraseña en Configuración → Mi cuenta.
+2. Entrar con `jose.stylishkb@gmail.com` / `Stylish2026*` (PIN `1234`). Cambiar la contraseña en Configuración → Mi cuenta.
 3. Configuración → Tasas: cargar la tasa del día de Bs y COP (sin tasa no se puede vender).
 4. Productos → Nuevo producto: tomar la foto con el celular, revisar el recorte, completar datos, precio y stock inicial.
 5. Caja → Abrir caja con el fondo en USD y COP.
