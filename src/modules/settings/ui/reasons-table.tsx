@@ -65,7 +65,7 @@ export function ReasonsTable({ reasons }: { reasons: AdjustmentReasonListRow[] }
               <TableRow>
                 <TableHead>Nombre</TableHead>
                 <TableHead>Se usa en</TableHead>
-                <TableHead className="text-right">Orden</TableHead>
+                <TableHead className="hidden text-right md:table-cell">Orden</TableHead>
                 <TableHead>Activo</TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
@@ -110,7 +110,7 @@ function ReasonRowItem({ reason, onEdit }: { reason: AdjustmentReasonListRow; on
       <TableCell>
         <Badge variant={KIND_BADGE[row.kind]}>{REASON_KIND_LABEL[row.kind]}</Badge>
       </TableCell>
-      <TableCell className="text-right tabular-nums">{row.sortOrder}</TableCell>
+      <TableCell className="hidden text-right tabular-nums md:table-cell">{row.sortOrder}</TableCell>
       <TableCell>
         <Switch checked={row.isActive} disabled={pending} onCheckedChange={(checked) => setActive(checked)} aria-label={`${row.name} activo`} />
       </TableCell>
@@ -162,7 +162,7 @@ function ReasonDialog({ state, nextSortOrder, onClose }: { state: DialogState; n
         if (!open) onClose();
       }}
     >
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="max-h-[90svh] overflow-y-auto sm:max-w-md">
         <form onSubmit={onSubmit} className="contents" noValidate>
           <DialogHeader>
             <DialogTitle>{editing ? "Editar motivo" : "Nuevo motivo"}</DialogTitle>

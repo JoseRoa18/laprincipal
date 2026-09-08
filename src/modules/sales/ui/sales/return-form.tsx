@@ -134,8 +134,8 @@ export function ReturnForm({ saleId, saleNumber, items, reasons, methods, origin
             <TableRow>
               <TableHead className="w-10" />
               <TableHead>Producto</TableHead>
-              <TableHead className="text-right">Vendido</TableHead>
-              <TableHead className="text-right">Ya devuelto</TableHead>
+              <TableHead className="hidden text-right md:table-cell">Vendido</TableHead>
+              <TableHead className="hidden text-right md:table-cell">Ya devuelto</TableHead>
               <TableHead className="w-36 text-right">Devolver</TableHead>
               <TableHead className="text-right">Importe</TableHead>
             </TableRow>
@@ -153,9 +153,12 @@ export function ReturnForm({ saleId, saleNumber, items, reasons, methods, origin
                   <TableCell className="whitespace-normal">
                     <p className="font-medium">{item.description}</p>
                     <p className="text-muted-foreground text-xs">{formatMoney(item.unitPriceUsd, "USD")} por {item.unitSymbol}</p>
+                    <p className="text-muted-foreground text-xs tabular-nums md:hidden">
+                      Vendido {formatQty(item.quantity, item.unitDecimals)} · devuelto {formatQty(item.returnedQty, item.unitDecimals)}
+                    </p>
                   </TableCell>
-                  <TableCell className="text-right tabular-nums">{formatQty(item.quantity, item.unitDecimals)}</TableCell>
-                  <TableCell className="text-right tabular-nums">{formatQty(item.returnedQty, item.unitDecimals)}</TableCell>
+                  <TableCell className="hidden text-right tabular-nums md:table-cell">{formatQty(item.quantity, item.unitDecimals)}</TableCell>
+                  <TableCell className="hidden text-right tabular-nums md:table-cell">{formatQty(item.returnedQty, item.unitDecimals)}</TableCell>
                   <TableCell className="text-right">
                     <Input
                       value={qty[item.id] ?? ""}

@@ -72,11 +72,11 @@ export default async function NoMovementReportPage({ searchParams }: { searchPar
                 <TableHeader>
                   <TableRow>
                     <TableHead className="pl-4">Producto</TableHead>
-                    <TableHead>Categoría</TableHead>
+                    <TableHead className="hidden md:table-cell">Categoría</TableHead>
                     <TableHead className="text-right">Existencia</TableHead>
                     <TableHead className="text-right">Valor a costo</TableHead>
                     <TableHead>Última venta</TableHead>
-                    <TableHead>Última entrada</TableHead>
+                    <TableHead className="hidden md:table-cell">Última entrada</TableHead>
                     <TableHead className="pr-4 text-right">Días sin vender</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -89,26 +89,28 @@ export default async function NoMovementReportPage({ searchParams }: { searchPar
                         </Link>
                         <div className="text-muted-foreground text-xs">{r.partNumber ?? r.sku}</div>
                       </TableCell>
-                      <TableCell className="whitespace-normal">{r.category}</TableCell>
+                      <TableCell className="hidden whitespace-normal md:table-cell">{r.category}</TableCell>
                       <TableCell className="text-right tabular-nums">{formatQty(r.quantity, r.unitDecimals)}</TableCell>
                       <TableCell className="text-right">
                         <Money value={r.value} />
                       </TableCell>
                       <TableCell>{r.lastSaleAt ? formatDate(r.lastSaleAt) : <span className="text-muted-foreground">Nunca</span>}</TableCell>
-                      <TableCell>{r.lastInboundAt ? formatDate(r.lastInboundAt) : "—"}</TableCell>
+                      <TableCell className="hidden md:table-cell">{r.lastInboundAt ? formatDate(r.lastInboundAt) : "—"}</TableCell>
                       <TableCell className="pr-4 text-right font-medium tabular-nums">{r.idleDays}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
                 <TableFooter>
                   <TableRow>
-                    <TableCell className="pl-4">Total</TableCell>
-                    <TableCell className="tabular-nums">{report.count} productos</TableCell>
+                    <TableCell className="pl-4">Total ({report.count} productos)</TableCell>
+                    <TableCell className="hidden md:table-cell" />
                     <TableCell />
                     <TableCell className="text-right">
                       <Money value={report.totalValue} />
                     </TableCell>
-                    <TableCell colSpan={3} />
+                    <TableCell />
+                    <TableCell className="hidden md:table-cell" />
+                    <TableCell />
                   </TableRow>
                 </TableFooter>
               </Table>

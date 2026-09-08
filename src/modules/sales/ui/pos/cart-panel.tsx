@@ -85,7 +85,7 @@ export function CartPanel({ config, totals, onCustomerChange, onCheckout, onHold
               return (
                 <li key={line.productId} className="px-3 py-2">
                   <div className="flex items-start gap-2">
-                    <button type="button" onClick={() => setEditing(line)} className="min-w-0 flex-1 text-left">
+                    <button type="button" onClick={() => setEditing(line)} className="tap-target min-w-0 flex-1 text-left">
                       <span className="block truncate font-medium leading-tight">{line.name}</span>
                       <span className="text-muted-foreground block truncate text-xs">
                         {formatMoney(line.unitPriceUsd, "USD")} × {formatQty(line.quantity, line.unitDecimals)} {line.unitSymbol}
@@ -133,7 +133,7 @@ export function CartPanel({ config, totals, onCustomerChange, onCheckout, onHold
           <span className="tabular-nums">{formatMoney(totals.subtotalUsd, "USD")}</span>
         </div>
         <div className="flex items-center justify-between">
-          <button type="button" onClick={() => setDiscountOpen(true)} className="text-primary flex items-center gap-1 font-medium hover:underline" disabled={lines.length === 0}>
+          <button type="button" onClick={() => setDiscountOpen(true)} className="tap-target text-primary flex items-center gap-1 font-medium hover:underline" disabled={lines.length === 0}>
             <Percent className="size-3.5" /> {globalDiscount ? "Descuento general" : "Agregar descuento"}
           </button>
           <span className={cn("tabular-nums", totals.discountUsd.gt(0) && "text-emerald-700 dark:text-emerald-400")}>

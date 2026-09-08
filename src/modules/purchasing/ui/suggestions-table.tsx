@@ -107,6 +107,61 @@ export function SuggestionsTable({ groups }: { groups: SuggestionGroup[] }) {
                 ) : null}
               </div>
             </header>
+            {/* Phones: one card per product with the editable quantity */}
+            <ul className="divide-y md:hidden">
+              {g.items.map((i) => {
+                const q = quantity(i.productId);
+                return (
+                  <li key={i.productId} className={cn("space-y-2 p-3", q <= 0 && "opacity-60")}>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <Link href={`/productos/${i.productId}`} className="tap-target flex min-w-0 items-center font-medium">
+                          <span className="truncate">{i.name}</span>
+                        </Link>
+                        <p className="text-muted-foreground truncate text-xs">
+                          {[i.partNumber, i.sku, i.supplierCode ? `Cód. prov. ${i.supplierCode}` : null].filter(Boolean).join(" · ")}
+                        </p>
+                      </div>
+                      <StockStatusBadge status={i.status} className="shrink-0" />
+                    </div>
+                    <p className="text-muted-foreground text-xs tabular-nums">
+                      Existencia <span className={cn("text-foreground font-medium", Number(i.stock) <= 0 && "text-destructive")}>{formatQty(i.stock, i.unitDecimals)} {i.unitSymbol}</span>
+                      {" · "}Reorden {formatQty(i.reorderPoint, i.unitDecimals)} / Máx {formatQty(i.maxStock, i.unitDecimals)}
+                      {" · "}Cobertura {i.daysOfCover !== null ? `${formatQty(Math.min(Number(i.daysOfCover), 999), 0)} d` : "—"}
+                      {" · "}Sugerido {formatQty(i.suggestedQty, i.unitDecimals)}
+                    </p>
+                    <div className="flex items-center justify-between gap-3">
+                      <label className="flex items-center gap-2 text-sm">
+                        <span className="text-muted-foreground">Pedir</span>
+                        <Input
+                          type="number"
+                          inputMode="decimal"
+                          min="0"
+                          step={stepFor(i.unitDecimals)}
+                          value={qty[i.productId] ?? ""}
+                          aria-label={`Cantidad a pedir de ${i.name}`}
+                          onChange={(e) => setQty((prev) => ({ ...prev, [i.productId]: e.target.value }))}
+                          className="h-11 w-24 text-right text-base"
+                        />
+                      </label>
+                      <span className="text-right text-sm">
+                        <Money value={q * Number(i.unitCostUsd)} currency="USD" className="font-semibold" />
+                        <span className="text-muted-foreground block text-xs">
+                          <Money value={i.unitCostUsd} currency="USD" /> c/u
+                        </span>
+                      </span>
+                    </div>
+                  </li>
+                );
+              })}
+              <li className="flex items-center justify-between border-t p-3 text-sm font-medium">
+                <span>Total estimado del pedido</span>
+                <Money value={total(g)} currency="USD" />
+              </li>
+            </ul>
+
+            {/* Wider screens: table */}
+            <div className="hidden md:block">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -176,6 +231,7 @@ export function SuggestionsTable({ groups }: { groups: SuggestionGroup[] }) {
                 </TableRow>
               </TableFooter>
             </Table>
+            </div>
           </section>
         );
       })}

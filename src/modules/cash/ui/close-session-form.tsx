@@ -270,7 +270,7 @@ export function CloseSessionForm({
           )}
           {references.length > 0 ? (
             <details className="group">
-              <summary className="cursor-pointer text-sm font-medium">Ver referencias ({references.length})</summary>
+              <summary className="cursor-pointer py-3 text-sm font-medium">Ver referencias ({references.length})</summary>
               <div className="mt-2 rounded-xl border">
                 <Table>
                   <TableHeader>
@@ -311,7 +311,7 @@ export function CloseSessionForm({
         </CardContent>
       </Card>
 
-      <div className="bg-background/95 sticky bottom-16 z-10 flex flex-col gap-2 border-t py-3 backdrop-blur sm:flex-row sm:items-center sm:justify-between md:bottom-0">
+      <div className="bg-background/95 sticky bottom-14 z-10 flex flex-col gap-2 border-t py-3 backdrop-blur sm:flex-row sm:items-center sm:justify-between md:bottom-0">
         <p className="text-muted-foreground text-sm">
           {missing.length > 0
             ? `Falta contar: ${missing.map((c) => c.code).join(", ")}`

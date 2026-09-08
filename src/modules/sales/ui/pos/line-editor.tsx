@@ -24,7 +24,7 @@ interface Props {
 export function LineEditor({ line, open, onOpenChange, onSave, onRemove, maxDiscountPct }: Props) {
   return (
     <Dialog open={open && line !== null} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="max-h-[90svh] overflow-y-auto sm:max-w-md">
         {line ? (
           <LineForm
             key={line.productId}

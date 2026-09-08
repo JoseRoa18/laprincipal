@@ -72,7 +72,41 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
           }
         />
       ) : (
-        <div className="rounded-xl border">
+        <>
+          {/* Phones: one card per sale */}
+          <ul className="space-y-2 md:hidden">
+            {rows.map((r) => (
+              <li key={r.id}>
+                <Link href={`/ventas/${r.id}`} className="bg-card active:bg-muted/50 block rounded-xl border p-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="font-medium">{r.number ?? "—"}</span>
+                    <SaleStatusBadge status={r.status} />
+                  </div>
+                  <p className="text-muted-foreground mt-0.5 text-xs">
+                    {formatDateTime(r.saleDate)} · {r.customerName ?? "Consumidor final"} · {r.sellerName}
+                  </p>
+                  <div className="mt-2 flex items-end justify-between gap-2">
+                    <span className="text-muted-foreground min-w-0 truncate text-xs">{r.paymentMethods.join(", ") || "—"}</span>
+                    <span className="shrink-0 text-right">
+                      <Money value={r.totalUsd} currency="USD" className="font-semibold" />
+                      {D(r.rateVes).gt(0) ? (
+                        <span className="text-muted-foreground block text-xs">
+                          <Money value={D(r.totalUsd).mul(r.rateVes)} currency="VES" />
+                        </span>
+                      ) : null}
+                    </span>
+                  </div>
+                </Link>
+              </li>
+            ))}
+            <li className="text-muted-foreground flex justify-between px-1 text-sm">
+              <span>Total del período (completadas)</span>
+              <Money value={sumUsd} currency="USD" className="text-foreground font-semibold" />
+            </li>
+          </ul>
+
+          {/* Wider screens: table */}
+          <div className="hidden rounded-xl border md:block">
           <Table>
             <TableHeader>
               <TableRow>
@@ -116,7 +150,8 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
             <span>Total del período (ventas completadas)</span>
             <Money value={sumUsd} currency="USD" className="text-foreground font-semibold" />
           </div>
-        </div>
+          </div>
+        </>
       )}
       <Pagination page={page} total={total} basePath="/ventas" params={params} />
     </div>

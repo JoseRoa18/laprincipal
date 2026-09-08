@@ -21,6 +21,21 @@ function trimZeros(v: string) {
   return v.includes(".") ? v.replace(/\.?0+$/, "") : v;
 }
 
+/** Footer label spanning every column before "Total USD" (three cost columns are hidden on phones). */
+function FooterLabel({ children, className }: { children: React.ReactNode; className?: string }) {
+  return (
+    <>
+      <TableCell colSpan={2} className={className}>
+        {children}
+      </TableCell>
+      <TableCell className="hidden md:table-cell" />
+      <TableCell className="hidden md:table-cell" />
+      <TableCell className="hidden md:table-cell" />
+      <TableCell />
+    </>
+  );
+}
+
 export default async function ReceiptDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await requireRole("admin", "warehouse");
   const { id } = await params;
@@ -107,9 +122,9 @@ export default async function ReceiptDetailPage({ params }: { params: Promise<{ 
           <TableRow>
             <TableHead>Producto</TableHead>
             <TableHead className="text-right">Cantidad</TableHead>
-            <TableHead className="text-right">Costo unit. ({receipt.currencyCode})</TableHead>
-            <TableHead className="text-right">Costo unit. USD</TableHead>
-            <TableHead className="text-right">Gastos</TableHead>
+            <TableHead className="hidden text-right md:table-cell">Costo unit. ({receipt.currencyCode})</TableHead>
+            <TableHead className="hidden text-right md:table-cell">Costo unit. USD</TableHead>
+            <TableHead className="hidden text-right md:table-cell">Gastos</TableHead>
             <TableHead className="text-right">Costo final USD</TableHead>
             <TableHead className="text-right">Total USD</TableHead>
           </TableRow>
@@ -126,13 +141,13 @@ export default async function ReceiptDetailPage({ params }: { params: Promise<{ 
               <TableCell className="text-right tabular-nums">
                 {formatQty(it.quantity, it.unitDecimals)} {it.unitSymbol}
               </TableCell>
-              <TableCell className="text-right">
+              <TableCell className="hidden text-right md:table-cell">
                 <Money value={it.unitCostAmount} currency={receipt.currencyCode} decimals={isVes ? 2 : 4} />
               </TableCell>
-              <TableCell className="text-right">
+              <TableCell className="hidden text-right md:table-cell">
                 <Money value={it.unitCostUsd} currency="USD" decimals={4} />
               </TableCell>
-              <TableCell className="text-right">
+              <TableCell className="hidden text-right md:table-cell">
                 <Money value={it.extraCostShareUsd} currency="USD" />
               </TableCell>
               <TableCell className="text-right">
@@ -146,30 +161,26 @@ export default async function ReceiptDetailPage({ params }: { params: Promise<{ 
         </TableBody>
         <TableFooter>
           <TableRow>
-            <TableCell colSpan={6}>Subtotal</TableCell>
+            <FooterLabel>Subtotal</FooterLabel>
             <TableCell className="text-right">
               <Money value={receipt.subtotalUsd} currency="USD" />
             </TableCell>
           </TableRow>
           <TableRow>
-            <TableCell colSpan={6}>Gastos adicionales (flete, aduana)</TableCell>
+            <FooterLabel>Gastos adicionales (flete, aduana)</FooterLabel>
             <TableCell className="text-right">
               <Money value={receipt.extraCostsUsd} currency="USD" />
             </TableCell>
           </TableRow>
           <TableRow>
-            <TableCell colSpan={6} className="text-base">
-              Total
-            </TableCell>
+            <FooterLabel className="text-base">Total</FooterLabel>
             <TableCell className="text-right text-base">
               <Money value={receipt.totalUsd} currency="USD" />
             </TableCell>
           </TableRow>
           {isVes ? (
             <TableRow>
-              <TableCell colSpan={6} className="text-muted-foreground font-normal">
-                Equivalente en {receipt.currencyCode} (sin gastos)
-              </TableCell>
+              <FooterLabel className="text-muted-foreground font-normal">Equivalente en {receipt.currencyCode} (sin gastos)</FooterLabel>
               <TableCell className="text-muted-foreground text-right font-normal">
                 <Money value={D(receipt.subtotalUsd).mul(D(receipt.exchangeRate))} currency={receipt.currencyCode} />
               </TableCell>

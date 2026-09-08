@@ -55,7 +55,7 @@ export default async function QuotesPage({ searchParams }: { searchParams: Promi
             <Link
               key={t.value}
               href={`/cotizaciones?estado=${t.value}${q ? `&q=${encodeURIComponent(q)}` : ""}`}
-              className={cn("rounded-lg border px-3 py-1.5 text-sm", status === t.value ? "bg-primary text-primary-foreground border-primary" : "hover:bg-muted")}
+              className={cn("tap-target inline-flex items-center rounded-lg border px-3 py-1.5 text-sm", status === t.value ? "bg-primary text-primary-foreground border-primary" : "hover:bg-muted")}
             >
               {t.label}
             </Link>
@@ -70,7 +70,40 @@ export default async function QuotesPage({ searchParams }: { searchParams: Promi
           description={q ? "Prueba con otro número o nombre." : "Crea una desde el punto de venta con “Cotizar” o con el botón Nueva cotización."}
         />
       ) : (
-        <div className="rounded-xl border">
+        <>
+          {/* Phones: one card per quote */}
+          <ul className="space-y-2 md:hidden">
+            {rows.map((r) => (
+              <li key={r.id}>
+                <Link href={`/cotizaciones/${r.id}`} className="bg-card active:bg-muted/50 block rounded-xl border p-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="font-medium">
+                      {r.number ?? "—"}
+                      {r.reservesStock ? <span className="text-muted-foreground ml-2 text-xs font-normal">reserva stock</span> : null}
+                    </span>
+                    <QuoteStatusBadge status={r.status} />
+                  </div>
+                  <p className="text-muted-foreground mt-0.5 text-xs">
+                    {formatDateTime(r.createdAt)} · {r.customerName ?? "Consumidor final"} · {r.sellerName}
+                  </p>
+                  <div className="mt-2 flex items-end justify-between gap-2 text-sm">
+                    <span className="text-muted-foreground text-xs">Válida hasta {formatDateOnly(r.validUntil)}</span>
+                    <span className="shrink-0 text-right">
+                      <Money value={r.totalUsd} currency="USD" className="font-semibold" />
+                      {D(r.rateVes).gt(0) ? (
+                        <span className="text-muted-foreground block text-xs">
+                          <Money value={D(r.totalUsd).mul(r.rateVes)} currency="VES" />
+                        </span>
+                      ) : null}
+                    </span>
+                  </div>
+                </Link>
+              </li>
+            ))}
+          </ul>
+
+          {/* Wider screens: table */}
+          <div className="hidden rounded-xl border md:block">
           <Table>
             <TableHeader>
               <TableRow>
@@ -111,7 +144,8 @@ export default async function QuotesPage({ searchParams }: { searchParams: Promi
               ))}
             </TableBody>
           </Table>
-        </div>
+          </div>
+        </>
       )}
       <Pagination page={page} total={total} basePath="/cotizaciones" params={params} />
     </div>

@@ -38,7 +38,7 @@ export function VoidReceiptDialog({ receiptId, number }: { receiptId: string; nu
       <DialogTrigger render={<Button variant="destructive" />}>
         <Ban data-icon="inline-start" /> Anular
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="max-h-[90svh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Anular entrada {number}</DialogTitle>
           <DialogDescription>

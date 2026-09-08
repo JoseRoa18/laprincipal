@@ -13,7 +13,7 @@ export default async function ReasonsPage() {
 
   return (
     <div className="space-y-4">
-      <Link href="/configuracion" className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-sm underline-offset-4 hover:underline">
+      <Link href="/configuracion" className="tap-target text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-sm underline-offset-4 hover:underline">
         <ArrowLeft className="size-4" />
         Volver a configuración
       </Link>

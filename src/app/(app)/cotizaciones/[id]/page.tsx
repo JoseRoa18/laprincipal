@@ -55,7 +55,7 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
                   <TableHead className="pl-4">Producto</TableHead>
                   <TableHead className="text-right">Cant.</TableHead>
                   <TableHead className="text-right">Precio</TableHead>
-                  <TableHead className="text-right">Desc.</TableHead>
+                  <TableHead className="hidden text-right md:table-cell">Desc.</TableHead>
                   <TableHead className="pr-4 text-right">Total</TableHead>
                 </TableRow>
               </TableHeader>
@@ -72,7 +72,7 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
                       {formatQty(item.quantity, item.unitDecimals)} {item.unitSymbol}
                     </TableCell>
                     <TableCell className="text-right tabular-nums">{formatMoney(item.unitPriceUsd, "USD")}</TableCell>
-                    <TableCell className="text-right tabular-nums">
+                    <TableCell className="hidden text-right tabular-nums md:table-cell">
                       {D(item.discountValue).gt(0) ? (item.discountType === "pct" ? `${D(item.discountValue).toString()} %` : `-${formatMoney(item.discountValue, "USD")}`) : "—"}
                     </TableCell>
                     <TableCell className="pr-4 text-right font-medium tabular-nums">{formatMoney(item.lineTotalUsd, "USD")}</TableCell>

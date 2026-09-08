@@ -24,9 +24,9 @@ function MarginTable({ rows, totals, firstColumn }: { rows: MarginRow[]; totals:
       <TableHeader>
         <TableRow>
           <TableHead>{firstColumn}</TableHead>
-          <TableHead className="text-right">Unidades</TableHead>
+          <TableHead className="hidden text-right md:table-cell">Unidades</TableHead>
           <TableHead className="text-right">Ingresos sin IVA</TableHead>
-          <TableHead className="text-right">Costo</TableHead>
+          <TableHead className="hidden text-right md:table-cell">Costo</TableHead>
           <TableHead className="text-right">Margen</TableHead>
           <TableHead className="text-right">Margen %</TableHead>
         </TableRow>
@@ -38,11 +38,11 @@ function MarginTable({ rows, totals, firstColumn }: { rows: MarginRow[]; totals:
               <div className="font-medium">{r.name}</div>
               {r.detail ? <div className="text-muted-foreground text-xs">{r.detail}</div> : null}
             </TableCell>
-            <TableCell className="text-right tabular-nums">{formatQty(r.units, 3)}</TableCell>
+            <TableCell className="hidden text-right tabular-nums md:table-cell">{formatQty(r.units, 3)}</TableCell>
             <TableCell className="text-right">
               <Money value={r.revenue} />
             </TableCell>
-            <TableCell className="text-right">
+            <TableCell className="hidden text-right md:table-cell">
               <Money value={r.cost} />
             </TableCell>
             <TableCell className="text-right">
@@ -55,11 +55,11 @@ function MarginTable({ rows, totals, firstColumn }: { rows: MarginRow[]; totals:
       <TableFooter>
         <TableRow>
           <TableCell>Total</TableCell>
-          <TableCell className="text-right tabular-nums">{formatQty(totals.units, 3)}</TableCell>
+          <TableCell className="hidden text-right tabular-nums md:table-cell">{formatQty(totals.units, 3)}</TableCell>
           <TableCell className="text-right">
             <Money value={totals.revenue} />
           </TableCell>
-          <TableCell className="text-right">
+          <TableCell className="hidden text-right md:table-cell">
             <Money value={totals.cost} />
           </TableCell>
           <TableCell className="text-right">

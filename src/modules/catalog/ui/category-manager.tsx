@@ -160,7 +160,7 @@ export function CategoryManager({ tree }: { tree: CategoryNode[] }) {
       )}
 
       <Dialog open={dialog.open} onOpenChange={(open) => (open ? null : setDialog(closed))}>
-        <DialogContent>
+        <DialogContent className="max-h-[90svh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{dialog.id ? "Editar categoría" : "Nueva categoría"}</DialogTitle>
             <DialogDescription>Las categorías organizan el catálogo en dos o tres niveles.</DialogDescription>

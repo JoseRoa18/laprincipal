@@ -66,7 +66,7 @@ export function HeldSalesDrawer({ open, onOpenChange, cartHasLines, onResume }: 
   return (
     <>
       <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent side="right" className="w-full sm:max-w-md">
+        <SheetContent side="right" className="w-full data-[side=right]:w-full sm:max-w-md">
           <SheetHeader>
             <SheetTitle className="flex items-center gap-2">
               <PauseCircle className="size-5" /> Ventas en espera

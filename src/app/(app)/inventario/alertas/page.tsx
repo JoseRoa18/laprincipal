@@ -17,6 +17,46 @@ export const metadata = { title: "Alertas de inventario" };
 function AlertTable({ rows, canBuy, emptyText, showLastSale }: { rows: StockRow[]; canBuy: boolean; emptyText: string; showLastSale?: boolean }) {
   if (rows.length === 0) return <EmptyState icon={CircleCheck} title="Nada por aquí" description={emptyText} />;
   return (
+    <>
+      {/* Phones: one card per product */}
+      <ul className="space-y-2 md:hidden">
+        {rows.map((r) => {
+          const stock = Number(r.quantity);
+          return (
+            <li key={r.productId} className="bg-card rounded-xl border p-3">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <Link href={`/productos/${r.productId}`} className="tap-target flex min-w-0 items-center font-medium">
+                    <span className="truncate">{r.name}</span>
+                  </Link>
+                  <p className="text-muted-foreground truncate text-xs">{[r.partNumber, r.sku, r.locationCode].filter(Boolean).join(" · ")}</p>
+                </div>
+                <StockStatusBadge status={r.status} className="shrink-0" />
+              </div>
+              <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+                <span className={cn("font-semibold tabular-nums", stock <= 0 && "text-destructive")}>
+                  {formatQty(r.quantity, r.unitDecimals)} {r.unitSymbol}
+                </span>
+                <span className="text-muted-foreground text-xs tabular-nums">
+                  {r.hasSettings ? `Mín ${formatQty(r.minStock, r.unitDecimals)} · Reorden ${formatQty(r.reorderPoint, r.unitDecimals)} · Máx ${formatQty(r.maxStock, r.unitDecimals)}` : "Sin mínimos"}
+                </span>
+                <span className="text-muted-foreground text-xs tabular-nums">
+                  Cobertura {r.hasStats && r.daysOfCover !== null ? `${formatQty(Math.min(Number(r.daysOfCover), 999), 0)} d` : "—"}
+                  {showLastSale ? ` · Última venta ${r.lastSaleAt ? formatDate(r.lastSaleAt) : "nunca"}` : ""}
+                </span>
+              </div>
+              {canBuy ? (
+                <Link href="/compras/que-comprar" className="tap-target text-primary mt-1 inline-flex items-center gap-1 text-sm underline-offset-4 hover:underline">
+                  <ShoppingCart className="size-4" /> Qué comprar
+                </Link>
+              ) : null}
+            </li>
+          );
+        })}
+      </ul>
+
+      {/* Wider screens: table */}
+      <div className="hidden md:block">
     <Table>
       <TableHeader>
         <TableRow>
@@ -63,6 +103,8 @@ function AlertTable({ rows, canBuy, emptyText, showLastSale }: { rows: StockRow[
         })}
       </TableBody>
     </Table>
+      </div>
+    </>
   );
 }
 
@@ -87,7 +129,8 @@ export default async function AlertsPage() {
         actions={canBuy ? <Button render={<Link href="/compras/que-comprar" />}>Ver qué comprar</Button> : undefined}
       />
       <Tabs defaultValue={first}>
-        <TabsList className="h-auto w-full flex-wrap justify-start sm:w-auto">
+        {/* `group-data-horizontal/tabs:h-auto` overrides the component's fixed h-8 so wrapped rows stay inside the box. */}
+        <TabsList className="h-auto w-full flex-wrap justify-start group-data-horizontal/tabs:h-auto sm:w-auto">
           {tabs.map((t) => (
             <TabsTrigger key={t.value} value={t.value} className="h-9 flex-none px-3">
               {t.label}

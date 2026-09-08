@@ -242,7 +242,7 @@ function CheckoutForm({
                 title={ok ? undefined : `Sin tasa para ${m.currencyCode}`}
               >
                 <span className="text-sm font-semibold">{m.name}</span>
-                <span className="text-muted-foreground text-[11px]">{ok ? (CURRENCY_LABEL[m.currencyCode] ?? m.currencyCode) : "Sin tasa"}</span>
+                <span className="text-muted-foreground text-xs">{ok ? (CURRENCY_LABEL[m.currencyCode] ?? m.currencyCode) : "Sin tasa"}</span>
               </Button>
             );
           })}

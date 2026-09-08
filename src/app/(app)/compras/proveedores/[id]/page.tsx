@@ -83,7 +83,7 @@ export default async function SupplierDetailPage({ params }: { params: Promise<{
                   <TableRow>
                     <TableHead>Número</TableHead>
                     <TableHead>Fecha</TableHead>
-                    <TableHead>Documento</TableHead>
+                    <TableHead className="hidden md:table-cell">Documento</TableHead>
                     <TableHead>Estado</TableHead>
                     <TableHead className="text-right">Total USD</TableHead>
                   </TableRow>
@@ -97,7 +97,7 @@ export default async function SupplierDetailPage({ params }: { params: Promise<{
                         </Link>
                       </TableCell>
                       <TableCell className="tabular-nums">{formatDate(r.receiptDate)}</TableCell>
-                      <TableCell className="text-muted-foreground">{r.supplierDocument ?? "—"}</TableCell>
+                      <TableCell className="text-muted-foreground hidden md:table-cell">{r.supplierDocument ?? "—"}</TableCell>
                       <TableCell>{RECEIPT_STATUS_LABEL[r.status]}</TableCell>
                       <TableCell className="text-right">
                         <Money value={r.totalUsd} currency="USD" />
@@ -121,11 +121,11 @@ export default async function SupplierDetailPage({ params }: { params: Promise<{
               <TableRow>
                 <TableHead className="w-10">Pref.</TableHead>
                 <TableHead>Producto</TableHead>
-                <TableHead>Cód. proveedor</TableHead>
+                <TableHead className="hidden md:table-cell">Cód. proveedor</TableHead>
                 <TableHead className="text-right">Existencia</TableHead>
-                <TableHead className="text-right">Último costo</TableHead>
+                <TableHead className="hidden text-right md:table-cell">Último costo</TableHead>
                 <TableHead className="text-right">Último costo USD</TableHead>
-                <TableHead>Última compra</TableHead>
+                <TableHead className="hidden md:table-cell">Última compra</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -140,13 +140,13 @@ export default async function SupplierDetailPage({ params }: { params: Promise<{
                     </Link>
                     <span className="text-muted-foreground block text-xs">{[p.partNumber, p.sku].filter(Boolean).join(" · ")}</span>
                   </TableCell>
-                  <TableCell className="text-muted-foreground">{p.supplierCode ?? "—"}</TableCell>
+                  <TableCell className="text-muted-foreground hidden md:table-cell">{p.supplierCode ?? "—"}</TableCell>
                   <TableCell className="text-right tabular-nums">
                     {formatQty(p.stock, p.unitDecimals)} {p.unitSymbol}
                   </TableCell>
-                  <TableCell className="text-right">{p.lastCostAmount ? <Money value={p.lastCostAmount} currency={p.lastCostCurrency ?? "USD"} /> : "—"}</TableCell>
+                  <TableCell className="hidden text-right md:table-cell">{p.lastCostAmount ? <Money value={p.lastCostAmount} currency={p.lastCostCurrency ?? "USD"} /> : "—"}</TableCell>
                   <TableCell className="text-right">{p.lastCostUsd ? <Money value={p.lastCostUsd} currency="USD" /> : "—"}</TableCell>
-                  <TableCell className="text-muted-foreground">{p.lastPurchaseAt ? formatDate(p.lastPurchaseAt) : "—"}</TableCell>
+                  <TableCell className="text-muted-foreground hidden md:table-cell">{p.lastPurchaseAt ? formatDate(p.lastPurchaseAt) : "—"}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

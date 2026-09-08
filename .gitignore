@@ -56,3 +56,6 @@ next-env.d.ts
 
 .vercel
 .env*
+
+# QA móvil (capturas y reporte generados por scripts/qa-mobile.ts)
+/qa/

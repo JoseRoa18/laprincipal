@@ -35,7 +35,49 @@ export default async function CashHistoryPage({ searchParams }: { searchParams: 
       {rows.length === 0 ? (
         <EmptyState icon={Wallet} title="Todavía no hay sesiones de caja" description="Cuando abras y cierres la caja, cada sesión quedará registrada aquí con su cierre imprimible." />
       ) : (
-        <div className="rounded-xl border">
+        <>
+          {/* Phones: one card per session */}
+          <ul className="space-y-2 md:hidden">
+            {rows.map((s) => {
+              const diffs = s.differences.filter((d) => d.difference !== null);
+              const balanced = diffs.length > 0 && diffs.every((d) => D(d.difference).isZero());
+              const pending = diffs.filter((d) => !D(d.difference).isZero());
+              return (
+                <li key={s.id}>
+                  <Link href={`/caja/historial/${s.id}`} className="bg-card active:bg-muted/50 block rounded-xl border p-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="font-medium">{s.number ?? "—"}</span>
+                      <Badge variant={s.status === "open" ? "default" : "outline"}>{s.status === "open" ? "Abierta" : "Cerrada"}</Badge>
+                    </div>
+                    <p className="text-muted-foreground text-xs">
+                      Apertura {formatDateTime(s.openedAt)} · {s.openedByName}
+                    </p>
+                    {s.closedAt ? (
+                      <p className="text-muted-foreground text-xs">
+                        Cierre {formatDateTime(s.closedAt)} · {s.closedByName}
+                      </p>
+                    ) : null}
+                    <p className="mt-1 text-sm">
+                      {s.status === "open" ? (
+                        <span className="text-muted-foreground">Sin cierre todavía</span>
+                      ) : balanced ? (
+                        <span className="text-emerald-700 dark:text-emerald-400">Cuadró</span>
+                      ) : (
+                        <span className="flex flex-wrap gap-x-3">
+                          {pending.map((d) => (
+                            <Money key={d.currencyCode} value={d.difference} currency={d.currencyCode} colored />
+                          ))}
+                        </span>
+                      )}
+                    </p>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+
+          {/* Wider screens: table */}
+          <div className="hidden rounded-xl border md:block">
           <Table>
             <TableHeader>
               <TableRow>
@@ -96,7 +138,8 @@ export default async function CashHistoryPage({ searchParams }: { searchParams: 
               })}
             </TableBody>
           </Table>
-        </div>
+          </div>
+        </>
       )}
 
       <Pagination page={page} total={total} basePath="/caja/historial" params={params} />

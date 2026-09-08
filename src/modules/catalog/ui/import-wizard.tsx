@@ -148,11 +148,11 @@ export function ImportWizard({ jobs }: { jobs: ImportJobView[] }) {
               <TableHeader>
                 <TableRow>
                   <TableHead>Fecha</TableHead>
-                  <TableHead>Usuario</TableHead>
+                  <TableHead className="hidden md:table-cell">Usuario</TableHead>
                   <TableHead>Estado</TableHead>
-                  <TableHead className="text-right">Filas</TableHead>
+                  <TableHead className="hidden text-right md:table-cell">Filas</TableHead>
                   <TableHead className="text-right">Creados</TableHead>
-                  <TableHead className="text-right">Errores</TableHead>
+                  <TableHead className="hidden text-right md:table-cell">Errores</TableHead>
                   <TableHead />
                 </TableRow>
               </TableHeader>
@@ -160,13 +160,13 @@ export function ImportWizard({ jobs }: { jobs: ImportJobView[] }) {
                 {jobs.map((j) => (
                   <TableRow key={j.id}>
                     <TableCell>{formatDateTime(j.appliedAt ?? j.createdAt)}</TableCell>
-                    <TableCell>{j.createdBy ?? "—"}</TableCell>
+                    <TableCell className="hidden md:table-cell">{j.createdBy ?? "—"}</TableCell>
                     <TableCell>
                       <Badge variant={j.status === "applied" ? "default" : "secondary"}>{IMPORT_STATUS_LABEL[j.status] ?? j.status}</Badge>
                     </TableCell>
-                    <TableCell className="text-right tabular-nums">{j.totalRows}</TableCell>
+                    <TableCell className="hidden text-right tabular-nums md:table-cell">{j.totalRows}</TableCell>
                     <TableCell className="text-right tabular-nums">{j.createdCount}</TableCell>
-                    <TableCell className="text-right tabular-nums">{j.errorRows}</TableCell>
+                    <TableCell className="hidden text-right tabular-nums md:table-cell">{j.errorRows}</TableCell>
                     <TableCell className="text-right">
                       {j.status === "applied" ? (
                         <ConfirmButton
@@ -238,10 +238,10 @@ function PreviewStep({ preview, pending, onApply, onBack }: { preview: ImportPre
               <TableHead className="w-14">Fila</TableHead>
               <TableHead>Nombre</TableHead>
               <TableHead>SKU</TableHead>
-              <TableHead>Categoría</TableHead>
-              <TableHead>Marca</TableHead>
+              <TableHead className="hidden md:table-cell">Categoría</TableHead>
+              <TableHead className="hidden md:table-cell">Marca</TableHead>
               <TableHead className="text-right">Precio</TableHead>
-              <TableHead className="text-right">Stock</TableHead>
+              <TableHead className="hidden text-right md:table-cell">Stock</TableHead>
               <TableHead>Resultado</TableHead>
             </TableRow>
           </TableHeader>
@@ -251,10 +251,10 @@ function PreviewStep({ preview, pending, onApply, onBack }: { preview: ImportPre
                 <TableCell className="tabular-nums">{r.rowNumber}</TableCell>
                 <TableCell className="max-w-64 truncate">{r.values.name || <span className="text-muted-foreground">—</span>}</TableCell>
                 <TableCell className="font-mono text-xs">{r.values.sku || <span className="text-muted-foreground">auto</span>}</TableCell>
-                <TableCell className="max-w-48 truncate">{r.values.category || "—"}</TableCell>
-                <TableCell>{r.values.brand || "—"}</TableCell>
+                <TableCell className="hidden max-w-48 truncate md:table-cell">{r.values.category || "—"}</TableCell>
+                <TableCell className="hidden md:table-cell">{r.values.brand || "—"}</TableCell>
                 <TableCell className="text-right tabular-nums">{r.values.publicPrice || "—"}</TableCell>
-                <TableCell className="text-right tabular-nums">{r.values.initialStock || "—"}</TableCell>
+                <TableCell className="hidden text-right tabular-nums md:table-cell">{r.values.initialStock || "—"}</TableCell>
                 <TableCell className="whitespace-normal">
                   {r.errors.length > 0 ? (
                     <ul className="text-destructive list-inside list-disc text-xs">

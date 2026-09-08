@@ -36,20 +36,20 @@ export function ParamSelect({
     router.push(qs ? `${pathname}?${qs}` : pathname);
   }
 
+  // NativeSelect renders its own <select>; passing the options directly avoids a nested
+  // <select> (invalid HTML that the browser rewrote, causing a hydration mismatch).
   return (
     <div className="flex items-center gap-2">
       <label htmlFor={id} className="text-muted-foreground text-sm whitespace-nowrap">
         {label}
       </label>
-      <NativeSelect className="min-w-36">
-        <select id={id} value={current} onChange={(e) => onChange(e.target.value)}>
-          {hideAll ? null : <NativeSelectOption value="">{allLabel}</NativeSelectOption>}
-          {options.map((o) => (
-            <NativeSelectOption key={o.value} value={o.value}>
-              {o.label}
-            </NativeSelectOption>
-          ))}
-        </select>
+      <NativeSelect id={id} value={current} onChange={(e) => onChange(e.target.value)} className="min-w-36 max-w-full">
+        {hideAll ? null : <NativeSelectOption value="">{allLabel}</NativeSelectOption>}
+        {options.map((o) => (
+          <NativeSelectOption key={o.value} value={o.value}>
+            {o.label}
+          </NativeSelectOption>
+        ))}
       </NativeSelect>
     </div>
   );

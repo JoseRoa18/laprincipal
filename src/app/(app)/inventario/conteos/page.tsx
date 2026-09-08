@@ -45,6 +45,30 @@ export default async function CountsPage({ searchParams }: { searchParams: Promi
           action={<Button render={<Link href="/inventario/conteos/nuevo" />}>Nuevo conteo</Button>}
         />
       ) : (
+        <>
+          {/* Phones: one card per count */}
+          <ul className="space-y-2 md:hidden">
+            {rows.map((c) => (
+              <li key={c.id}>
+                <Link href={`/inventario/conteos/${c.id}`} className="bg-card active:bg-muted/50 block rounded-xl border p-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="font-medium">
+                      {c.number ?? (c.status === "open" ? "En curso" : "Sin número")}
+                      {c.blind ? <span className="text-muted-foreground ml-2 text-xs font-normal">Ciego</span> : null}
+                    </span>
+                    <CountStatusBadge status={c.status} />
+                  </div>
+                  <p className="mt-0.5 text-sm">{countFilterLabel(c.filter, c.categoryName)}</p>
+                  <p className="text-muted-foreground mt-1 text-xs tabular-nums">
+                    {c.countedItems} de {c.totalItems} contados · {formatDateTime(c.startedAt)} · {c.startedByName}
+                  </p>
+                </Link>
+              </li>
+            ))}
+          </ul>
+
+          {/* Wider screens: table */}
+          <div className="hidden md:block">
         <Table>
           <TableHeader>
             <TableRow>
@@ -78,6 +102,8 @@ export default async function CountsPage({ searchParams }: { searchParams: Promi
             ))}
           </TableBody>
         </Table>
+          </div>
+        </>
       )}
       <Pagination page={page} total={total} basePath="/inventario/conteos" params={params} />
     </div>

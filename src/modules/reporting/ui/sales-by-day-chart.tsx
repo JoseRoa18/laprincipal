@@ -38,7 +38,8 @@ function DayTooltip({ active, payload }: { active?: boolean; payload?: Array<{ p
  * chart is the picture, the table is the record.
  */
 export function SalesByDayChart({ data, height = 240, label, className }: { data: DayPoint[]; height?: number; label: string; className?: string }) {
-  const tickEvery = data.length > 16 ? Math.ceil(data.length / 8) - 1 : 0;
+  // Let Recharts drop labels that would collide (narrow phones/tablets) instead of forcing every tick.
+  const tickEvery: number | "preserveStartEnd" = data.length > 16 ? Math.ceil(data.length / 8) - 1 : "preserveStartEnd";
   return (
     <div className={cn(VIZ_ROOT, "w-full", className)} role="img" aria-label={label} style={{ height }}>
       <ResponsiveContainer width="100%" height="100%">
@@ -50,8 +51,8 @@ export function SalesByDayChart({ data, height = 240, label, className }: { data
             interval={tickEvery}
             tickLine={false}
             axisLine={{ stroke: "var(--border)" }}
-            tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
-            minTickGap={16}
+            tick={{ fill: "var(--muted-foreground)", fontSize: 12 }}
+            minTickGap={28}
           />
           <YAxis
             width={60}
@@ -59,7 +60,7 @@ export function SalesByDayChart({ data, height = 240, label, className }: { data
             tickLine={false}
             axisLine={false}
             tickCount={4}
-            tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
+            tick={{ fill: "var(--muted-foreground)", fontSize: 12 }}
           />
           <Tooltip cursor={{ fill: "var(--muted)" }} content={<DayTooltip />} />
           <Bar dataKey="total" fill="var(--viz-accent)" radius={[4, 4, 0, 0]} maxBarSize={24} isAnimationActive={false} />

@@ -69,9 +69,9 @@ export function PaymentMethodsTable({ methods, currencies }: { methods: PaymentM
             <TableHeader>
               <TableRow>
                 <TableHead>Método</TableHead>
-                <TableHead>Tipo</TableHead>
+                <TableHead className="hidden md:table-cell">Tipo</TableHead>
                 <TableHead>Moneda</TableHead>
-                <TableHead className="text-right">Recargo</TableHead>
+                <TableHead className="hidden text-right md:table-cell">Recargo</TableHead>
                 <TableHead>Activo</TableHead>
                 <TableHead>Referencia</TableHead>
                 <TableHead>En caja</TableHead>
@@ -135,13 +135,13 @@ function MethodRowItem({ method, onEdit }: { method: PaymentMethodListRow; onEdi
         <div className="font-medium">{row.name}</div>
         <div className="text-muted-foreground font-mono text-xs">{row.code}</div>
       </TableCell>
-      <TableCell>
+      <TableCell className="hidden md:table-cell">
         <Badge variant="outline">{PAYMENT_KIND_LABEL[row.kind]}</Badge>
       </TableCell>
       <TableCell>
         {row.currencyCode} <span className="text-muted-foreground">({row.currencySymbol})</span>
       </TableCell>
-      <TableCell className="text-right tabular-nums">
+      <TableCell className="hidden text-right tabular-nums md:table-cell">
         {row.surchargePctDisplay === "0" ? <span className="text-muted-foreground">—</span> : formatPct(row.surchargePctDisplay, 2)}
       </TableCell>
       <TableCell>{flagSwitch("isActive")}</TableCell>
@@ -223,7 +223,7 @@ function CreateMethodDialog({ currencies, nextSortOrder, onClose }: { currencies
         if (!open) onClose();
       }}
     >
-      <DialogContent className="max-h-[calc(100vh-2rem)] overflow-y-auto sm:max-w-lg">
+      <DialogContent className="max-h-[90svh] overflow-y-auto sm:max-w-lg">
         <form onSubmit={onSubmit} className="contents" noValidate>
           <DialogHeader>
             <DialogTitle>Nuevo método de pago</DialogTitle>
@@ -377,7 +377,7 @@ function EditMethodDialog({ method, onClose }: { method: PaymentMethodListRow; o
         if (!open) onClose();
       }}
     >
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="max-h-[90svh] overflow-y-auto sm:max-w-md">
         <form onSubmit={onSubmit} className="contents" noValidate>
           <DialogHeader>
             <DialogTitle>Editar método de pago</DialogTitle>

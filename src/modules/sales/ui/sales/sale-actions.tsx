@@ -80,7 +80,7 @@ export function SaleActions({ saleId, number, canReturn, canVoid, outsideVoidWin
         </Button>
       ) : null}
       <Dialog open={voidOpen} onOpenChange={setVoidOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="max-h-[90svh] overflow-y-auto sm:max-w-md">
           <VoidForm saleId={saleId} number={number} outsideVoidWindow={outsideVoidWindow} voidWindowHours={voidWindowHours} onDone={() => setVoidOpen(false)} />
         </DialogContent>
       </Dialog>

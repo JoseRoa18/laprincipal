@@ -201,7 +201,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
                       <TableCell>
                         <ProductThumb url={p.thumbUrl} alt="" size={44} />
                       </TableCell>
-                      <TableCell className="max-w-72 whitespace-normal">
+                      <TableCell className="min-w-48 max-w-72 whitespace-normal">
                         <Link href={`/productos/${p.id}`} className="font-medium hover:underline">
                           {p.name}
                         </Link>

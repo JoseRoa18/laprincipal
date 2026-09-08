@@ -103,7 +103,7 @@ export default async function VelocityReportPage({ searchParams }: { searchParam
                   href={hrefWith(params, { status: active ? undefined : s })}
                   aria-pressed={active}
                   className={cn(
-                    "bg-card flex items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors hover:bg-muted/50",
+                    "tap-target bg-card flex items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors hover:bg-muted/50",
                     active && "ring-ring ring-2",
                   )}
                 >
@@ -133,12 +133,12 @@ export default async function VelocityReportPage({ searchParams }: { searchParam
                       <TableHead className="text-right">Disponible</TableHead>
                       <TableHead className="text-right">Velocidad/día</TableHead>
                       <TableHead className="text-right">Cobertura</TableHead>
-                      <TableHead className="text-center">ABC</TableHead>
+                      <TableHead className="hidden text-center md:table-cell">ABC</TableHead>
                       <TableHead>Estado</TableHead>
-                      <TableHead className="text-right">Reorden sugerido</TableHead>
+                      <TableHead className="hidden text-right md:table-cell">Reorden sugerido</TableHead>
                       <TableHead className="text-right">Cantidad sugerida</TableHead>
-                      <TableHead>Última venta</TableHead>
-                      <TableHead className="pr-4">Modo</TableHead>
+                      <TableHead className="hidden md:table-cell">Última venta</TableHead>
+                      <TableHead className="hidden pr-4 md:table-cell">Modo</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -160,7 +160,7 @@ export default async function VelocityReportPage({ searchParams }: { searchParam
                           ) : null}
                         </TableCell>
                         <TableCell className="text-right tabular-nums">{r.daysOfCover ? `${formatQty(r.daysOfCover, 1)} días` : "—"}</TableCell>
-                        <TableCell className="text-center">
+                        <TableCell className="hidden text-center md:table-cell">
                           {r.abcClass ? (
                             <Badge variant="outline" className="font-semibold">
                               {r.abcClass}
@@ -172,7 +172,7 @@ export default async function VelocityReportPage({ searchParams }: { searchParam
                         <TableCell>
                           <StockStatusBadge status={r.status} />
                         </TableCell>
-                        <TableCell className="text-right tabular-nums">
+                        <TableCell className="hidden text-right tabular-nums md:table-cell">
                           {formatQty(r.suggestedReorderPoint, r.unitDecimals)}
                           {r.mode === "manual" ? (
                             <div className="text-muted-foreground text-xs">
@@ -181,8 +181,8 @@ export default async function VelocityReportPage({ searchParams }: { searchParam
                           ) : null}
                         </TableCell>
                         <TableCell className="text-right font-medium tabular-nums">{formatQty(r.suggestedQty, r.unitDecimals)}</TableCell>
-                        <TableCell>{r.lastSaleAt ? formatDate(r.lastSaleAt) : <span className="text-muted-foreground">Nunca</span>}</TableCell>
-                        <TableCell className="pr-4">
+                        <TableCell className="hidden md:table-cell">{r.lastSaleAt ? formatDate(r.lastSaleAt) : <span className="text-muted-foreground">Nunca</span>}</TableCell>
+                        <TableCell className="hidden pr-4 md:table-cell">
                           <Badge variant={r.mode === "auto" ? "secondary" : "outline"}>{r.mode === "auto" ? "Automático" : "Manual"}</Badge>
                         </TableCell>
                       </TableRow>

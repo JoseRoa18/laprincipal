@@ -133,7 +133,7 @@ export default async function HomePage() {
             <CardContent className="space-y-2">
               <SalesByDayChart data={chartData} height={190} label="Ventas por día de los últimos 14 días" />
               <details className="text-sm">
-                <summary className="text-muted-foreground cursor-pointer select-none">Ver tabla</summary>
+                <summary className="text-muted-foreground cursor-pointer py-3 select-none">Ver tabla</summary>
                 <div className="mt-2 max-h-56 overflow-auto rounded-lg border">
                   <Table>
                     <TableHeader>
@@ -207,8 +207,8 @@ export default async function HomePage() {
                   {data.topProducts.map((p, i) => (
                     <li key={p.productId} className="flex items-center gap-3">
                       <span className="text-muted-foreground w-4 text-right tabular-nums">{i + 1}</span>
-                      <Link href={`/productos/${p.productId}`} className="min-w-0 flex-1 truncate font-medium hover:underline">
-                        {p.name}
+                      <Link href={`/productos/${p.productId}`} className="tap-target flex min-w-0 flex-1 items-center font-medium hover:underline">
+                        <span className="truncate">{p.name}</span>
                       </Link>
                       <span className="tabular-nums">{formatQty(p.units, 2)} u</span>
                     </li>

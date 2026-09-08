@@ -73,7 +73,7 @@ export default async function InventoryReportPage({ searchParams }: { searchPara
                   <TableRow>
                     <TableHead>Categoría</TableHead>
                     <TableHead className="text-right">Productos</TableHead>
-                    <TableHead className="text-right">Unidades</TableHead>
+                    <TableHead className="hidden text-right md:table-cell">Unidades</TableHead>
                     <TableHead className="text-right">Valor</TableHead>
                     <TableHead className="w-56">% del total</TableHead>
                   </TableRow>
@@ -83,7 +83,7 @@ export default async function InventoryReportPage({ searchParams }: { searchPara
                     <TableRow key={c.categoryId ?? "none"}>
                       <TableCell className="whitespace-normal font-medium">{c.name}</TableCell>
                       <TableCell className="text-right tabular-nums">{c.products}</TableCell>
-                      <TableCell className="text-right tabular-nums">{formatQty(c.quantity, 2)}</TableCell>
+                      <TableCell className="hidden text-right tabular-nums md:table-cell">{formatQty(c.quantity, 2)}</TableCell>
                       <TableCell className="text-right">
                         <Money value={c.value} />
                       </TableCell>
@@ -100,7 +100,7 @@ export default async function InventoryReportPage({ searchParams }: { searchPara
                   <TableRow>
                     <TableCell>Total</TableCell>
                     <TableCell className="text-right tabular-nums">{v.withStock}</TableCell>
-                    <TableCell className="text-right tabular-nums">{formatQty(v.totalQty, 2)}</TableCell>
+                    <TableCell className="hidden text-right tabular-nums md:table-cell">{formatQty(v.totalQty, 2)}</TableCell>
                     <TableCell className="text-right">
                       <Money value={v.totalValue} />
                     </TableCell>
@@ -138,9 +138,9 @@ export default async function InventoryReportPage({ searchParams }: { searchPara
                 <TableHeader>
                   <TableRow>
                     <TableHead>Producto</TableHead>
-                    <TableHead>Categoría</TableHead>
+                    <TableHead className="hidden md:table-cell">Categoría</TableHead>
                     <TableHead className="text-right">Existencia</TableHead>
-                    <TableHead className="text-right">Costo prom.</TableHead>
+                    <TableHead className="hidden text-right md:table-cell">Costo prom.</TableHead>
                     <TableHead className="text-right">Valor</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -153,9 +153,9 @@ export default async function InventoryReportPage({ searchParams }: { searchPara
                         </Link>
                         <div className="text-muted-foreground text-xs">{r.partNumber ?? r.sku}</div>
                       </TableCell>
-                      <TableCell className="whitespace-normal">{r.category}</TableCell>
+                      <TableCell className="hidden whitespace-normal md:table-cell">{r.category}</TableCell>
                       <TableCell className="text-right tabular-nums">{formatQty(r.quantity, r.unitDecimals)}</TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="hidden text-right md:table-cell">
                         <Money value={r.costAvg} />
                       </TableCell>
                       <TableCell className="text-right">

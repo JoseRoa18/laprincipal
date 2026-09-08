@@ -67,7 +67,7 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
               key={c.value}
               href={hrefWith(params, { tipo: c.value })}
               className={cn(
-                "inline-flex h-9 items-center rounded-full border px-3 text-sm",
+                "tap-target inline-flex h-9 items-center rounded-full border px-3 text-sm",
                 type === c.value ? "bg-primary text-primary-foreground border-transparent" : "hover:bg-muted",
               )}
               aria-current={type === c.value ? "page" : undefined}
@@ -77,7 +77,7 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
           ))}
           <Link
             href={hrefWith(params, { inactivos: includeInactive ? "" : "1" })}
-            className="text-muted-foreground hover:text-foreground ml-1 text-sm underline-offset-4 hover:underline"
+            className="tap-target text-muted-foreground hover:text-foreground ml-1 inline-flex items-center text-sm underline-offset-4 hover:underline"
           >
             {includeInactive ? "Ocultar inactivos" : "Ver inactivos"}
           </Link>
@@ -96,7 +96,29 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
           />
         )
       ) : (
-        <div className="rounded-xl border">
+        <>
+          {/* Phones: one card per customer */}
+          <ul className="space-y-2 md:hidden">
+            {rows.map((c) => (
+              <li key={c.id}>
+                <Link href={`/clientes/${c.id}`} className="bg-card active:bg-muted/50 block rounded-xl border p-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="min-w-0 truncate font-medium">{c.name}</span>
+                    <span className="flex shrink-0 gap-1">
+                      {!c.isActive ? <Badge variant="secondary">Inactivo</Badge> : null}
+                      <Badge variant={c.customerType === "technician" ? "default" : "outline"}>{CUSTOMER_TYPE_LABEL[c.customerType]}</Badge>
+                    </span>
+                  </div>
+                  <p className="text-muted-foreground text-xs tabular-nums">
+                    {[formatDoc(c.docType, c.docNumber), c.phone, c.priceListName].filter(Boolean).join(" · ") || "Sin documento ni teléfono"}
+                  </p>
+                </Link>
+              </li>
+            ))}
+          </ul>
+
+          {/* Wider screens: table */}
+          <div className="hidden rounded-xl border md:block">
           <Table>
             <TableHeader>
               <TableRow>
@@ -130,7 +152,8 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
               ))}
             </TableBody>
           </Table>
-        </div>
+          </div>
+        </>
       )}
 
       <Pagination page={page} total={total} basePath="/clientes" params={params} />

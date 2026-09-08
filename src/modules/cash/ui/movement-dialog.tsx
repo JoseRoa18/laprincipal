@@ -81,7 +81,7 @@ export function MovementDialog({
         {isOut ? <ArrowUpFromLine /> : <ArrowDownToLine />}
         {isOut ? "Retiro" : "Ingreso"}
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="max-h-[90svh] overflow-y-auto">
         <form onSubmit={onSubmit} className="space-y-4" noValidate>
           <DialogHeader>
             <DialogTitle>{isOut ? "Retiro de efectivo" : "Ingreso de efectivo"}</DialogTitle>

@@ -108,7 +108,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
 - Componentes propios en `src/components/app`: `PageHeader`, `Money`, `StockStatusBadge`, `EmptyState`, `SearchInput`, `Pagination`, `ConfirmButton`.
 - Notificaciones: `import { toast } from "sonner"`; `toast.success("Producto guardado")`, `toast.error(result.error.message)`.
 - Formularios: `react-hook-form` + `zodResolver` (`@hookform/resolvers/zod`) con el mismo esquema Zod de la acción. Mensajes de error bajo el campo. Botón deshabilitado mientras `pending`.
-- Móvil primero: botones táctiles de al menos 44 px (`size="lg"`), tablas con `overflow-x-auto`, acciones principales visibles sin scroll.
+- Móvil primero: botones táctiles de al menos 44 px (`size="lg"`), tablas con `overflow-x-auto`, acciones principales visibles sin scroll. `src/app/globals.css` tiene una capa `@media (pointer: coarse)` que en celular y tablet sube a 44 px los `Button`, `Input`, `NativeSelect`, pestañas y opciones de menú (y a 16 px la fuente de los controles, para que iOS no haga zoom) sin cambiar el escritorio; para enlaces o botones propios usa la utilidad `tap-target`. Listas anchas: tarjetas en celular (`md:hidden`) y tabla en `hidden md:block`; columnas secundarias con `hidden md:table-cell`. Diálogos con formulario: `max-h-[90svh] overflow-y-auto`. Verificación: `pnpm exec tsx scripts/qa-mobile.ts` (ver `docs/reportes/qa-movil.md`).
 - Montos siempre con `<Money value={x} currency="USD" />`. Cantidades con `formatQty`. Fechas con `formatDate`/`formatDateTime`.
 - Textos en español neutro, sin jerga técnica. Botones con verbo: "Guardar", "Aplicar entrada", "Cobrar".
 - `next/image` está en modo `unoptimized`; para fotos usa `<img>` o `Image` con `width`/`height` explícitos.

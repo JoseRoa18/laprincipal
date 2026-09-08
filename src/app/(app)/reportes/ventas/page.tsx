@@ -155,7 +155,7 @@ export default async function SalesReportPage({ searchParams }: { searchParams: 
                         <TableHead>Producto</TableHead>
                         <TableHead className="text-right">Unidades</TableHead>
                         <TableHead className="text-right">Ingresos</TableHead>
-                        <TableHead className="w-48">% del total</TableHead>
+                        <TableHead className="hidden w-48 md:table-cell">% del total</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -169,7 +169,7 @@ export default async function SalesReportPage({ searchParams }: { searchParams: 
                           <TableCell className="text-right">
                             <Money value={r.revenue} />
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="hidden md:table-cell">
                             <div className="flex items-center gap-2">
                               <ShareBar pct={r.share} />
                               <span className="w-14 text-right text-xs tabular-nums">{formatPct(r.share)}</span>
@@ -185,7 +185,7 @@ export default async function SalesReportPage({ searchParams }: { searchParams: 
                         <TableCell className="text-right">
                           <Money value={t.total} />
                         </TableCell>
-                        <TableCell />
+                        <TableCell className="hidden md:table-cell" />
                       </TableRow>
                     </TableFooter>
                   </Table>
@@ -198,7 +198,7 @@ export default async function SalesReportPage({ searchParams }: { searchParams: 
                         <TableHead>Categoría</TableHead>
                         <TableHead className="text-right">Unidades</TableHead>
                         <TableHead className="text-right">Ingresos</TableHead>
-                        <TableHead className="w-48">% del total</TableHead>
+                        <TableHead className="hidden w-48 md:table-cell">% del total</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -209,7 +209,7 @@ export default async function SalesReportPage({ searchParams }: { searchParams: 
                           <TableCell className="text-right">
                             <Money value={r.revenue} />
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="hidden md:table-cell">
                             <div className="flex items-center gap-2">
                               <ShareBar pct={r.share} />
                               <span className="w-14 text-right text-xs tabular-nums">{formatPct(r.share)}</span>
@@ -228,7 +228,7 @@ export default async function SalesReportPage({ searchParams }: { searchParams: 
                         <TableHead>Vendedor</TableHead>
                         <TableHead className="text-right">Ventas</TableHead>
                         <TableHead className="text-right">Total</TableHead>
-                        <TableHead className="w-48">% del total</TableHead>
+                        <TableHead className="hidden w-48 md:table-cell">% del total</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -239,7 +239,7 @@ export default async function SalesReportPage({ searchParams }: { searchParams: 
                           <TableCell className="text-right">
                             <Money value={r.total} />
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="hidden md:table-cell">
                             <div className="flex items-center gap-2">
                               <ShareBar pct={r.share} />
                               <span className="w-14 text-right text-xs tabular-nums">{formatPct(r.share)}</span>
@@ -261,9 +261,9 @@ export default async function SalesReportPage({ searchParams }: { searchParams: 
                           <TableHead>Método</TableHead>
                           <TableHead>Moneda</TableHead>
                           <TableHead className="text-right">Monto</TableHead>
-                          <TableHead className="text-right">Equivalente USD</TableHead>
-                          <TableHead className="text-right">Ventas</TableHead>
-                          <TableHead className="w-48">% de los pagos</TableHead>
+                          <TableHead className="hidden text-right md:table-cell">Equivalente USD</TableHead>
+                          <TableHead className="hidden text-right md:table-cell">Ventas</TableHead>
+                          <TableHead className="hidden w-48 md:table-cell">% de los pagos</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -274,11 +274,11 @@ export default async function SalesReportPage({ searchParams }: { searchParams: 
                             <TableCell className="text-right">
                               <Money value={r.amount} currency={r.currencyCode} />
                             </TableCell>
-                            <TableCell className="text-right">
+                            <TableCell className="hidden text-right md:table-cell">
                               <Money value={r.amountUsd} />
                             </TableCell>
-                            <TableCell className="text-right tabular-nums">{r.count}</TableCell>
-                            <TableCell>
+                            <TableCell className="hidden text-right tabular-nums md:table-cell">{r.count}</TableCell>
+                            <TableCell className="hidden md:table-cell">
                               <div className="flex items-center gap-2">
                                 <ShareBar pct={r.share} />
                                 <span className="w-14 text-right text-xs tabular-nums">{formatPct(r.share)}</span>
@@ -298,7 +298,7 @@ export default async function SalesReportPage({ searchParams }: { searchParams: 
                         <TableHead>Hora</TableHead>
                         <TableHead className="text-right">Ventas</TableHead>
                         <TableHead className="text-right">Total</TableHead>
-                        <TableHead className="w-48">% del total</TableHead>
+                        <TableHead className="hidden w-48 md:table-cell">% del total</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -313,7 +313,7 @@ export default async function SalesReportPage({ searchParams }: { searchParams: 
                             <TableCell className="text-right">
                               <Money value={r.total} />
                             </TableCell>
-                            <TableCell>
+                            <TableCell className="hidden md:table-cell">
                               <div className="flex items-center gap-2">
                                 <ShareBar pct={sharePct} />
                                 <span className="w-14 text-right text-xs tabular-nums">{formatPct(sharePct)}</span>

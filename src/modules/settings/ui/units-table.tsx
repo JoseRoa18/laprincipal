@@ -143,7 +143,7 @@ function UnitDialog({ state, onClose }: { state: DialogState; onClose: () => voi
         if (!open) onClose();
       }}
     >
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="max-h-[90svh] overflow-y-auto sm:max-w-md">
         <form onSubmit={onSubmit} className="contents" noValidate>
           <DialogHeader>
             <DialogTitle>{editing ? "Editar unidad" : "Nueva unidad"}</DialogTitle>

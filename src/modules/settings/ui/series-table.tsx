@@ -42,7 +42,7 @@ export function SeriesTable({ series }: { series: DocumentSeriesListRow[] }) {
               <TableRow>
                 <TableHead>Documento</TableHead>
                 <TableHead>Prefijo</TableHead>
-                <TableHead className="text-right">Relleno</TableHead>
+                <TableHead className="hidden text-right md:table-cell">Relleno</TableHead>
                 <TableHead className="text-right">Próximo número</TableHead>
                 <TableHead>Ejemplo</TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
@@ -53,7 +53,7 @@ export function SeriesTable({ series }: { series: DocumentSeriesListRow[] }) {
                 <TableRow key={s.id}>
                   <TableCell className="font-medium">{s.label}</TableCell>
                   <TableCell className="font-mono">{s.prefix}</TableCell>
-                  <TableCell className="text-right tabular-nums">{s.padding} dígitos</TableCell>
+                  <TableCell className="hidden text-right tabular-nums md:table-cell">{s.padding} dígitos</TableCell>
                   <TableCell className="text-right tabular-nums">{s.nextNumber}</TableCell>
                   <TableCell className="font-mono">{s.example}</TableCell>
                   <TableCell className="text-right">
@@ -134,7 +134,7 @@ function SeriesDialog({ series, onClose }: { series: DocumentSeriesListRow; onCl
         if (!open) onClose();
       }}
     >
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="max-h-[90svh] overflow-y-auto sm:max-w-md">
         <form onSubmit={onSubmit} className="contents" noValidate>
           <DialogHeader>
             <DialogTitle>Serie de {series.label.toLowerCase()}</DialogTitle>

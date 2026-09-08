@@ -66,6 +66,55 @@ export default async function MovementsPage({ searchParams }: { searchParams: Pr
           description="No hay movimientos en el período o con los filtros elegidos. Las entradas por compra, ventas y ajustes aparecerán aquí."
         />
       ) : (
+        <>
+          {/* Phones: one card per movement */}
+          <ul className="space-y-2 md:hidden">
+            {rows.map((m) => {
+              const qty = Number(m.quantity);
+              const href = referenceHref(m.referenceType, m.referenceId);
+              const doc = m.referenceType ? referenceLabel(m.referenceType) : "";
+              return (
+                <li key={m.id} className="bg-card rounded-xl border p-3">
+                  {product ? null : (
+                    <Link href={`/inventario/movimientos?product=${m.productId}`} className="tap-target flex min-w-0 items-center font-medium">
+                      <span className="truncate">{m.productName}</span>
+                    </Link>
+                  )}
+                  <p className="text-muted-foreground text-xs">
+                    {formatDateTime(m.createdAt)} ·{" "}
+                    {href ? (
+                      <Link href={href} className="text-primary underline-offset-4 hover:underline">
+                        {MOVEMENT_TYPE_LABEL[m.type]}
+                      </Link>
+                    ) : (
+                      MOVEMENT_TYPE_LABEL[m.type]
+                    )}
+                    {m.reasonName ? ` · ${m.reasonName}` : ""}
+                    {doc && doc !== MOVEMENT_TYPE_LABEL[m.type] ? ` · ${doc}` : ""}
+                  </p>
+                  <div className="mt-2 flex items-center justify-between gap-3 text-sm">
+                    <span className={cn("font-semibold tabular-nums", qty > 0 ? "text-emerald-700 dark:text-emerald-400" : "text-destructive")}>
+                      {qty > 0 ? "+" : "−"}
+                      {formatQty(Math.abs(qty), m.unitDecimals)} {m.unitSymbol}
+                    </span>
+                    <span className={cn("tabular-nums", Number(m.balanceAfter) < 0 && "text-destructive")}>
+                      <span className="text-muted-foreground text-xs">Saldo </span>
+                      <span className="font-medium">{formatQty(m.balanceAfter, m.unitDecimals)}</span>
+                    </span>
+                    {showCosts ? <Money value={m.unitCostUsd} currency="USD" className="text-muted-foreground text-xs" /> : null}
+                  </div>
+                  {m.userName || m.notes ? (
+                    <p className="text-muted-foreground mt-1 truncate text-xs">
+                      {[m.userName, m.notes].filter(Boolean).join(" · ")}
+                    </p>
+                  ) : null}
+                </li>
+              );
+            })}
+          </ul>
+
+          {/* Wider screens: table */}
+          <div className="hidden md:block">
         <Table>
           <TableHeader>
             <TableRow>
@@ -91,8 +140,8 @@ export default async function MovementsPage({ searchParams }: { searchParams: Pr
                   <TableCell className="tabular-nums">{formatDateTime(m.createdAt)}</TableCell>
                   {product ? null : (
                     <TableCell className="max-w-[20rem]">
-                      <Link href={`/inventario/movimientos?product=${m.productId}`} className="block truncate hover:underline">
-                        {m.productName}
+                      <Link href={`/inventario/movimientos?product=${m.productId}`} className="tap-target flex min-w-0 items-center hover:underline">
+                        <span className="truncate">{m.productName}</span>
                       </Link>
                       <span className="text-muted-foreground block truncate text-xs">{[m.partNumber, m.productSku].filter(Boolean).join(" · ")}</span>
                     </TableCell>
@@ -129,6 +178,8 @@ export default async function MovementsPage({ searchParams }: { searchParams: Pr
             })}
           </TableBody>
         </Table>
+          </div>
+        </>
       )}
 
       <Pagination page={page} pageSize={PAGE_SIZE} total={total} basePath="/inventario/movimientos" params={params} />

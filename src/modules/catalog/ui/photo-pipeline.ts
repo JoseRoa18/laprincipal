@@ -1,17 +1,44 @@
 /**
  * Browser-side photo pipeline (no server involved):
  * camera/file → downscale to 1600 px JPEG → background removal (@imgly/background-removal)
- * → white 1200×1200 WebP with the part centered → 300×300 thumbnail.
+ * → "acabado de estudio": clean mask (specks removed, edge eroded 1 px and feathered), auto-levels,
+ *   gentle gray-world white balance, +8 % saturation, mild unsharp mask
+ * → pure white 1200×1200 WebP with the part centered at 82 % of the side and a soft contact shadow
+ * → 300×300 thumbnail.
+ *
+ * The image math lives in `domain/photo-math.ts` (pure, unit-tested); this file only handles
+ * decoding, canvases (OffscreenCanvas when available) and encoding.
  */
+
+import {
+  alphaBoundingBox,
+  applyColorAdjustments,
+  buildLevelsLut,
+  CATALOG_FILL,
+  catalogLayout,
+  channelMeans,
+  contactShadowGeometry,
+  erodeAlpha,
+  featherAlpha,
+  grayWorldGains,
+  levelsFromHistogram,
+  luminanceHistogram,
+  removeSmallIslands,
+  SATURATION_BOOST,
+  unsharpMask,
+  type ShadowGeometry,
+} from "../domain/photo-math";
 
 export const MAX_SIDE = 1600;
 export const PROCESSED_SIZE = 1200;
 export const THUMB_SIZE = 300;
-export const MARGIN_PCT = 0.06;
-export const ALPHA_THRESHOLD = 10;
 export const PROCESS_TIMEOUT_MS = 60_000;
+/** Transparent pixels kept around the crop so the feathered edge is never clipped. */
+const EDGE_PAD = 4;
 
 type Decoded = ImageBitmap | HTMLImageElement;
+type AnyCanvas = HTMLCanvasElement | OffscreenCanvas;
+type Ctx2D = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
 
 async function decode(blob: Blob): Promise<Decoded> {
   if (typeof createImageBitmap === "function") {
@@ -45,14 +72,30 @@ function release(src: Decoded) {
   if ("close" in src && typeof src.close === "function") src.close();
 }
 
-function canvasToBlob(canvas: HTMLCanvasElement, type: string, quality?: number): Promise<Blob> {
+/** OffscreenCanvas keeps the work off the DOM (and off the main-thread layout) when the browser has it. */
+function createCanvas(w: number, h: number): AnyCanvas {
+  if (typeof OffscreenCanvas !== "undefined") return new OffscreenCanvas(w, h);
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  return canvas;
+}
+
+function context2d(canvas: AnyCanvas, options?: CanvasRenderingContext2DSettings): Ctx2D {
+  const ctx = (canvas as HTMLCanvasElement).getContext("2d", options) as Ctx2D | null;
+  if (!ctx) throw new Error("Canvas no disponible");
+  return ctx;
+}
+
+function canvasToBlob(canvas: AnyCanvas, type: string, quality?: number): Promise<Blob> {
+  if ("convertToBlob" in canvas) return canvas.convertToBlob({ type, quality });
   return new Promise((resolve, reject) => {
     canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error("No se pudo generar la imagen"))), type, quality);
   });
 }
 
 /** WebP when the browser can encode it (Safari < 16 cannot); JPEG otherwise. */
-async function encodeWebp(canvas: HTMLCanvasElement, quality: number): Promise<Blob> {
+async function encodeWebp(canvas: AnyCanvas, quality: number): Promise<Blob> {
   const blob = await canvasToBlob(canvas, "image/webp", quality);
   if (blob.type === "image/webp") return blob;
   return canvasToBlob(canvas, "image/jpeg", 0.9);
@@ -67,11 +110,8 @@ export async function downscaleImage(file: Blob, maxSide = MAX_SIDE, quality = 0
     const scale = Math.min(1, maxSide / Math.max(w, h));
     const cw = Math.max(1, Math.round(w * scale));
     const ch = Math.max(1, Math.round(h * scale));
-    const canvas = document.createElement("canvas");
-    canvas.width = cw;
-    canvas.height = ch;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) throw new Error("Canvas no disponible");
+    const canvas = createCanvas(cw, ch);
+    const ctx = context2d(canvas);
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, cw, ch);
     ctx.imageSmoothingQuality = "high";
@@ -82,15 +122,12 @@ export async function downscaleImage(file: Blob, maxSide = MAX_SIDE, quality = 0
   }
 }
 
-function squareThumbFromCanvas(source: HTMLCanvasElement | Decoded, sw: number, sh: number, size: number): Promise<Blob> {
+function squareThumbFromCanvas(source: AnyCanvas | Decoded, sw: number, sh: number, size: number): Promise<Blob> {
   const side = Math.min(sw, sh);
   const sx = Math.floor((sw - side) / 2);
   const sy = Math.floor((sh - side) / 2);
-  const canvas = document.createElement("canvas");
-  canvas.width = size;
-  canvas.height = size;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("Canvas no disponible");
+  const canvas = createCanvas(size, size);
+  const ctx = context2d(canvas);
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, 0, size, size);
   ctx.imageSmoothingQuality = "high";
@@ -109,72 +146,116 @@ export async function makeThumb(source: Blob, size = THUMB_SIZE): Promise<Blob> 
   }
 }
 
+function drawContactShadow(ctx: Ctx2D, g: ShadowGeometry) {
+  // A radial gradient drawn under a non-uniform scale becomes a soft-edged ellipse;
+  // no `filter` needed, so it renders the same on every browser.
+  ctx.save();
+  ctx.translate(g.cx, g.cy);
+  ctx.scale(g.rx, g.ry);
+  const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, 1);
+  grad.addColorStop(0, `rgba(0,0,0,${g.opacity})`);
+  grad.addColorStop(0.55, `rgba(0,0,0,${g.opacity * 0.6})`);
+  grad.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = grad;
+  ctx.fillRect(-1, -1, 2, 2);
+  ctx.restore();
+}
+
+export interface CompositeOptions {
+  /** Output side in pixels. */
+  size?: number;
+  /** Fraction of the side taken by the product's longer dimension. */
+  fill?: number;
+  /** Soft contact shadow under the product. */
+  shadow?: boolean;
+  /** Levels, white balance, saturation and sharpening on the product pixels. */
+  studio?: boolean;
+}
+
 export interface CompositeResult {
   processed: Blob;
   thumb: Blob;
   /** Fraction of the frame occupied by the detected object (0–1); low values suggest a bad cut-out. */
   coverage: number;
+  /** Specks removed from the mask. */
+  islandsRemoved: number;
 }
 
 /**
- * Paint a transparent cut-out on pure white: find the bounding box of visible pixels
- * (alpha > 10), add a 6 % margin, center it in a 1200×1200 square. Also builds the thumbnail.
+ * Paint a transparent cut-out as a catalog photo: clean the mask, apply the studio finish to
+ * the product pixels, center it on pure white at 82 % of the side with a soft contact shadow.
+ * Also builds the thumbnail.
  */
-export async function compositeOnWhite(transparent: Blob, size = PROCESSED_SIZE, margin = MARGIN_PCT): Promise<CompositeResult> {
+export async function compositeOnWhite(transparent: Blob, options: CompositeOptions = {}): Promise<CompositeResult> {
+  const { size = PROCESSED_SIZE, fill = CATALOG_FILL, shadow = true, studio = true } = options;
   const src = await decode(transparent);
   try {
-    const { w, h } = sizeOf(src);
-    const work = document.createElement("canvas");
-    work.width = w;
-    work.height = h;
-    const wctx = work.getContext("2d", { willReadFrequently: true });
-    if (!wctx) throw new Error("Canvas no disponible");
-    wctx.drawImage(src, 0, 0);
+    const { w: sw, h: sh } = sizeOf(src);
+    if (!sw || !sh) throw new Error("La imagen está vacía");
+    // Work at ≤ 1600 px (the original already is; this guards other inputs) to keep phones responsive.
+    const workScale = Math.min(1, MAX_SIDE / Math.max(sw, sh));
+    const w = Math.max(1, Math.round(sw * workScale));
+    const h = Math.max(1, Math.round(sh * workScale));
+    const work = createCanvas(w, h);
+    const wctx = context2d(work, { willReadFrequently: true });
+    wctx.imageSmoothingQuality = "high";
+    wctx.drawImage(src, 0, 0, w, h);
     const data = wctx.getImageData(0, 0, w, h).data;
 
-    let minX = w;
-    let minY = h;
-    let maxX = -1;
-    let maxY = -1;
-    let visible = 0;
-    for (let y = 0; y < h; y++) {
-      const row = y * w * 4;
-      for (let x = 0; x < w; x++) {
-        if (data[row + x * 4 + 3] > ALPHA_THRESHOLD) {
-          visible++;
-          if (x < minX) minX = x;
-          if (x > maxX) maxX = x;
-          if (y < minY) minY = y;
-          if (y > maxY) maxY = y;
-        }
-      }
-    }
-    if (maxX < 0) {
-      minX = 0;
-      minY = 0;
-      maxX = w - 1;
-      maxY = h - 1;
-    }
-    const bw = maxX - minX + 1;
-    const bh = maxY - minY + 1;
-    const side = Math.max(bw, bh) * (1 + margin * 2);
+    const alpha = new Uint8Array(w * h);
+    for (let i = 0; i < w * h; i++) alpha[i] = data[i * 4 + 3];
+    const islands = removeSmallIslands(alpha, w, h);
+    const box = alphaBoundingBox(alpha, w, h);
+    const coverage = box ? box.area / (w * h) : 0;
 
-    const out = document.createElement("canvas");
-    out.width = size;
-    out.height = size;
-    const octx = out.getContext("2d");
-    if (!octx) throw new Error("Canvas no disponible");
+    const out = createCanvas(size, size);
+    const octx = context2d(out);
     octx.fillStyle = "#ffffff";
     octx.fillRect(0, 0, size, size);
     octx.imageSmoothingQuality = "high";
-    const scale = size / side;
-    const dw = bw * scale;
-    const dh = bh * scale;
-    octx.drawImage(work, minX, minY, bw, bh, (size - dw) / 2, (size - dh) / 2, dw, dh);
+
+    if (!box) {
+      // Nothing detected: keep the whole frame, centered with the same framing.
+      const layout = catalogLayout(w, h, size, fill);
+      octx.drawImage(work, 0, 0, w, h, layout.dx, layout.dy, layout.dw, layout.dh);
+    } else {
+      // Crop the product (plus a transparent pad) into its own buffer: every filter below runs on it only.
+      const rx = Math.max(0, box.minX - EDGE_PAD);
+      const ry = Math.max(0, box.minY - EDGE_PAD);
+      const rw = Math.min(w, box.maxX + EDGE_PAD + 1) - rx;
+      const rh = Math.min(h, box.maxY + EDGE_PAD + 1) - ry;
+      const region = new Uint8ClampedArray(rw * rh * 4);
+      const regionAlpha = new Uint8Array(rw * rh);
+      for (let y = 0; y < rh; y++) {
+        const srcStart = (ry + y) * w + rx;
+        region.set(data.subarray(srcStart * 4, (srcStart + rw) * 4), y * rw * 4);
+        regionAlpha.set(alpha.subarray(srcStart, srcStart + rw), y * rw);
+      }
+
+      if (studio) {
+        // Statistics on solid pixels only; the same LUT and gains apply to the whole product.
+        const levels = levelsFromHistogram(luminanceHistogram(region, regionAlpha));
+        const gains = grayWorldGains(channelMeans(region, regionAlpha));
+        applyColorAdjustments(region, { lut: levels.gain !== 1 ? buildLevelsLut(levels.low, levels.high) : undefined, gains, saturation: SATURATION_BOOST });
+      }
+      // Matte choke: drop the outermost pixel ring (where the old background bleeds in) and feather 1–2 px.
+      erodeAlpha(regionAlpha, rw, rh, 1);
+      featherAlpha(regionAlpha, rw, rh, 1, 2);
+      for (let i = 0; i < rw * rh; i++) region[i * 4 + 3] = regionAlpha[i];
+      if (studio) unsharpMask(region, rw, rh);
+
+      const regionCanvas = createCanvas(rw, rh);
+      context2d(regionCanvas).putImageData(new ImageData(region, rw, rh), 0, 0);
+
+      const layout = catalogLayout(box.width, box.height, size, fill);
+      if (shadow) drawContactShadow(octx, contactShadowGeometry(layout));
+      const s = layout.scale;
+      octx.drawImage(regionCanvas, 0, 0, rw, rh, layout.dx - (box.minX - rx) * s, layout.dy - (box.minY - ry) * s, rw * s, rh * s);
+    }
 
     const processed = await encodeWebp(out, 0.85);
     const thumb = await squareThumbFromCanvas(out, size, size, THUMB_SIZE);
-    return { processed, thumb, coverage: visible / (w * h) };
+    return { processed, thumb, coverage, islandsRemoved: islands.removed };
   } finally {
     release(src);
   }
@@ -220,4 +301,12 @@ export function extensionFor(blob: Blob): string {
   if (blob.type === "image/webp") return "webp";
   if (blob.type === "image/png") return "png";
   return "jpg";
+}
+
+/** Decode a base64 payload (server action result) into a Blob. */
+export function base64ToBlob(base64: string, type: string): Blob {
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return new Blob([bytes], { type });
 }

@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { can, requireUser } from "@/lib/auth-guards";
 import { formatDate, formatDateTime, formatPct, formatQty } from "@/lib/format";
 import { D } from "@/lib/money";
+import { isAiPhotoEnabled } from "@/modules/catalog/application/photo-ai";
 import { priceMargin } from "@/modules/catalog/domain/pricing";
 import { getProductDetail } from "@/modules/catalog/infrastructure/product-detail";
 import { BarcodeManager } from "@/modules/catalog/ui/barcode-manager";
@@ -20,6 +21,9 @@ import { ProductStatusActions } from "@/modules/catalog/ui/product-status-action
 import { getDefaultLocation } from "@/modules/core/application/context";
 import { displayAmounts } from "@/modules/currency/domain/conversion";
 import { getRatesSnapshot } from "@/modules/currency/infrastructure/rates";
+
+// "Estilo catálogo con IA" (server action of this page) can take 10–20 s: allow up to 60 s on Vercel.
+export const maxDuration = 60;
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -79,7 +83,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
             <CardTitle>Fotos</CardTitle>
           </CardHeader>
           <CardContent>
-            <ProductGallery productId={product.id} productName={product.name} images={product.images} canEdit={canManage} />
+            <ProductGallery productId={product.id} productName={product.name} images={product.images} canEdit={canManage} aiEnabled={isAiPhotoEnabled()} />
           </CardContent>
         </Card>
 
@@ -295,8 +299,8 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
                     <TableHead>Tipo</TableHead>
                     <TableHead className="text-right">Cantidad</TableHead>
                     <TableHead className="text-right">Saldo</TableHead>
-                    {showCosts ? <TableHead className="text-right">Costo</TableHead> : null}
-                    <TableHead>Usuario</TableHead>
+                    {showCosts ? <TableHead className="hidden text-right md:table-cell">Costo</TableHead> : null}
+                    <TableHead className="hidden md:table-cell">Usuario</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -313,11 +317,11 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
                       </TableCell>
                       <TableCell className="text-right tabular-nums">{formatQty(m.balanceAfter, product.unit.decimals)}</TableCell>
                       {showCosts ? (
-                        <TableCell className="text-right">
+                        <TableCell className="hidden text-right md:table-cell">
                           <Money value={m.unitCostUsd} />
                         </TableCell>
                       ) : null}
-                      <TableCell className="text-muted-foreground">{m.userName ?? "—"}</TableCell>
+                      <TableCell className="text-muted-foreground hidden md:table-cell">{m.userName ?? "—"}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

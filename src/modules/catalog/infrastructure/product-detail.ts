@@ -26,6 +26,7 @@ import {
 import { D } from "@/lib/money";
 import { getStorage } from "@/lib/storage";
 import type { StockStatus } from "@/modules/inventory/domain/velocity";
+import { isAiImagePath } from "../domain/photo-paths";
 import { NEW_BRAND_OPTION, type ProductFormValues } from "../domain/product-schema";
 import { getPriceListIds } from "./catalog-options";
 import { rowStatus } from "./products-list";
@@ -36,6 +37,8 @@ export interface ProductImageView {
   thumbUrl: string;
   originalUrl: string;
   status: "pending" | "processed" | "original_only" | "failed";
+  /** The shown version is the AI catalog photo (can go back to the cut-out). */
+  isAi: boolean;
   isPrimary: boolean;
   sortOrder: number;
 }
@@ -212,6 +215,7 @@ export async function getProductDetail(id: string, warehouseId: string, dbx: DbO
       thumbUrl: storage.publicUrl("product-photos", img.thumbPath ?? img.processedPath ?? img.originalPath),
       originalUrl: storage.publicUrl("product-photos", img.originalPath),
       status: img.status,
+      isAi: isAiImagePath(img.processedPath),
       isPrimary: img.isPrimary,
       sortOrder: img.sortOrder,
     })),

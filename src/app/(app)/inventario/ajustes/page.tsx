@@ -45,6 +45,28 @@ export default async function AdjustmentsPage({ searchParams }: { searchParams: 
           action={<Button render={<Link href="/inventario/ajustes/nuevo" />}>Nuevo ajuste</Button>}
         />
       ) : (
+        <>
+          {/* Phones: one card per adjustment */}
+          <ul className="space-y-2 md:hidden">
+            {rows.map((a) => (
+              <li key={a.id}>
+                <Link href={`/inventario/ajustes/${a.id}`} className="bg-card active:bg-muted/50 block rounded-xl border p-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="font-medium">{a.number ?? "Borrador"}</span>
+                    <AdjustmentStatusBadge status={a.status} />
+                  </div>
+                  <p className="mt-0.5 text-sm">{a.reasonName}</p>
+                  {a.notes ? <p className="text-muted-foreground truncate text-xs">{a.notes}</p> : null}
+                  <p className="text-muted-foreground mt-1 text-xs">
+                    {formatDateTime(a.appliedAt ?? a.createdAt)} · {a.itemCount} {a.itemCount === 1 ? "producto" : "productos"} · {a.createdByName}
+                  </p>
+                </Link>
+              </li>
+            ))}
+          </ul>
+
+          {/* Wider screens: table */}
+          <div className="hidden md:block">
         <Table>
           <TableHeader>
             <TableRow>
@@ -78,6 +100,8 @@ export default async function AdjustmentsPage({ searchParams }: { searchParams: 
             ))}
           </TableBody>
         </Table>
+          </div>
+        </>
       )}
       <Pagination page={page} total={total} basePath="/inventario/ajustes" params={params} />
     </div>

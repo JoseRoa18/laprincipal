@@ -28,11 +28,13 @@ export interface ProductFormProps {
   initialValues: ProductFormValues;
   options: ProductFormOptions;
   canViewCosts: boolean;
+  /** Server has GEMINI_API_KEY: shows "Estilo catálogo con IA" in the photo step. */
+  aiPhotosEnabled?: boolean;
 }
 
 const fmtMoney = (d: { toFixed: (n: number) => string; isZero: () => boolean }) => (d.isZero() ? "" : d.toFixed(2).replace(".", ","));
 
-export function ProductForm({ mode, productId, initialValues, options, canViewCosts }: ProductFormProps) {
+export function ProductForm({ mode, productId, initialValues, options, canViewCosts, aiPhotosEnabled = false }: ProductFormProps) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<string | null>(null);
@@ -156,7 +158,7 @@ export function ProductForm({ mode, productId, initialValues, options, canViewCo
             <CardDescription>Toma la foto con el celular; la app la deja con fondo blanco. Puedes agregar varias; la primera será la principal.</CardDescription>
           </CardHeader>
           <CardContent>
-            <PhotoCapture key={photoKey} disabled={busy} onChange={(accepted, processing) => { setPhotos(accepted); setProcessingPhotos(processing); }} />
+            <PhotoCapture key={photoKey} disabled={busy} aiEnabled={aiPhotosEnabled} onChange={(accepted, processing) => { setPhotos(accepted); setProcessingPhotos(processing); }} />
           </CardContent>
         </Card>
       ) : null}
@@ -271,8 +273,9 @@ export function ProductForm({ mode, productId, initialValues, options, canViewCo
                 <option key={t} value={t} />
               ))}
             </datalist>
+            {/* Phones: two per row (type + brand, then model + remove); wider: one row. */}
             {compatibilities.fields.map((row, index) => (
-              <div key={row.id} className="grid grid-cols-[1fr_1fr_1fr_auto] gap-2">
+              <div key={row.id} className="grid grid-cols-2 gap-2 sm:grid-cols-[1fr_1fr_1fr_auto]">
                 <div>
                   <Input list="appliance-types" placeholder="Tipo (Nevera)" aria-label="Tipo de aparato" className={controlClass} {...register(`compatibilities.${index}.applianceType`)} />
                 </div>
@@ -283,7 +286,7 @@ export function ProductForm({ mode, productId, initialValues, options, canViewCo
                   <Input placeholder="Modelo (RMS400)" aria-label="Modelo del aparato" className={controlClass} {...register(`compatibilities.${index}.model`)} />
                   {err(`compatibilities.${index}.model`) ? <p className="text-destructive mt-1 text-xs">{err(`compatibilities.${index}.model`)}</p> : null}
                 </div>
-                <Button type="button" variant="ghost" size="icon" className="size-11 md:size-10" aria-label="Quitar compatibilidad" onClick={() => compatibilities.remove(index)}>
+                <Button type="button" variant="ghost" size="icon" className="size-11 justify-self-end md:size-10" aria-label="Quitar compatibilidad" onClick={() => compatibilities.remove(index)}>
                   <Trash2 />
                 </Button>
               </div>
@@ -295,16 +298,24 @@ export function ProductForm({ mode, productId, initialValues, options, canViewCo
 
           <div className="space-y-3">
             <p className="text-sm font-medium">Códigos equivalentes</p>
+            {/* Phones: code + remove on the first row, brand below; wider: one row. */}
             {equivalences.fields.map((row, index) => (
-              <div key={row.id} className="grid grid-cols-[1fr_1fr_auto] gap-2">
+              <div key={row.id} className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 sm:grid-cols-[1fr_1fr_auto]">
                 <div>
                   <Input placeholder="Código (FFI12HBX)" aria-label="Código equivalente" className={controlClass} {...register(`equivalences.${index}.code`)} />
                   {err(`equivalences.${index}.code`) ? <p className="text-destructive mt-1 text-xs">{err(`equivalences.${index}.code`)}</p> : null}
                 </div>
-                <div>
+                <div className="col-span-2 sm:col-span-1">
                   <Input placeholder="Marca (opcional)" aria-label="Marca del código equivalente" className={controlClass} {...register(`equivalences.${index}.brand`)} />
                 </div>
-                <Button type="button" variant="ghost" size="icon" className="size-11 md:size-10" aria-label="Quitar equivalencia" onClick={() => equivalences.remove(index)}>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="col-start-2 row-start-1 size-11 sm:col-start-auto sm:row-start-auto md:size-10"
+                  aria-label="Quitar equivalencia"
+                  onClick={() => equivalences.remove(index)}
+                >
                   <Trash2 />
                 </Button>
               </div>

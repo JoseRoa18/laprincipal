@@ -17,7 +17,7 @@ interface Props {
 export function HoldDialog({ open, onOpenChange, initialLabel, onSubmit }: Props) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-sm">
+      <DialogContent className="max-h-[90svh] overflow-y-auto sm:max-w-sm">
         <HoldForm initialLabel={initialLabel} onSubmit={onSubmit} onDone={() => onOpenChange(false)} />
       </DialogContent>
     </Dialog>

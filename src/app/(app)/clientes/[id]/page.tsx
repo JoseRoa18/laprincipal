@@ -129,7 +129,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
                 <TableRow>
                   <TableHead>Número</TableHead>
                   <TableHead>Fecha</TableHead>
-                  <TableHead>Vendedor</TableHead>
+                  <TableHead className="hidden md:table-cell">Vendedor</TableHead>
                   <TableHead>Estado</TableHead>
                   <TableHead className="text-right">Total</TableHead>
                 </TableRow>
@@ -143,7 +143,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
                       </Link>
                     </TableCell>
                     <TableCell>{formatDateTime(s.saleDate)}</TableCell>
-                    <TableCell>{s.sellerName}</TableCell>
+                    <TableCell className="hidden md:table-cell">{s.sellerName}</TableCell>
                     <TableCell>
                       <Badge variant={s.status === "completed" ? "outline" : "secondary"}>{SALE_STATUS[s.status] ?? s.status}</Badge>
                     </TableCell>
@@ -169,7 +169,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
                 <TableRow>
                   <TableHead>Número</TableHead>
                   <TableHead>Fecha</TableHead>
-                  <TableHead>Vence</TableHead>
+                  <TableHead className="hidden md:table-cell">Vence</TableHead>
                   <TableHead>Estado</TableHead>
                   <TableHead className="text-right">Total</TableHead>
                 </TableRow>
@@ -183,7 +183,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
                       </Link>
                     </TableCell>
                     <TableCell>{formatDateTime(q.createdAt)}</TableCell>
-                    <TableCell>{formatDate(q.validUntil)}</TableCell>
+                    <TableCell className="hidden md:table-cell">{formatDate(q.validUntil)}</TableCell>
                     <TableCell>
                       <Badge variant="outline">{QUOTE_STATUS[q.status] ?? q.status}</Badge>
                     </TableCell>

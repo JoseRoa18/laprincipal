@@ -52,6 +52,35 @@ export default async function ReceiptsPage({ searchParams }: { searchParams: Pro
           action={<Button render={<Link href="/compras/entradas/nueva" />}>Nueva entrada</Button>}
         />
       ) : (
+        <>
+          {/* Phones: one card per receipt */}
+          <ul className="space-y-2 md:hidden">
+            {rows.map((r) => (
+              <li key={r.id}>
+                <Link href={`/compras/entradas/${r.id}`} className="bg-card active:bg-muted/50 block rounded-xl border p-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="font-medium">{r.number ?? "Borrador"}</span>
+                    <ReceiptStatusBadge status={r.status} />
+                  </div>
+                  <p className="mt-0.5 truncate text-sm">{r.supplierName}</p>
+                  <p className="text-muted-foreground text-xs">
+                    {formatDate(r.receiptDate)}
+                    {r.supplierDocument ? ` · Doc. ${r.supplierDocument}` : ""} · {r.currencyCode}
+                    {r.currencyCode !== "USD" ? ` a ${formatMoney(r.exchangeRate, r.currencyCode, { symbol: "" }).trim()}` : ""}
+                  </p>
+                  <div className="mt-2 flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground text-xs">
+                      {r.itemCount} {r.itemCount === 1 ? "producto" : "productos"}
+                    </span>
+                    <Money value={r.totalUsd} currency="USD" className="font-semibold" />
+                  </div>
+                </Link>
+              </li>
+            ))}
+          </ul>
+
+          {/* Wider screens: table */}
+          <div className="hidden md:block">
         <Table>
           <TableHeader>
             <TableRow>
@@ -91,6 +120,8 @@ export default async function ReceiptsPage({ searchParams }: { searchParams: Pro
             ))}
           </TableBody>
         </Table>
+          </div>
+        </>
       )}
       <Pagination page={page} total={total} basePath="/compras/entradas" params={params} />
     </div>

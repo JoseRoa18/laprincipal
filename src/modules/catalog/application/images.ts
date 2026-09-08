@@ -5,6 +5,7 @@ import { productImages, products } from "@/db/schema";
 import { AppError, notFound } from "@/lib/errors";
 import { getStorage } from "@/lib/storage";
 import { writeAudit } from "@/modules/core/application/audit";
+import { candidatePaths, imageBasePath, newAiStamp } from "../domain/photo-paths";
 import type { ActorUser } from "./catalog-shared";
 
 export const PHOTO_BUCKET = "product-photos" as const;
@@ -21,12 +22,15 @@ export interface AddImageInput {
   /** White-background square version (WebP), when background removal succeeded. */
   processed?: ImageFile | null;
   thumb?: ImageFile | null;
+  /** AI catalog version generated before the upload (create form). When present it becomes the shown version. */
+  ai?: ImageFile | null;
+  aiThumb?: ImageFile | null;
   status: "processed" | "original_only";
 }
 
 const EXTENSIONS: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
 
-function extensionFor(contentType: string): string {
+export function extensionFor(contentType: string): string {
   const ext = EXTENSIONS[contentType];
   if (!ext) throw new AppError("VALIDATION", "Formato de imagen no permitido. Usa JPG, PNG o WebP.");
   return ext;
@@ -42,7 +46,7 @@ export async function addProductImage(input: AddImageInput, user: ActorUser) {
 
   const storage = getStorage();
   const imageId = randomUUID();
-  const base = `products/${input.productId}/${imageId}`;
+  const base = imageBasePath(input.productId, imageId);
   const stored: string[] = [];
 
   const put = async (suffix: string, file: ImageFile) => {
@@ -54,8 +58,15 @@ export async function addProductImage(input: AddImageInput, user: ActorUser) {
 
   try {
     const originalPath = await put("original", input.original);
-    const processedPath = input.processed ? await put("processed", input.processed) : null;
-    const thumbPath = input.thumb ? await put("thumb", input.thumb) : null;
+    const cutoutPath = input.processed ? await put("processed", input.processed) : null;
+    const cutoutThumbPath = input.thumb ? await put("thumb", input.thumb) : null;
+    let processedPath = cutoutPath;
+    let thumbPath = cutoutThumbPath;
+    if (input.ai) {
+      const stamp = newAiStamp();
+      processedPath = await put(`ai-${stamp}`, input.ai);
+      thumbPath = input.aiThumb ? await put(`ai-${stamp}-thumb`, input.aiThumb) : cutoutThumbPath;
+    }
 
     return await db.transaction(async (tx) => {
       const [{ total }] = await tx.select({ total: count() }).from(productImages).where(eq(productImages.productId, input.productId));
@@ -70,7 +81,7 @@ export async function addProductImage(input: AddImageInput, user: ActorUser) {
           thumbPath,
           sortOrder: (maxSort ?? 0) + 1,
           isPrimary: Number(total) === 0,
-          status: input.status,
+          status: processedPath ? "processed" : input.status,
           createdBy: user.id,
         })
         .returning();
@@ -112,7 +123,10 @@ export async function deleteProductImage(productId: string, imageId: string, use
     return img;
   });
   const storage = getStorage();
-  for (const path of [row.originalPath, row.processedPath, row.thumbPath]) {
+  // The row points at one version, but the cut-out and its thumbnail may still exist next to an AI version.
+  const base = imageBasePath(productId, imageId);
+  const paths = new Set([row.originalPath, row.processedPath, row.thumbPath, ...candidatePaths(base, "processed"), ...candidatePaths(base, "thumb")]);
+  for (const path of paths) {
     if (path) await storage.delete(PHOTO_BUCKET, path).catch(() => undefined);
   }
 }

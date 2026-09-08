@@ -45,7 +45,7 @@ interface Props {
 export function DiscountDialog({ open, onOpenChange, value, subtotalUsd, maxDiscountPct, onSave }: Props) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-sm">
+      <DialogContent className="max-h-[90svh] overflow-y-auto sm:max-w-sm">
         <DiscountForm
           value={value}
           subtotalUsd={subtotalUsd}

@@ -42,6 +42,13 @@ Verificación automática: `pnpm typecheck`, `pnpm lint`, `pnpm test`, y `pnpm e
 - Sugerencias de esquema para una futura migración: secuencias para SKU y códigos internos; índices únicos parciales en `product_barcodes` (INTERNAL) y `product_images` (primaria); `purchase_receipts.applied_by`; `import_jobs.file_path` opcional.
 - `src/modules/reporting/domain/abc.ts` duplica `abcClassify` (ya corregido en la compartida); unificar.
 
+## Mejoras posteriores (2026-09-08, tarde)
+
+- Tema visual "industrial azul" y animaciones sutiles con respeto a "reducir movimiento".
+- Producción: driver `pg` (node-postgres) con el transaction pooler de Supabase; el session pooler admite solo 15 clientes y postgres.js colgaba consultas concurrentes.
+- Fotos: acabado de estudio automático (niveles, balance de blancos, bordes sin halo, encuadre uniforme, sombra suave) y modo opcional "Estilo catálogo con IA" (Gemini, activo solo con `GEMINI_API_KEY`). Informe: `docs/reportes/fotos-catalogo.md`.
+- Revisión móvil completa con Playwright (`scripts/qa-mobile.ts`): 60 rutas × celular y tablet más 52 diálogos, sin desbordes ni objetivos táctiles pequeños. Informe: `docs/reportes/qa-movil.md`.
+
 ## Próximos pasos
 
 1. Publicar: repositorio privado en GitHub, proyecto en Supabase y en Vercel según `docs/07-despliegue.md` (requiere autorización y cuentas del dueño).

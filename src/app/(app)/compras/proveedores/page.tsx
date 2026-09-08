@@ -48,6 +48,29 @@ export default async function SuppliersPage({ searchParams }: { searchParams: Pr
           action={q ? undefined : <Button render={<Link href="/compras/proveedores/nuevo" />}>Nuevo proveedor</Button>}
         />
       ) : (
+        <>
+          {/* Phones: one card per supplier */}
+          <ul className="space-y-2 md:hidden">
+            {rows.map((s) => (
+              <li key={s.id}>
+                <Link href={`/compras/proveedores/${s.id}`} className="bg-card active:bg-muted/50 block rounded-xl border p-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="min-w-0 truncate font-medium">{s.name}</span>
+                    {s.isActive ? <Badge variant="outline">Activo</Badge> : <Badge variant="secondary">Inactivo</Badge>}
+                  </div>
+                  <p className="text-muted-foreground text-xs">
+                    {[s.taxId, s.contactName, s.phone].filter(Boolean).join(" · ") || "Sin datos de contacto"}
+                  </p>
+                  <p className="text-muted-foreground mt-1 text-xs tabular-nums">
+                    {s.currencyCode} · entrega {s.leadTimeDays} días · {s.productCount} {s.productCount === 1 ? "producto" : "productos"}
+                  </p>
+                </Link>
+              </li>
+            ))}
+          </ul>
+
+          {/* Wider screens: table */}
+          <div className="hidden md:block">
         <Table>
           <TableHeader>
             <TableRow>
@@ -80,6 +103,8 @@ export default async function SuppliersPage({ searchParams }: { searchParams: Pr
             ))}
           </TableBody>
         </Table>
+          </div>
+        </>
       )}
       <Pagination page={page} total={total} basePath="/compras/proveedores" params={params} />
     </div>

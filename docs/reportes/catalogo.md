@@ -49,6 +49,8 @@ Fecha: 2026-09-08. Rutas bajo `/productos/**`, módulo `src/modules/catalog`, AP
 
 ## 3. Fotos con IA (pipeline en el navegador)
 
+> Actualización 2026-09-08: el recorte ahora termina con un "acabado de estudio" (niveles, balance de blancos, nitidez, borde sin halo, encuadre al 82 % y sombra de contacto) y existe un modo opcional "Estilo catálogo con IA" (Gemini, servidor) con comparación antes/después y "Volver al recorte". Detalles en `docs/reportes/fotos-catalogo.md`.
+
 `photo-capture.tsx` + `photo-pipeline.ts`: `<input capture="environment">` o galería (varias) → reducción a 1600 px JPEG 0,9 (original) → `@imgly/background-removal` vía `import()` dinámico (`isnet_quint8` en celular, `isnet_fp16` en PC, modelo desde el CDN por defecto, barra de progreso "Descargando el modelo" / "Recortando el fondo") → recorte sobre blanco: caja de píxeles con alfa > 10, margen 6 %, centrado en 1200 × 1200, WebP 0,85 (JPEG si el navegador no codifica WebP) + miniatura 300 × 300 → vista lado a lado con "Usar mejorada", "Conservar original", "Repetir". Si falla o tarda más de 60 s, queda `original_only`. Al crear, las fotos aceptadas se guardan en memoria y se suben una por una con `uploadProductPhotoAction` (FormData, tope 12 MB) después de crear el producto; en editar/detalle se suben al aceptar. Rutas: `products/<productId>/<imageId>-original.jpg|processed.webp|thumb.webp` en el bucket `product-photos`; la primera foto es la principal.
 
 ## 4. Cómo probar a mano

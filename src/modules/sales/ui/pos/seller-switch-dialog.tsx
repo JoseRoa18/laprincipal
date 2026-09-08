@@ -21,7 +21,7 @@ interface Props {
 export function SellerSwitchDialog({ open, onOpenChange, config }: Props) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-sm">
+      <DialogContent className="max-h-[90svh] overflow-y-auto sm:max-w-sm">
         <SellerSwitchForm config={config} onDone={() => onOpenChange(false)} />
       </DialogContent>
     </Dialog>

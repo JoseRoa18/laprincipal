@@ -275,7 +275,7 @@ export function CountSheet({
                   <TableHead className="text-right">Sistema</TableHead>
                   <TableHead className="text-right">Contado</TableHead>
                   <TableHead className="text-right">Diferencia</TableHead>
-                  {showCosts ? <TableHead className="text-right">Valor</TableHead> : null}
+                  {showCosts ? <TableHead className="hidden text-right md:table-cell">Valor</TableHead> : null}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -298,7 +298,7 @@ export function CountSheet({
                           {formatQty(d, i.unitDecimals)} {i.unitSymbol}
                         </TableCell>
                         {showCosts ? (
-                          <TableCell className="text-right">
+                          <TableCell className="hidden text-right md:table-cell">
                             <Money value={d * Number(i.costAvgUsd)} currency="USD" colored />
                           </TableCell>
                         ) : null}
@@ -314,7 +314,7 @@ export function CountSheet({
                   </TableCell>
                   <TableCell />
                   {showCosts ? (
-                    <TableCell className="text-right">
+                    <TableCell className="hidden text-right md:table-cell">
                       <Money value={diffValue} currency="USD" colored />
                     </TableCell>
                   ) : null}

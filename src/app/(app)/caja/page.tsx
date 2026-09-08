@@ -151,9 +151,9 @@ export default async function CashPage() {
                 <TableRow>
                   <TableHead>Método</TableHead>
                   <TableHead>Moneda</TableHead>
-                  <TableHead className="text-right">Pagos</TableHead>
+                  <TableHead className="hidden text-right md:table-cell">Pagos</TableHead>
                   <TableHead className="text-right">Cobrado</TableHead>
-                  <TableHead className="text-right">Devuelto</TableHead>
+                  <TableHead className="hidden text-right md:table-cell">Devuelto</TableHead>
                   <TableHead className="text-right">En USD</TableHead>
                 </TableRow>
               </TableHeader>
@@ -169,11 +169,11 @@ export default async function CashPage() {
                       ) : null}
                     </TableCell>
                     <TableCell>{m.currencyCode}</TableCell>
-                    <TableCell className="text-right tabular-nums">{m.count}</TableCell>
+                    <TableCell className="hidden text-right tabular-nums md:table-cell">{m.count}</TableCell>
                     <TableCell className="text-right">
                       <Money value={m.amount} currency={m.currencyCode} />
                     </TableCell>
-                    <TableCell className="text-right">{D(m.refundsAmount).gt(0) ? <Money value={m.refundsAmount} currency={m.currencyCode} /> : "—"}</TableCell>
+                    <TableCell className="hidden text-right md:table-cell">{D(m.refundsAmount).gt(0) ? <Money value={m.refundsAmount} currency={m.currencyCode} /> : "—"}</TableCell>
                     <TableCell className="text-right">
                       <Money value={D(m.amountUsd).minus(m.refundsAmountUsd)} currency="USD" />
                     </TableCell>

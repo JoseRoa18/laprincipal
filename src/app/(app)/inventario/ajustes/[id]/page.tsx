@@ -84,9 +84,9 @@ export default async function AdjustmentDetailPage({ params }: { params: Promise
           <TableRow>
             <TableHead>Producto</TableHead>
             <TableHead className="text-right">Cantidad</TableHead>
-            {showCosts ? <TableHead className="text-right">Costo unit.</TableHead> : null}
+            {showCosts ? <TableHead className="hidden text-right md:table-cell">Costo unit.</TableHead> : null}
             {showCosts ? <TableHead className="text-right">Total</TableHead> : null}
-            <TableHead>Nota</TableHead>
+            <TableHead className="hidden md:table-cell">Nota</TableHead>
             <TableHead />
           </TableRow>
         </TableHeader>
@@ -106,7 +106,7 @@ export default async function AdjustmentDetailPage({ params }: { params: Promise
                   {formatQty(it.quantityDelta, it.unitDecimals)} {it.unitSymbol}
                 </TableCell>
                 {showCosts ? (
-                  <TableCell className="text-right">
+                  <TableCell className="hidden text-right md:table-cell">
                     <Money value={it.unitCostUsd} currency="USD" />
                   </TableCell>
                 ) : null}
@@ -115,7 +115,7 @@ export default async function AdjustmentDetailPage({ params }: { params: Promise
                     <Money value={D(it.quantityDelta).mul(D(it.unitCostUsd))} currency="USD" colored />
                   </TableCell>
                 ) : null}
-                <TableCell className="text-muted-foreground">{it.notes ?? ""}</TableCell>
+                <TableCell className="text-muted-foreground hidden md:table-cell">{it.notes ?? ""}</TableCell>
                 <TableCell className="text-right">
                   <Link href={`/inventario/movimientos?product=${it.productId}`} className="text-primary text-xs underline-offset-4 hover:underline">
                     Kardex
@@ -128,11 +128,14 @@ export default async function AdjustmentDetailPage({ params }: { params: Promise
         {showCosts ? (
           <TableFooter>
             <TableRow>
-              <TableCell colSpan={3}>Valor del ajuste a costo</TableCell>
+              {/* Same column count as the rows on phones (unit cost and notes hidden) and on wider screens. */}
+              <TableCell colSpan={2}>Valor del ajuste a costo</TableCell>
+              <TableCell className="hidden md:table-cell" />
               <TableCell className="text-right">
                 <Money value={totalValue} currency="USD" colored />
               </TableCell>
-              <TableCell colSpan={2} />
+              <TableCell className="hidden md:table-cell" />
+              <TableCell />
             </TableRow>
           </TableFooter>
         ) : null}

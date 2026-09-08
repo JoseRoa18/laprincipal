@@ -28,7 +28,7 @@ function plusDays(days: number): string {
 export function QuoteDialog({ open, onOpenChange, config }: Props) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="max-h-[90svh] overflow-y-auto sm:max-w-md">
         <QuoteForm config={config} onDone={() => onOpenChange(false)} />
       </DialogContent>
     </Dialog>

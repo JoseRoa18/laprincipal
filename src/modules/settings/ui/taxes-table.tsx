@@ -171,7 +171,7 @@ function TaxDialog({ state, onClose }: { state: DialogState; onClose: () => void
         if (!open) onClose();
       }}
     >
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="max-h-[90svh] overflow-y-auto sm:max-w-md">
         <form onSubmit={onSubmit} className="contents" noValidate>
           <DialogHeader>
             <DialogTitle>{editing ? "Editar impuesto" : "Nuevo impuesto"}</DialogTitle>

@@ -29,7 +29,7 @@ export function MobileNav({ user }: { user: SessionUser }) {
                 href={item.href}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "flex h-14 flex-col items-center justify-center gap-0.5 text-[11px] font-medium",
+                  "flex h-14 flex-col items-center justify-center gap-0.5 text-xs font-medium",
                   active ? "text-primary" : "text-muted-foreground",
                 )}
               >
@@ -43,7 +43,7 @@ export function MobileNav({ user }: { user: SessionUser }) {
           <button
             type="button"
             onClick={toggleSidebar}
-            className="text-muted-foreground flex h-14 w-full flex-col items-center justify-center gap-0.5 text-[11px] font-medium"
+            className="text-muted-foreground flex h-14 w-full flex-col items-center justify-center gap-0.5 text-xs font-medium"
           >
             <Ellipsis className="size-5" />
             Más

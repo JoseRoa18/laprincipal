@@ -44,7 +44,7 @@ interface DialogProps {
 export function CreateUserDialog({ open, onOpenChange }: DialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="max-h-[90svh] overflow-y-auto sm:max-w-md">
         <CreateUserForm onClose={() => onOpenChange(false)} />
       </DialogContent>
     </Dialog>
@@ -182,7 +182,7 @@ function CreateUserForm({ onClose }: { onClose: () => void }) {
 export function EditUserDialog({ user, isSelf, open, onOpenChange }: DialogProps & { user: UserListRow; isSelf: boolean }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="max-h-[90svh] overflow-y-auto sm:max-w-md">
         <EditUserForm user={user} isSelf={isSelf} onClose={() => onOpenChange(false)} />
       </DialogContent>
     </Dialog>
@@ -288,7 +288,7 @@ function EditUserForm({ user, isSelf, onClose }: { user: UserListRow; isSelf: bo
 export function ResetPasswordDialog({ user, open, onOpenChange }: DialogProps & { user: UserListRow }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="max-h-[90svh] overflow-y-auto sm:max-w-md">
         <ResetPasswordForm user={user} onClose={() => onOpenChange(false)} />
       </DialogContent>
     </Dialog>
@@ -374,7 +374,7 @@ function ResetPasswordForm({ user, onClose }: { user: UserListRow; onClose: () =
 export function ResetPinDialog({ user, open, onOpenChange }: DialogProps & { user: UserListRow }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="max-h-[90svh] overflow-y-auto sm:max-w-md">
         <ResetPinForm user={user} onClose={() => onOpenChange(false)} />
       </DialogContent>
     </Dialog>

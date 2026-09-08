@@ -111,8 +111,8 @@ export function StockTable({ rows, showCosts, canEdit }: { rows: StockRow[]; sho
                   <Thumb url={r.thumbUrl} className="size-12" />
                 </Link>
                 <div className="min-w-0 flex-1">
-                  <Link href={`/productos/${r.productId}`} className="block truncate font-medium">
-                    {r.name}
+                  <Link href={`/productos/${r.productId}`} className="tap-target flex min-w-0 items-center font-medium">
+                    <span className="truncate">{r.name}</span>
                   </Link>
                   <p className="text-muted-foreground truncate text-xs">{[r.partNumber, r.sku, r.locationCode].filter(Boolean).join(" · ")}</p>
                   <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
