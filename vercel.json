@@ -1,6 +1,14 @@
 {
   "crons": [
-    { "path": "/api/cron/stats", "schedule": "0 7 * * *" },
-    { "path": "/api/cron/backup", "schedule": "0 8 * * 0" }
-  ]
+    {
+      "path": "/api/cron/stats",
+      "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/cron/backup",
+      "schedule": "0 8 * * 0"
+    }
+  ],
+  "buildCommand": "pnpm db:migrate && pnpm build",
+  "framework": "nextjs"
 }
