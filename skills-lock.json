@@ -1,0 +1,149 @@
+{
+  "version": 1,
+  "skills": {
+    "codebase-design": {
+      "source": "mattpocock/skills",
+      "sourceType": "github",
+      "skillPath": "skills/engineering/codebase-design/SKILL.md",
+      "computedHash": "caea3cb8a8281ff829fd1a2b985044e77601b62f301adf43f689ccfc74c15f6f"
+    },
+    "critical-thinking-logical-reasoning": {
+      "source": "sammcj/agentic-coding",
+      "sourceType": "github",
+      "skillPath": "skills/critical-thinking-logical-reasoning/SKILL.md",
+      "computedHash": "e3d8e841828d561b5922850a708f9fc7b3783cba0a9fea171dbe81ac93de8285"
+    },
+    "cycle-counting": {
+      "source": "kishorkukreja/awesome-supply-chain",
+      "sourceType": "github",
+      "skillPath": "skills/cycle-counting/SKILL.md",
+      "computedHash": "2872be65107dd5422689f61399e1a908eae16b66bf35efc214424e7313747eff"
+    },
+    "demand-forecasting": {
+      "source": "kishorkukreja/awesome-supply-chain",
+      "sourceType": "github",
+      "skillPath": "skills/demand-forecasting/SKILL.md",
+      "computedHash": "ec0a4b2e5fcb7752999a1b0f5de937e437e3b8bf400add9b68478afde9832776"
+    },
+    "design-critique": {
+      "source": "anthropics/knowledge-work-plugins",
+      "sourceType": "github",
+      "skillPath": "design/skills/design-critique/SKILL.md",
+      "computedHash": "ef158c069ebac6747cfb9cefabdd3daaedbffd1cff1c359c46bcf303358cbb1e"
+    },
+    "design-system": {
+      "source": "anthropics/knowledge-work-plugins",
+      "sourceType": "github",
+      "skillPath": "design/skills/design-system/SKILL.md",
+      "computedHash": "12497053dd5456ed6a80e51826d17c584d422584a1d2f653b4038170e4a3348f"
+    },
+    "design-taste-frontend": {
+      "source": "leonxlnx/taste-skill",
+      "sourceType": "github",
+      "skillPath": "skills/taste-skill/SKILL.md",
+      "computedHash": "899b84384f74f540ea5284d9b2e9234e050998b42eacc805410b518d4226c0b3"
+    },
+    "economic-order-quantity": {
+      "source": "kishorkukreja/awesome-supply-chain",
+      "sourceType": "github",
+      "skillPath": "skills/economic-order-quantity/SKILL.md",
+      "computedHash": "4b280c15b9c8b42b64799f4b9ef230351690cab453126a922dca92098b98359b"
+    },
+    "high-end-visual-design": {
+      "source": "leonxlnx/taste-skill",
+      "sourceType": "github",
+      "skillPath": "skills/soft-skill/SKILL.md",
+      "computedHash": "f730e4132775f13eea19e3dc39afc6bb453cfc0498872b127ad8f0d47cfd802d"
+    },
+    "inventory-demand-planning": {
+      "source": "affaan-m/ecc",
+      "sourceType": "github",
+      "skillPath": "skills/inventory-demand-planning/SKILL.md",
+      "computedHash": "7339f44371674c1e2c5290677a27868ca593dd6ee5e353d24f1d6665e38ba1c5"
+    },
+    "inventory-optimization": {
+      "source": "kishorkukreja/awesome-supply-chain",
+      "sourceType": "github",
+      "skillPath": "skills/inventory-optimization/SKILL.md",
+      "computedHash": "18db6aa463fed603783e0baaccecb5e9c39aa9aa4a8a3aab91ae8c58a6553ac3"
+    },
+    "inventory-tracking": {
+      "source": "finsilabs/awesome-ecommerce-skills",
+      "sourceType": "github",
+      "skillPath": "skills/catalog-inventory/inventory-tracking/SKILL.md",
+      "computedHash": "8ce66b7ddc2d5245ca8084df7284ccca1fc02c7b35be2d0ddaeaa0af80a564df"
+    },
+    "low-stock-alerts": {
+      "source": "finsilabs/awesome-ecommerce-skills",
+      "sourceType": "github",
+      "skillPath": "skills/catalog-inventory/low-stock-alerts/SKILL.md",
+      "computedHash": "783ab3384a570a3eda0e610e57cebb185e23f1b30ca03e6f6b37b6f99905b25a"
+    },
+    "math-reasoning": {
+      "source": "lingzhi227/agent-research-skills",
+      "sourceType": "github",
+      "skillPath": "skills/math-reasoning/SKILL.md",
+      "computedHash": "5cdc3f13b6e96922fdd876d3bb353186ebc45d8f37d48d4d1795b4b40fc0663f"
+    },
+    "multi-warehouse": {
+      "source": "finsilabs/awesome-ecommerce-skills",
+      "sourceType": "github",
+      "skillPath": "skills/catalog-inventory/multi-warehouse/SKILL.md",
+      "computedHash": "22c8c93c2d9419dedc95c759f04038272884ca8275f98b5f7ef950249adad68d"
+    },
+    "replenishment-strategy": {
+      "source": "kishorkukreja/awesome-supply-chain",
+      "sourceType": "github",
+      "skillPath": "skills/replenishment-strategy/SKILL.md",
+      "computedHash": "a3e549b1cda8309c0169e1441a8310aca5b0ccc5c9266e45d066a29a0288a7be"
+    },
+    "solve-math-rigorously": {
+      "source": "googlarz/math-skill",
+      "sourceType": "github",
+      "skillPath": "SKILL.md",
+      "computedHash": "f716297de262794ae3c2bb604b16621de65ed56075548f94f55f4e4457746ef8"
+    },
+    "statistical-analysis": {
+      "source": "anthropics/knowledge-work-plugins",
+      "sourceType": "github",
+      "skillPath": "data/skills/statistical-analysis/SKILL.md",
+      "computedHash": "f3bc611085cf4bdb5e1f82009a5da707d11afc012a28a1df63978e4e66c5fff9"
+    },
+    "stochastic-inventory-models": {
+      "source": "kishorkukreja/awesome-supply-chain",
+      "sourceType": "github",
+      "skillPath": "skills/stochastic-inventory-models/SKILL.md",
+      "computedHash": "b396bd8f4ffd226c147129745a002acc1b1c6c44fc0b9701e41e908b9fbd565c"
+    },
+    "supply-chain-analytics": {
+      "source": "kishorkukreja/awesome-supply-chain",
+      "sourceType": "github",
+      "skillPath": "skills/supply-chain-analytics/SKILL.md",
+      "computedHash": "d7b0a8311349c53558f9dad5dd8f4d9dcf0e8ada81deedc379404f4fe4eea1de"
+    },
+    "validate-data": {
+      "source": "anthropics/knowledge-work-plugins",
+      "sourceType": "github",
+      "skillPath": "data/skills/validate-data/SKILL.md",
+      "computedHash": "98fb2c31a30b00277253c15ca5fcbdb909dff41551ab086056b926de974225a8"
+    },
+    "warehouse-optimization": {
+      "source": "nexscope-ai/ecommerce-skills",
+      "sourceType": "github",
+      "skillPath": "warehouse-optimization/SKILL.md",
+      "computedHash": "9e03d46b6178d1185d4646bc813ab556fdb66ff9cff40d2c5acad97d8a3958d5"
+    },
+    "web-design-guidelines": {
+      "source": "vercel-labs/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/web-design-guidelines/SKILL.md",
+      "computedHash": "f3bc47f890f42a44db1007ab390709ec368e4b8c089baee6b0007182236ac474"
+    },
+    "xlsx": {
+      "source": "anthropics/skills",
+      "sourceType": "github",
+      "skillPath": "skills/xlsx/SKILL.md",
+      "computedHash": "cbaaabead69c5e03643f116cde6a396ad53f6da058da6eaa7bad6c4fbafe6026"
+    }
+  }
+}

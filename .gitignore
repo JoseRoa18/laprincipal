@@ -39,3 +39,14 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Proyecto
+.env
+.env*.local
+/data/
+/storage/
+/storage-test/
+/coverage/
+/playwright-report/
+/test-results/
+*.tsbuildinfo
