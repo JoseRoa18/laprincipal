@@ -1,5 +1,6 @@
 import { Package, ShoppingCart, TriangleAlert, Wallet } from "lucide-react";
 import Link from "next/link";
+import { AnimatedMoney } from "@/components/app/animated-money";
 import { Money } from "@/components/app/money";
 import { PageHeader } from "@/components/app/page-header";
 import { Button } from "@/components/ui/button";
@@ -53,11 +54,11 @@ export default async function HomePage() {
         </Card>
       ) : null}
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="stagger grid gap-4 *:animate-in *:fade-in-0 *:slide-in-from-bottom-2 *:duration-500 sm:grid-cols-2 lg:grid-cols-4">
         {showSales ? (
           <KpiCard
             label="Ventas de hoy"
-            value={<Money value={data.salesToday.total} />}
+            value={<AnimatedMoney value={data.salesToday.total} />}
             hint={
               <>
                 {data.salesToday.count} {data.salesToday.count === 1 ? "venta" : "ventas"}
@@ -81,7 +82,7 @@ export default async function HomePage() {
         {showSales ? (
           <KpiCard
             label="Ventas del mes"
-            value={<Money value={data.salesMonth.total} />}
+            value={<AnimatedMoney value={data.salesMonth.total} />}
             hint={
               <>
                 {data.salesMonth.count === 0 ? "Sin ventas registradas" : `${data.salesMonth.count} ventas`}
@@ -107,7 +108,7 @@ export default async function HomePage() {
         {showCosts ? (
           <KpiCard
             label="Valor del inventario"
-            value={<Money value={data.inventoryValue} />}
+            value={<AnimatedMoney value={data.inventoryValue} />}
             hint={
               <>
                 A costo promedio
@@ -122,7 +123,7 @@ export default async function HomePage() {
         )}
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="stagger grid gap-4 *:animate-in *:fade-in-0 *:slide-in-from-bottom-2 *:duration-500 lg:grid-cols-3">
         {showSales ? (
           <Card className="lg:col-span-2">
             <CardHeader>

@@ -48,7 +48,7 @@ export function AppSidebar({ user, companyName }: { user: SessionUser; companyNa
                     isActive={isNavActive(item, pathname)}
                     tooltip={item.label}
                     size="lg"
-                    className="data-active:shadow-[inset_3px_0_0_var(--highlight)]"
+                    className="transition-[background-color,box-shadow,color] duration-200 data-active:shadow-[inset_3px_0_0_var(--highlight)]"
                     render={<Link href={item.href} onClick={() => setOpenMobile(false)} />}
                   >
                     <item.icon />

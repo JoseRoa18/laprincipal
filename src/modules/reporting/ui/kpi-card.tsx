@@ -47,7 +47,7 @@ export function Delta({ value, label, upIsGood = true }: { value: number; label?
   const Icon = flat ? Minus : rounded > 0 ? ArrowUpRight : ArrowDownRight;
   return (
     <p
-      className={cn(
+      className={cn("card-lift", 
         "flex items-center gap-1 text-xs tabular-nums",
         flat ? "text-muted-foreground" : good ? "text-emerald-700 dark:text-emerald-400" : "text-destructive",
       )}
