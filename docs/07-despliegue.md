@@ -1,5 +1,7 @@
 # Despliegue en Supabase y Vercel
 
+> **Estado (2026-09-08):** ya desplegado. Proyecto Supabase `kkgsfyfncuftnrbjqcvh` (us-east-1), proyecto Vercel `laprincipal` conectado a GitHub `JoseRoa18/laprincipal`, URL de producción https://laprincipal.vercel.app. Los pasos siguientes documentan cómo se hizo y cómo repetirlo.
+
 Guía paso a paso para poner la app en producción. Tiempo estimado: 30 minutos la primera vez.
 
 ## 1. Supabase (base de datos y archivos)
