@@ -14,7 +14,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatQty } from "@/lib/format";
-import { normalizeSearch } from "@/modules/catalog/infrastructure/product-lookup";
+import { normalizeSearch } from "@/modules/catalog/domain/search-text";
 import type { CountItemRow, CountStatus } from "@/modules/inventory/infrastructure/counts";
 import { cn } from "cn";
 import { ScanButton } from "./barcode-scanner";

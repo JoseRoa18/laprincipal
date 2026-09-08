@@ -53,3 +53,6 @@ next-env.d.ts
 
 # Plantilla de variables (sin secretos)
 !.env.example
+
+.vercel
+.env*
