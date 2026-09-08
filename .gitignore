@@ -50,3 +50,6 @@ next-env.d.ts
 /playwright-report/
 /test-results/
 *.tsbuildinfo
+
+# Plantilla de variables (sin secretos)
+!.env.example
