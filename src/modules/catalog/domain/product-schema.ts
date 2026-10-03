@@ -65,12 +65,8 @@ export const productFormSchema = z
       .refine((v) => v === "" || /^\d{1,4}$/.test(v), "Días enteros, por ejemplo 30"),
     locationCode: z.string().trim().max(40, "Máximo 40 caracteres"),
     isActive: z.boolean(),
-    publicPriceUsd: z
-      .string()
-      .trim()
-      .min(1, "El precio público es obligatorio")
-      .refine(isNumber, "Escribe un número, por ejemplo 12,50")
-      .refine(isNonNegative, "El precio no puede ser negativo"),
+    /** Empty = "Falta precio": the product is registered but cannot be sold until priced. */
+    publicPriceUsd: optionalMoney,
     techPriceUsd: optionalMoney,
     costUsd: optionalMoney,
     initialStock: optionalQty,
@@ -84,6 +80,15 @@ export const productFormSchema = z
     generateInternalBarcode: z.boolean(),
     equivalences: z.array(equivalenceSchema),
     compatibilities: z.array(compatibilitySchema),
+  })
+  .refine((d) => d.techPriceUsd === "" || d.publicPriceUsd !== "", {
+    message: "Pon primero el precio público",
+    path: ["techPriceUsd"],
+  })
+  // Stock loaded without a cost would drag the average cost down for good.
+  .refine((d) => !D(parseLocalizedNumber(d.initialStock) ?? 0).gt(0) || D(parseLocalizedNumber(d.costUsd) ?? 0).gt(0), {
+    message: "Escribe el costo: hay existencia inicial",
+    path: ["costUsd"],
   })
   .refine((d) => d.brandId !== NEW_BRAND_OPTION || d.newBrandName !== "", {
     message: "Escribe el nombre de la nueva marca",
@@ -144,8 +149,8 @@ export interface ProductInput {
   warrantyDays: number;
   locationCode: string | null;
   isActive: boolean;
-  /** Decimal strings ("12.50"). */
-  publicPriceUsd: string;
+  /** Decimal strings ("12.50"). Null: no selling price yet ("Falta precio"). */
+  publicPriceUsd: string | null;
   techPriceUsd: string | null;
   costUsd: string | null;
   initialStock: string | null;
@@ -177,7 +182,7 @@ export function toProductInput(values: ProductFormValues): ProductInput {
     warrantyDays: values.warrantyDays === "" ? 0 : Number(values.warrantyDays),
     locationCode: orNull(values.locationCode)?.toUpperCase() ?? null,
     isActive: values.isActive,
-    publicPriceUsd: num(values.publicPriceUsd) ?? "0",
+    publicPriceUsd: num(values.publicPriceUsd) !== null && D(num(values.publicPriceUsd)!).gt(0) ? num(values.publicPriceUsd) : null,
     techPriceUsd: num(values.techPriceUsd),
     costUsd: num(values.costUsd),
     initialStock: num(values.initialStock),

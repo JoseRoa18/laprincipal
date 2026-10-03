@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
   boolean,
   index,
@@ -140,7 +141,11 @@ export const productBarcodes = pgTable(
     isPrimary: boolean("is_primary").notNull().default(false),
     ...timestamps(),
   },
-  (t) => [index("product_barcodes_product_idx").on(t.productId)],
+  (t) => [
+    index("product_barcodes_product_idx").on(t.productId),
+    // One internal code per product, even with two taps on "Generar" at once.
+    uniqueIndex("product_barcodes_internal_uidx").on(t.productId).where(sql`${t.type} = 'INTERNAL'`),
+  ],
 );
 
 export const productImages = pgTable(

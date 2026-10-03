@@ -125,7 +125,7 @@ export async function applyImport(jobId: string, user: ActorUser): Promise<Apply
     const createdIds: string[] = [];
     for (const row of valid) {
       try {
-        const created = await createProductInTx(tx, row.input!, user, location.warehouseId);
+        const created = await createProductInTx(tx, row.input!, user, location.warehouseId, { audit: false });
         createdIds.push(created.id);
       } catch (err) {
         const message = err instanceof AppError ? err.message : "error inesperado";
@@ -138,7 +138,8 @@ export async function applyImport(jobId: string, user: ActorUser): Promise<Apply
       .update(importJobs)
       .set({ status: "applied", ...counts, errors, createdIds, appliedAt: new Date() })
       .where(eq(importJobs.id, jobId));
-    await writeAudit(tx, { userId: user.id, action: "import.apply", entityType: "import_job", entityId: jobId, after: { created: createdIds.length, skipped: counts.errorRows } });
+    // One entry for the whole import (with every product created) instead of a snapshot per row.
+    await writeAudit(tx, { userId: user.id, action: "import.apply", entityType: "import_job", entityId: jobId, after: { created: createdIds.length, skipped: counts.errorRows, productIds: createdIds } });
     return { jobId, created: createdIds.length, skipped: counts.errorRows };
   });
 }

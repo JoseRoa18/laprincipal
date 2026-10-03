@@ -50,6 +50,13 @@
       "when": 1791031478471,
       "tag": "0006_count_system_qty",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1791061274507,
+      "tag": "0007_catalog_hardening",
+      "breakpoints": true
     }
   ]
 }

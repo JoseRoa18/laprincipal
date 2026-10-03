@@ -5,11 +5,12 @@ import { z } from "zod";
 import { parseInput, runAction } from "@/lib/action";
 import { ALL_ROLES, assertRole } from "@/lib/auth-guards";
 import { AppError } from "@/lib/errors";
+import { parseLocalizedNumber } from "@/lib/format";
 import { getStorage } from "@/lib/storage";
 import { addBarcode, generateInternalBarcodeFor, removeBarcode, setPrimaryBarcode } from "@/modules/catalog/application/barcodes";
 import { addProductImage, deleteProductImage, setPrimaryImage, type ImageFile } from "@/modules/catalog/application/images";
 import { applyAiImage, enhanceProductImageWithAi, generateCatalogPhoto, revertAiImage, type AiPhotoResult } from "@/modules/catalog/application/photo-ai";
-import { createProduct, deleteProduct, setProductActive, updateProduct } from "@/modules/catalog/application/products";
+import { createProduct, deleteProduct, setProductActive, setProductPrices, updateProduct } from "@/modules/catalog/application/products";
 import { productFormSchema, toProductInput } from "@/modules/catalog/domain/product-schema";
 import { searchProducts } from "@/modules/catalog/infrastructure/product-lookup";
 import { getDefaultLocation } from "@/modules/core/application/context";
@@ -31,6 +32,28 @@ export async function createProductAction(input: unknown, clientId?: string) {
     const result = await createProduct(toProductInput(values), user, { clientId: id });
     revalidateProducts(result.id);
     return result;
+  });
+}
+
+const pricesSchema = z.object({
+  productId: z.uuid("Identificador inválido"),
+  publicPriceUsd: z.string().trim().min(1, "Escribe el precio público"),
+  techPriceUsd: z.string().trim().optional(),
+});
+
+/** "Poner precios": set the selling prices of a product registered without them. */
+export async function setProductPricesAction(input: unknown) {
+  return runAction(async () => {
+    const user = await assertRole("admin", "warehouse");
+    const data = parseInput(pricesSchema, input);
+    const publicPrice = parseLocalizedNumber(data.publicPriceUsd);
+    const techPrice = data.techPriceUsd ? parseLocalizedNumber(data.techPriceUsd) : null;
+    if (publicPrice === null) throw new AppError("VALIDATION", "Precio público inválido.", { fields: { publicPriceUsd: "Número inválido" } });
+    if (data.techPriceUsd && techPrice === null) throw new AppError("VALIDATION", "Precio técnico inválido.", { fields: { techPriceUsd: "Número inválido" } });
+    await setProductPrices({ productId: data.productId, publicPriceUsd: publicPrice, techPriceUsd: techPrice }, user);
+    revalidateProducts(data.productId);
+    revalidatePath("/productos/precios");
+    return { productId: data.productId };
   });
 }
 

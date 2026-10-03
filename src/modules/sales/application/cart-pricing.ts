@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import type { DbOrTx } from "@/db/client";
 import { customers, priceLists } from "@/db/schema";
+import { D } from "@/lib/money";
 import { AppError, notFound } from "@/lib/errors";
 import { getProductsForSale, type ProductForSale } from "@/modules/catalog/infrastructure/product-lookup";
 import { computeTotals, type GlobalDiscount, type LineInput, type SaleTotals } from "../domain/pricing";
@@ -71,8 +72,8 @@ export async function priceLines(
     if (!product) throw notFound("El producto");
     if (!product.isActive) throw new AppError("VALIDATION", `"${product.name}" está inactivo y no se puede vender.`);
     const price = opts.priceOverrides?.get(l.productId) ?? product.priceUsd;
-    if (price === null || price === undefined) {
-      throw new AppError("VALIDATION", `"${product.name}" no tiene precio en la lista. Asígnale un precio antes de venderlo.`, {
+    if (price === null || price === undefined || !D(price).gt(0)) {
+      throw new AppError("VALIDATION", `"${product.name}" no tiene precio de venta (Falta precio). Pídele al administrador que se lo ponga.`, {
         productId: product.id,
       });
     }

@@ -44,6 +44,11 @@ export async function removeBarcode(productId: string, barcodeId: string, user: 
       .from(productBarcodes)
       .where(and(eq(productBarcodes.id, barcodeId), eq(productBarcodes.productId, productId)));
     if (!row) throw notFound("El código de barras");
+    // Internal codes are printed on labels and never reused: deleting one would let a
+    // future product take it, and old labels would sell the wrong item.
+    if (row.type === "INTERNAL") {
+      throw new AppError("VALIDATION", "Los códigos internos no se borran: las etiquetas impresas los usan. Si el producto tiene otro código, márcalo como principal.");
+    }
     await tx.delete(productBarcodes).where(eq(productBarcodes.id, barcodeId));
     if (row.isPrimary) {
       const [next] = await tx.select({ id: productBarcodes.id }).from(productBarcodes).where(eq(productBarcodes.productId, productId)).orderBy(asc(productBarcodes.createdAt)).limit(1);

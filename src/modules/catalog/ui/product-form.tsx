@@ -336,7 +336,12 @@ export function ProductForm({ mode, productId, initialValues, options, canViewCo
           <CardDescription>Precios en dólares con IVA incluido. Bs y COP se calculan con la tasa del día.</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-3">
-          <FormField label="Precio público (USD)" htmlFor="publicPriceUsd" required error={err("publicPriceUsd")}>
+          <FormField
+            label="Precio público (USD)"
+            htmlFor="publicPriceUsd"
+            error={err("publicPriceUsd")}
+            hint={publicPrice?.trim() ? undefined : "Si aún no lo tienes, déjalo vacío: queda con \"Falta precio\" y no se vende hasta ponérselo."}
+          >
             <Input id="publicPriceUsd" inputMode="decimal" placeholder="0,00" className={controlClass} {...register("publicPriceUsd")} />
           </FormField>
           <FormField

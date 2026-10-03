@@ -73,6 +73,30 @@ async function resolveBrandId(tx: Tx, input: Pick<ProductInput, "brandId" | "new
   return created.id;
 }
 
+async function hasPublicPrice(tx: Tx, productId: string): Promise<boolean> {
+  const lists = await getPriceListIds(tx);
+  const [row] = await tx
+    .select({ id: priceListItems.id })
+    .from(priceListItems)
+    .where(and(eq(priceListItems.productId, productId), eq(priceListItems.priceListId, lists.publicId), sql`${priceListItems.priceUsd} > 0`))
+    .limit(1);
+  return Boolean(row);
+}
+
+/**
+ * Set the selling prices of a product (the "Poner precios" screen). The
+ * technician price is suggested from the public one when left empty.
+ */
+export async function setProductPrices(args: { productId: string; publicPriceUsd: string; techPriceUsd: string | null }, user: ActorUser): Promise<void> {
+  if (!D(args.publicPriceUsd).gt(0)) throw new AppError("VALIDATION", "El precio público debe ser mayor que cero.", { fields: { publicPriceUsd: "Mayor que cero" } });
+  await db.transaction(async (tx) => {
+    const [product] = await tx.select({ id: products.id, deletedAt: products.deletedAt }).from(products).where(eq(products.id, args.productId)).limit(1);
+    if (!product || product.deletedAt) throw notFound("El producto");
+    await savePrices(tx, { productId: args.productId, publicPriceUsd: args.publicPriceUsd, techPriceUsd: args.techPriceUsd, userId: user.id });
+    await writeAudit(tx, { userId: user.id, action: "product.prices", entityType: "product", entityId: args.productId, after: args });
+  });
+}
+
 /** Upsert PUBLIC and TECH prices; every change is recorded in price_history. */
 async function savePrices(tx: Tx, args: { productId: string; publicPriceUsd: string; techPriceUsd: string | null; userId: string }) {
   const lists = await getPriceListIds(tx);
@@ -146,7 +170,8 @@ export async function createProductInTx(
   input: ProductInput,
   user: ActorUser,
   warehouseId: string,
-  opts: { id?: string } = {},
+  /** `audit: false` for bulk imports, which write one summary entry instead of a snapshot per product. */
+  opts: { id?: string; audit?: boolean } = {},
 ): Promise<CreateProductResult> {
   await assertReferences(tx, input);
   const sku = input.sku ?? (await nextSku(tx));
@@ -190,7 +215,7 @@ export async function createProductInTx(
     barcode = (await registerInternalBarcode(tx, p.id, { isPrimary: true })).code;
   }
 
-  await savePrices(tx, { productId: p.id, publicPriceUsd: input.publicPriceUsd, techPriceUsd: input.techPriceUsd, userId: user.id });
+  if (input.publicPriceUsd) await savePrices(tx, { productId: p.id, publicPriceUsd: input.publicPriceUsd, techPriceUsd: input.techPriceUsd, userId: user.id });
   await upsertStockSettings(tx, { productId: p.id, warehouseId, minStock: input.minStock, maxStock: input.maxStock, userId: user.id });
 
   const initial = input.initialStock ? D(input.initialStock) : null;
@@ -214,8 +239,10 @@ export async function createProductInTx(
   }
 
   await rebuildSearchText(tx, p.id);
-  const after = await loadProductSnapshot(tx, p.id);
-  await writeAudit(tx, { userId: user.id, action: "product.create", entityType: "product", entityId: p.id, after });
+  if (opts.audit !== false) {
+    const after = await loadProductSnapshot(tx, p.id);
+    await writeAudit(tx, { userId: user.id, action: "product.create", entityType: "product", entityId: p.id, after });
+  }
   return { id: p.id, sku, barcode };
 }
 
@@ -298,7 +325,11 @@ export async function updateProduct(id: string, input: ProductInput, user: Actor
     await replaceEquivalences(tx, id, input.equivalences);
     await replaceCompatibilities(tx, id, input.compatibilities);
     if (input.barcode) await registerBarcode(tx, id, input.barcode);
-    await savePrices(tx, { productId: id, publicPriceUsd: input.publicPriceUsd, techPriceUsd: input.techPriceUsd, userId: user.id });
+    if (input.publicPriceUsd) {
+      await savePrices(tx, { productId: id, publicPriceUsd: input.publicPriceUsd, techPriceUsd: input.techPriceUsd, userId: user.id });
+    } else if (await hasPublicPrice(tx, id)) {
+      throw new AppError("VALIDATION", "Este producto ya tiene precio público: no se puede dejar vacío.", { fields: { publicPriceUsd: "Escribe el precio" } });
+    }
     await upsertStockSettings(tx, { productId: id, warehouseId: location.warehouseId, minStock: input.minStock, maxStock: input.maxStock, userId: user.id });
     await rebuildSearchText(tx, id);
 

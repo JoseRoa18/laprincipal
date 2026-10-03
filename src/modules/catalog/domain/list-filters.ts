@@ -2,6 +2,7 @@
 
 export type StockFilter = "all" | "out" | "buy_now" | "soon" | "ok" | "excess" | "no_data";
 export type ActiveFilter = "1" | "0" | "all";
+export type PriceFilter = "all" | "missing";
 
 export interface ProductListFilter {
   q: string;
@@ -9,7 +10,14 @@ export interface ProductListFilter {
   brandId: string | null;
   stock: StockFilter;
   active: ActiveFilter;
+  /** "missing": products without a selling price ("Falta precio"). */
+  price: PriceFilter;
 }
+
+export const PRICE_FILTER_LABELS: Record<PriceFilter, string> = {
+  all: "Con y sin precio",
+  missing: "Falta precio",
+};
 
 export const STOCK_FILTER_LABELS: Record<StockFilter, string> = {
   all: "Todo el stock",
@@ -38,5 +46,6 @@ export function parseListFilter(params: Record<string, string | string[] | undef
     brandId: str("brand") || null,
     stock: (Object.keys(STOCK_FILTER_LABELS) as StockFilter[]).includes(stock as StockFilter) ? (stock as StockFilter) : "all",
     active: active === "0" || active === "all" ? active : "1",
+    price: str("precio") === "sin" ? "missing" : "all",
   };
 }

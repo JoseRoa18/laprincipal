@@ -3,7 +3,7 @@ import { db, type DbOrTx } from "@/db/client";
 import { categories, productStats, products, stockLevels, stockSettings, units } from "@/db/schema";
 import { D, toMoneyDb } from "@/lib/money";
 import { getStorage } from "@/lib/storage";
-import { normalizeSearch } from "@/modules/catalog/infrastructure/product-lookup";
+import { searchPatterns } from "@/modules/catalog/domain/search-text";
 import { getDefaultLocation } from "@/modules/core/application/context";
 import type { StockStatus } from "../domain/velocity";
 
@@ -20,17 +20,28 @@ export const reservedExpr = sql<string>`coalesce(${stockLevels.reservedQty}, 0)`
 export const reorderPointExpr = sql<string>`coalesce(nullif(${stockSettings.reorderPoint}, 0), ${stockSettings.minStock}, 0)`;
 export const maxStockExpr = sql<string>`coalesce(${stockSettings.maxStock}, 0)`;
 
+/** Days of cover at or under which a product is "Pronto" (the `stats.soonThresholdDays` default). */
+export const SOON_DAYS = 7;
+
 /**
- * Traffic-light status in SQL. Mirrors `stockStatus()` from the domain:
- * uses `product_stats.status` when the daily statistics exist (and are not
- * "no_data"), otherwise the manual min/max rule.
+ * Traffic-light status computed live from the stock right now, so a product
+ * sold down at noon shows "Comprar ya" at once (not after the 3:00 a. m.
+ * statistics). Same rule as `stockStatus()`: reorder point (the automatic one
+ * is written back to stock_settings by the daily job, else the manual one or
+ * the minimum), days of cover from the daily sales velocity, maximum.
+ * Constants are inlined so the expression can be used in GROUP BY.
  */
-export const statusExpr = sql<StockStatus>`case
-  when ${productStats.productId} is not null and ${productStats.status} <> 'no_data' then ${productStats.status}::text
-  when ${reorderPointExpr} > 0 and ${qtyExpr} <= ${reorderPointExpr} then 'buy_now'
-  when ${maxStockExpr} > 0 and ${qtyExpr} > ${maxStockExpr} then 'excess'
-  when ${reorderPointExpr} > 0 or ${maxStockExpr} > 0 then 'ok'
+export function liveStatusExpr(stock: SQL): SQL<StockStatus> {
+  const velocity = sql`coalesce(${productStats.velocity}, 0)`;
+  return sql<StockStatus>`case
+  when ${reorderPointExpr} > 0 and ${stock} <= ${reorderPointExpr} then 'buy_now'
+  when ${velocity} > 0 and ${stock} / ${velocity} <= ${sql.raw(String(SOON_DAYS))} then 'soon'
+  when ${maxStockExpr} > 0 and ${stock} > ${maxStockExpr} then 'excess'
+  when ${reorderPointExpr} > 0 or ${maxStockExpr} > 0 or ${velocity} > 0 then 'ok'
   else 'no_data' end`;
+}
+
+export const statusExpr = liveStatusExpr(qtyExpr);
 
 /** Inventory value at average cost (negative stock does not subtract). */
 export const valueExpr = sql<string>`greatest(${qtyExpr}, 0) * ${products.costAvgUsd}`;
@@ -94,10 +105,9 @@ function buildWhere(f: StockFilters): SQL | undefined {
   if (!f.includeInactive) conds.push(eq(products.isActive, true));
   const q = f.q?.trim();
   if (q) {
-    const norm = normalizeSearch(q);
     conds.push(
       or(
-        ilike(products.searchText, `%${norm}%`),
+        and(...searchPatterns(q).map((w) => ilike(products.searchText, w))),
         ilike(products.sku, `%${q}%`),
         ilike(products.partNumber, `%${q}%`),
         ilike(products.locationCode, `%${q}%`),

@@ -19,8 +19,9 @@ import {
 import { D } from "@/lib/money";
 import { getStorage } from "@/lib/storage";
 import { stockStatus, type StockStatus } from "@/modules/inventory/domain/velocity";
+import { liveStatusExpr, SOON_DAYS } from "@/modules/inventory/infrastructure/stock-query";
 import type { ProductListFilter } from "../domain/list-filters";
-import { normalizeSearch } from "../domain/search-text";
+import { searchPatterns } from "../domain/search-text";
 import { categoryWithDescendants, getPriceListIds, listCategoryOptions } from "./catalog-options";
 
 export { ACTIVE_FILTER_LABELS, parseListFilter, STOCK_FILTER_LABELS, type ActiveFilter, type ProductListFilter, type StockFilter } from "../domain/list-filters";
@@ -56,30 +57,32 @@ function asStatus(value: string | null | undefined): StockStatus | null {
   return value && (STATUS_VALUES as string[]).includes(value) ? (value as StockStatus) : null;
 }
 
-/** Same rule as `stockStatus()` in manual mode, expressed in SQL so it can filter. */
+/** Live traffic light (see `liveStatusExpr`) on the available stock, in SQL so it can filter. */
 function statusSql(): { stockAvailable: SQL<string>; statusExpr: SQL<string> } {
   const stockAvailable = sql<string>`coalesce(${stockLevels.quantity}, 0) - coalesce(${stockLevels.reservedQty}, 0)`;
-  const reorder = sql`coalesce(nullif(${stockSettings.reorderPoint}, 0), ${stockSettings.minStock}, 0)`;
-  const statusExpr = sql<string>`case
-    when ${productStats.status} is not null and ${productStats.status} <> 'no_data' then ${productStats.status}::text
-    when ${reorder} > 0 and ${stockAvailable} <= ${reorder} then 'buy_now'
-    when coalesce(${stockSettings.maxStock}, 0) > 0 and ${stockAvailable} > ${stockSettings.maxStock} then 'excess'
-    when ${reorder} > 0 or coalesce(${stockSettings.maxStock}, 0) > 0 then 'ok'
-    else 'no_data' end`;
-  return { stockAvailable, statusExpr };
+  return { stockAvailable, statusExpr: liveStatusExpr(stockAvailable) };
 }
 
+/** Same live rule in TypeScript, for rows already loaded. */
 export function rowStatus(r: {
-  statsStatus: string | null;
   stockAvailable: string;
   minStock: string | null;
   maxStock: string | null;
   reorderPoint: string | null;
+  /** Daily sales velocity from the statistics (0 or null without history). */
+  velocity?: string | null;
 }): StockStatus {
-  const fromStats = asStatus(r.statsStatus);
-  if (fromStats && fromStats !== "no_data") return fromStats;
   const reorder = D(r.reorderPoint ?? 0).gt(0) ? D(r.reorderPoint) : D(r.minStock ?? 0);
-  return stockStatus({ stock: r.stockAvailable, reorderPoint: reorder, maxStock: r.maxStock ?? 0, daysOfCover: null, hasData: false });
+  const velocity = D(r.velocity ?? 0);
+  const hasData = velocity.gt(0);
+  return stockStatus({
+    stock: r.stockAvailable,
+    reorderPoint: reorder,
+    maxStock: r.maxStock ?? 0,
+    daysOfCover: hasData ? D(r.stockAvailable).div(velocity) : null,
+    hasData,
+    soonThresholdDays: SOON_DAYS,
+  });
 }
 
 async function buildConditions(dbx: DbOrTx, filter: ProductListFilter): Promise<SQL[]> {
@@ -93,13 +96,18 @@ async function buildConditions(dbx: DbOrTx, filter: ProductListFilter): Promise<
   }
   if (filter.q) {
     const term = filter.q.trim();
-    const normalized = normalizeSearch(term);
     conds.push(
       or(
-        ilike(products.searchText, `%${normalized}%`),
+        and(...searchPatterns(term).map((w) => ilike(products.searchText, w)))!,
         eq(products.sku, term.toUpperCase()),
         sql`exists (select 1 from ${productBarcodes} where ${productBarcodes.productId} = ${products.id} and ${productBarcodes.code} = ${term})`,
       )!,
+    );
+  }
+  if (filter.price === "missing") {
+    const { publicId } = await getPriceListIds(dbx);
+    conds.push(
+      sql`not exists (select 1 from ${priceListItems} where ${priceListItems.productId} = ${products.id} and ${priceListItems.priceListId} = ${publicId} and ${priceListItems.priceUsd} > 0)`,
     );
   }
   const { stockAvailable, statusExpr } = statusSql();
@@ -212,7 +220,7 @@ export async function listProducts(
       minStock: r.minStock ?? "0",
       maxStock: r.maxStock ?? "0",
       reorderPoint: r.reorderPoint ?? "0",
-      status: rowStatus({ statsStatus: r.statsStatus, stockAvailable: r.stockAvailable ?? "0", minStock: r.minStock, maxStock: r.maxStock, reorderPoint: r.reorderPoint }),
+      status: asStatus(r.statusExpr) ?? "no_data",
       daysOfCover: r.daysOfCover,
       thumbUrl: r.thumbPath ? storage.publicUrl("product-photos", r.thumbPath) : null,
     })),
@@ -279,7 +287,7 @@ export async function listProductsForExport(filter: ProductListFilter, opts: { w
     minStock: r.minStock ?? "0",
     maxStock: r.maxStock ?? "0",
     reorderPoint: r.reorderPoint ?? "0",
-    status: rowStatus({ statsStatus: r.statsStatus, stockAvailable: r.stockAvailable ?? "0", minStock: r.minStock, maxStock: r.maxStock, reorderPoint: r.reorderPoint }),
+    status: asStatus(r.statusExpr) ?? "no_data",
     daysOfCover: r.daysOfCover,
     thumbUrl: r.thumbPath ? storage.publicUrl("product-photos", r.thumbPath) : null,
     barcodes: codes
@@ -296,4 +304,19 @@ export async function listProductsForExport(filter: ProductListFilter, opts: { w
       .join("; "),
     createdAt: r.createdAt,
   }));
+}
+
+/** Products (not deleted) without a selling price: registered but not sellable ("Falta precio"). */
+export async function countProductsWithoutPrice(dbx: DbOrTx = db): Promise<number> {
+  const { publicId } = await getPriceListIds(dbx);
+  const [row] = await dbx
+    .select({ n: count() })
+    .from(products)
+    .where(
+      and(
+        isNull(products.deletedAt),
+        sql`not exists (select 1 from ${priceListItems} where ${priceListItems.productId} = ${products.id} and ${priceListItems.priceListId} = ${publicId} and ${priceListItems.priceUsd} > 0)`,
+      ),
+    );
+  return row?.n ?? 0;
 }

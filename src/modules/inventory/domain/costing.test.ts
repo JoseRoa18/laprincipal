@@ -39,4 +39,9 @@ describe("prorateExtraCosts", () => {
     expect(out[0].extraCostShareUsd.toFixed(4)).toBe("0.0000");
     expect(out[0].unitCostFinalUsd.toFixed(4)).toBe("3.0000");
   });
+
+  it("treats an average of 0 (stock loaded without cost) as unknown", () => {
+    // 10 units at cost 0 + 10 bought at $5: $5, not $2.50 for good.
+    expect(weightedAverageCost(10, 0, 10, 5).toFixed(2)).toBe("5.00");
+  });
 });

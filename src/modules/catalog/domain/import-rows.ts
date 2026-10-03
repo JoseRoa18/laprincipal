@@ -13,9 +13,9 @@ export const IMPORT_COLUMNS = [
   { key: "category", header: "Categoría", required: false, width: 30, hint: "Ruta 'Refrigeración > Compresores' o nombre de la subcategoría." },
   { key: "brand", header: "Marca", required: false, width: 16, hint: "Se crea si no existe." },
   { key: "unit", header: "Unidad", required: false, width: 10, hint: "Símbolo o nombre: u, m, kg. Vacío = Unidad." },
-  { key: "publicPrice", header: "Precio público USD*", required: true, width: 18, hint: "Obligatorio. Con IVA incluido." },
+  { key: "publicPrice", header: "Precio público USD", required: false, width: 18, hint: "Con IVA incluido. Vacío = el producto queda con 'Falta precio' y no se vende hasta ponérselo." },
   { key: "techPrice", header: "Precio técnico USD", required: false, width: 18, hint: "Vacío = se calcula con el descuento configurado." },
-  { key: "cost", header: "Costo USD", required: false, width: 12, hint: "Costo unitario." },
+  { key: "cost", header: "Costo USD", required: false, width: 12, hint: "Costo unitario. Obligatorio si hay stock inicial." },
   { key: "initialStock", header: "Stock inicial", required: false, width: 12, hint: "Genera un movimiento de inventario inicial." },
   { key: "minStock", header: "Mínimo", required: false, width: 10, hint: "Stock mínimo." },
   { key: "maxStock", header: "Máximo", required: false, width: 10, hint: "Stock máximo." },
@@ -280,7 +280,7 @@ export function validateImportRows(rows: RawImportRow[], lookups: ImportLookups)
       }
     }
 
-    const publicPrice = readNumber(v.publicPrice, "Precio público", errors, { required: true });
+    const publicPrice = readNumber(v.publicPrice, "Precio público", errors);
     const techPrice = readNumber(v.techPrice, "Precio técnico", errors);
     const cost = readNumber(v.cost, "Costo", errors);
     const initialStock = readNumber(v.initialStock, "Stock inicial", errors);
@@ -291,6 +291,12 @@ export function validateImportRows(rows: RawImportRow[], lookups: ImportLookups)
     }
     const warranty = readNumber(v.warrantyDays, "Garantía", errors, { integer: true });
     if (publicPrice && cost && D(publicPrice).lt(D(cost))) warnings.push("El precio público es menor que el costo");
+    if (!publicPrice || !D(publicPrice).gt(0)) {
+      if (techPrice) errors.push("Precio técnico sin precio público: pon primero el público");
+      else warnings.push("Sin precio de venta: queda con 'Falta precio' y no se vende hasta ponérselo");
+    }
+    // Stock loaded without a cost would drag the average cost down for good.
+    if (initialStock && D(initialStock).gt(0) && !(cost && D(cost).gt(0))) errors.push("Costo obligatorio: la fila tiene stock inicial");
 
     let barcode: string | null = null;
     const barcodeText = (v.barcode ?? "").trim();
@@ -321,7 +327,7 @@ export function validateImportRows(rows: RawImportRow[], lookups: ImportLookups)
             warrantyDays: warranty ? Number(warranty) : 0,
             locationCode: (v.location ?? "").trim().toUpperCase() || null,
             isActive: true,
-            publicPriceUsd: publicPrice ?? "0",
+            publicPriceUsd: publicPrice && D(publicPrice).gt(0) ? publicPrice : null,
             techPriceUsd: techPrice,
             costUsd: cost,
             initialStock,

@@ -51,6 +51,8 @@ El vendedor solo vende: al entrar ve la pantalla Vender y puede consultar Produc
 3. Precio público en dólares; el precio técnico se sugiere solo. Costo si se conoce.
 4. Stock inicial y ubicación en el estante. Guardar, o "Guardar y crear otro".
 
+**Productos sin precio:** si aún no tienes el precio de venta, deja vacío el precio público (el costo sí es obligatorio si cargas existencia). El producto queda en gris con "Falta precio" y no se puede vender. Productos → "Poner precios" muestra todos los que faltan con un precio sugerido según el margen; escribe el precio, Enter y pasa al siguiente. El precio técnico se calcula solo si lo dejas vacío.
+
 **Códigos de barras:** si el repuesto trae código, escanearlo en la ficha. Si no, "Generar código interno" e imprimir la etiqueta en Productos → Etiquetas.
 
 **Muchos productos de una vez:** Productos → Importar → descargar la plantilla de Excel, llenarla y subirla. La app avisa los errores por fila antes de aplicar.

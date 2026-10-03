@@ -13,6 +13,19 @@ export function normalizeSearch(text: string): string {
     .trim();
 }
 
+/**
+ * Words of a search, normalized, as LIKE patterns that all must match, in any
+ * order: "compresor 1/3" finds "Compresor Embraco 1/3 HP". `%` and `_` typed
+ * by the user are matched literally.
+ */
+export function searchPatterns(text: string): string[] {
+  return normalizeSearch(text)
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 8)
+    .map((word) => `%${word.replace(/[\\%_]/g, (c) => `\\${c}`)}%`);
+}
+
 /** Code without separators ("EMB-123 A" → "emb123a") so users can type codes either way. */
 export function compactCode(text: string): string {
   return normalizeSearch(text).replace(/[^a-z0-9]+/g, "");

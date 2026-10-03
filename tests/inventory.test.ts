@@ -216,3 +216,17 @@ describe.skipIf(skip)("stock list, settings and alerts", () => {
     });
   });
 });
+
+describe.skipIf(skip)("live stock status", () => {
+  it("shows Comprar ya as soon as stock drops, even when the 3:00 a. m. statistics said OK", async () => {
+    await withFixtures(async (f) => {
+      const product = await f.createProduct({ name: "Relé de prueba en vivo" });
+      await applyMovements(f.tx, [{ productId: product.id, warehouseId: f.warehouseId, type: "initial", quantity: "10", unitCostUsd: "2", userId: f.userId }]);
+      await upsertStockSettings({ productId: product.id, minStock: "5", maxStock: "0", reorderPoint: "0", reorderQty: "0", mode: "manual" }, f.userId, f.tx);
+      await f.tx.insert(s.productStats).values({ productId: product.id, warehouseId: f.warehouseId, status: "ok" });
+      await applyMovements(f.tx, [{ productId: product.id, warehouseId: f.warehouseId, type: "sale_out", quantity: "-6", unitCostUsd: "2", userId: f.userId }]);
+      const buyNow = await listStock({ dbx: f.tx, warehouseId: f.warehouseId, status: "buy_now", pageSize: 100 });
+      expect(buyNow.rows.map((r) => r.productId)).toContain(product.id);
+    });
+  });
+});

@@ -87,20 +87,22 @@ export function BarcodeManager({ productId, barcodes, canEdit }: { productId: st
                     <Star />
                   </Button>
                 ) : null}
-                <ConfirmButton
-                  title="Quitar código de barras"
-                  description={`Se quitará el código ${b.code} de este producto. Las etiquetas ya impresas con ese código dejarán de encontrarlo.`}
-                  confirmLabel="Quitar"
-                  destructive
-                  variant="ghost"
-                  size="icon"
-                  action={() => removeBarcodeAction(productId, b.id)}
-                  successMessage="Código quitado"
-                  onSuccess={() => router.refresh()}
-                >
-                  <Trash2 />
-                  <span className="sr-only">Quitar</span>
-                </ConfirmButton>
+                {b.type !== "INTERNAL" ? (
+                  <ConfirmButton
+                    title="Quitar código de barras"
+                    description={`Se quitará el código ${b.code} de este producto. Las etiquetas ya impresas con ese código dejarán de encontrarlo.`}
+                    confirmLabel="Quitar"
+                    destructive
+                    variant="ghost"
+                    size="icon"
+                    action={() => removeBarcodeAction(productId, b.id)}
+                    successMessage="Código quitado"
+                    onSuccess={() => router.refresh()}
+                  >
+                    <Trash2 />
+                    <span className="sr-only">Quitar</span>
+                  </ConfirmButton>
+                ) : null}
               </div>
             ) : null}
           </li>

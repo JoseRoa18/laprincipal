@@ -47,7 +47,9 @@ export async function nextInternalBarcode(dbx: DbOrTx): Promise<string> {
   const length = sql.raw(String(INTERNAL_SEQUENCE_DIGITS));
   const max = await scalar(
     dbx,
-    sql`select max(substring(${productBarcodes.code} from ${start} for ${length})::bigint) as max from ${productBarcodes} where ${productBarcodes.type} = 'INTERNAL' and ${productBarcodes.code} ~ ${pattern}`,
+    // Every code in the internal range counts, whatever its type: a distributor code typed
+    // by hand in that range must not be generated again.
+    sql`select max(substring(${productBarcodes.code} from ${start} for ${length})::bigint) as max from ${productBarcodes} where ${productBarcodes.code} ~ ${pattern}`,
   );
   return generateInternalBarcode(Number(max ?? 0) + 1);
 }
@@ -87,12 +89,13 @@ export async function registerBarcode(tx: Tx, productId: string, rawCode: string
 
 /** Create an internal barcode for a product (one per product). */
 export async function registerInternalBarcode(tx: Tx, productId: string, opts: { isPrimary?: boolean } = {}): Promise<BarcodeRow> {
+  // Lock first: a double tap on "Generar" must find the code made by the first one.
+  await lockCatalogSequences(tx);
   const [already] = await tx
     .select({ id: productBarcodes.id, code: productBarcodes.code, isPrimary: productBarcodes.isPrimary })
     .from(productBarcodes)
     .where(and(eq(productBarcodes.productId, productId), eq(productBarcodes.type, "INTERNAL")));
   if (already) return { id: already.id, code: already.code, type: "INTERNAL", isPrimary: already.isPrimary, existed: true };
-  await lockCatalogSequences(tx);
   const code = await nextInternalBarcode(tx);
   const [{ total }] = await tx.select({ total: count() }).from(productBarcodes).where(eq(productBarcodes.productId, productId));
   const isPrimary = opts.isPrimary ?? Number(total) === 0;

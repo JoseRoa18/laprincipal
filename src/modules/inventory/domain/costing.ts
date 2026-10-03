@@ -11,7 +11,8 @@ export function weightedAverageCost(currentQty: Num, currentAvg: Num, incomingQt
   const q1 = D(incomingQty);
   const c1 = D(incomingUnitCost);
   if (q1.lte(0)) throw new Error("La cantidad recibida debe ser mayor que cero");
-  if (q0.lte(0)) return roundTo(c1, 4);
+  // No stock, or stock that came in without a cost (average 0 = unknown): the new cost is the average.
+  if (q0.lte(0) || c0.lte(0)) return roundTo(c1, 4);
   const total = q0.mul(c0).plus(q1.mul(c1));
   return roundTo(total.div(q0.plus(q1)), 4);
 }

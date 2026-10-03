@@ -3,6 +3,7 @@
 import { Camera, PackageSearch, ScanBarcode, Search, X } from "lucide-react";
 import { useCallback, useEffect, useImperativeHandle, useRef, useState, type Ref } from "react";
 import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Kbd } from "@/components/ui/kbd";
@@ -113,6 +114,11 @@ export function ProductSearch({ priceListId, rateVes, onAdd, handle }: Props) {
   }
 
   function add(product: PosProduct) {
+    if (!hasPrice(product)) {
+      toast.error(`"${product.name}" no tiene precio de venta (Falta precio). Pídele al administrador que se lo ponga.`);
+      reset();
+      return;
+    }
     onAdd(product);
     reset();
   }
@@ -229,9 +235,10 @@ export function ProductSearch({ priceListId, rateVes, onAdd, handle }: Props) {
             {results.map((p, i) => {
               const stock = D(p.stockAvailable);
               const out = stock.lte(0);
-              const bs = p.priceUsd && rateVes ? D(p.priceUsd).mul(rateVes) : null;
+              const priced = hasPrice(p);
+              const bs = priced && rateVes ? D(p.priceUsd!).mul(rateVes) : null;
               return (
-                <li key={p.id} role="option" aria-selected={i === highlight}>
+                <li key={p.id} role="option" aria-selected={i === highlight} aria-disabled={!priced}>
                   <button
                     type="button"
                     onClick={() => add(p)}
@@ -239,6 +246,7 @@ export function ProductSearch({ priceListId, rateVes, onAdd, handle }: Props) {
                     className={cn(
                       "flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-muted/60 active:bg-muted",
                       i === highlight && "bg-muted/60",
+                      !priced && "opacity-60",
                     )}
                   >
                     <span className="bg-muted flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-md">
@@ -259,7 +267,13 @@ export function ProductSearch({ priceListId, rateVes, onAdd, handle }: Props) {
                       </span>
                     </span>
                     <span className="shrink-0 text-right">
-                      <span className="block text-base font-semibold tabular-nums">{p.priceUsd ? formatMoney(p.priceUsd, "USD") : "Sin precio"}</span>
+                      {priced ? (
+                        <span className="block text-base font-semibold tabular-nums">{formatMoney(p.priceUsd!, "USD")}</span>
+                      ) : (
+                        <Badge variant="outline" className="border-amber-400 text-amber-800 dark:text-amber-300">
+                          Falta precio
+                        </Badge>
+                      )}
                       {bs ? <span className="text-muted-foreground block text-xs tabular-nums">{formatMoney(bs, "VES")}</span> : null}
                     </span>
                   </button>
@@ -283,6 +297,11 @@ export function ProductSearch({ priceListId, rateVes, onAdd, handle }: Props) {
 }
 
 /** Scanner output: digits/uppercase with no spaces. Used to prefer the exact lookup. */
+/** A product without a selling price is shown but cannot be sold. */
+function hasPrice(p: PosProduct): boolean {
+  return Boolean(p.priceUsd && D(p.priceUsd).gt(0));
+}
+
 function looksLikeCode(term: string): boolean {
   return /^[A-Za-z0-9-]{6,}$/.test(term.trim()) && !/\s/.test(term.trim());
 }

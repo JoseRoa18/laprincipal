@@ -4,7 +4,7 @@ import { FileSpreadsheet } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { NativeSelect, NativeSelectOptGroup, NativeSelectOption } from "@/components/ui/native-select";
-import { ACTIVE_FILTER_LABELS, STOCK_FILTER_LABELS, type ProductListFilter } from "../domain/list-filters";
+import { ACTIVE_FILTER_LABELS, PRICE_FILTER_LABELS, STOCK_FILTER_LABELS, type ProductListFilter } from "../domain/list-filters";
 import type { BrandOption, CategoryOption } from "../infrastructure/catalog-options";
 
 /** Category / brand / stock / active selects bound to the URL, plus the Excel export link. */
@@ -62,6 +62,13 @@ export function ProductFilters({
       </NativeSelect>
       <NativeSelect aria-label="Estado de stock" className={selectClass} value={filter.stock} onChange={(e) => set("stock", e.target.value === "all" ? "" : e.target.value)}>
         {Object.entries(STOCK_FILTER_LABELS).map(([value, label]) => (
+          <NativeSelectOption key={value} value={value}>
+            {label}
+          </NativeSelectOption>
+        ))}
+      </NativeSelect>
+      <NativeSelect aria-label="Precio" className={selectClass} value={filter.price} onChange={(e) => set("precio", e.target.value === "missing" ? "sin" : "")}>
+        {Object.entries(PRICE_FILTER_LABELS).map(([value, label]) => (
           <NativeSelectOption key={value} value={value}>
             {label}
           </NativeSelectOption>

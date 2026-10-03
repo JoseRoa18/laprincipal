@@ -6,7 +6,7 @@ import { AppError } from "@/lib/errors";
 import { D } from "@/lib/money";
 import { generateInternalBarcodeFor } from "@/modules/catalog/application/barcodes";
 import { applyImport, undoImport, validateImportFile } from "@/modules/catalog/application/import";
-import { createProduct, deleteProduct, updateProduct } from "@/modules/catalog/application/products";
+import { createProduct, deleteProduct, setProductPrices, updateProduct } from "@/modules/catalog/application/products";
 import { isValidEan13 } from "@/modules/catalog/domain/barcodes";
 import type { ProductInput } from "@/modules/catalog/domain/product-schema";
 import { searchProducts } from "@/modules/catalog/infrastructure/product-lookup";
@@ -213,6 +213,22 @@ describe.skipIf(SKIP)("catalog integration", () => {
     expect(isValidEan13(generated.code)).toBe(true);
     expect(Number(generated.code.slice(2, 12))).toBe(Number(result.barcode!.slice(2, 12)) + 1);
     await expect(generateInternalBarcodeFor(other.id, { id: base.userId })).rejects.toBeInstanceOf(AppError);
+  });
+
+  it("registers a product without a selling price that cannot be sold until priced", async () => {
+    const name = `Sin precio ${uid("np")}`;
+    const input = productInput(base, { name, publicPriceUsd: null, techPriceUsd: null });
+    const p = await createProduct(input, { id: base.userId });
+    created.push(p.id);
+    const location = await getDefaultLocation();
+    const [unpriced] = await searchProducts(name, { warehouseId: location.warehouseId });
+    expect(unpriced.priceUsd ?? null).toBeNull();
+
+    await setProductPrices({ productId: p.id, publicPriceUsd: "30", techPriceUsd: null }, { id: base.userId });
+    const [priced] = await searchProducts(name, { warehouseId: location.warehouseId });
+    expect(D(priced.priceUsd!).toFixed(2)).toBe("30.00");
+    // Once priced, the price cannot be left empty again from the form.
+    await expect(updateProduct(p.id, input, { id: base.userId })).rejects.toMatchObject({ code: "VALIDATION" });
   });
 
   it("soft-deletes products without movements and only deactivates those with kardex", async () => {

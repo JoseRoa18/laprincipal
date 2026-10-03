@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildSearchText, compactCode, normalizeSearch } from "./search-text";
+import { buildSearchText, compactCode, normalizeSearch, searchPatterns } from "./search-text";
 
 describe("normalizeSearch", () => {
   it("lower-cases, strips accents and collapses spaces", () => {
@@ -39,5 +39,16 @@ describe("buildSearchText", () => {
   it("skips empty values and duplicates", () => {
     const text = buildSearchText({ name: "Relé", sku: "RELE", partNumber: "", brandName: null, equivalenceCodes: ["rele", "RELE"] });
     expect(text).toBe("rele");
+  });
+});
+
+describe("searchPatterns", () => {
+  it("splits the search into words that must all appear, in any order", () => {
+    expect(searchPatterns("Compresor  1/3")).toEqual(["%compresor%", "%1/3%"]);
+    expect(searchPatterns("TÉRMOSTATO mabe")).toEqual(["%termostato%", "%mabe%"]);
+  });
+
+  it("matches % and _ literally", () => {
+    expect(searchPatterns("50% off_x")).toEqual([String.raw`%50\%%`, String.raw`%off\_x%`]);
   });
 });

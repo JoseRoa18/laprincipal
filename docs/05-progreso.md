@@ -83,7 +83,18 @@ Cuatro revisiones (seguridad, dinero, inventario/catálogo, producción). Aplica
 - Conteo: la diferencia se calcula contra la existencia al momento de contar cada producto (`system_qty_at_count`), y dos teléfonos no agregan el mismo producto dos veces.
 - Despliegue: las migraciones solo corren en el build de producción (las vistas previas ya no tocan la base real).
 
-Pendiente de esa revisión (no aplicado aún): estado "Comprar ya" calculado en vivo (hoy se actualiza de madrugada), costo promedio con existencia cargada sin costo, códigos internos no reutilizables, rehacer búsqueda al renombrar marca o categoría, búsqueda por varias palabras en cualquier orden, importación más rápida para archivos grandes (hoy conviene hasta ~200 filas por archivo), pantallas de error con "Reintentar" que recargue, cambio en USD con centavos.
+## Productos sin precio y resto de la revisión (2026-10-03)
+
+- Productos sin precio de venta: se registran (formulario e importación) con su costo, aparecen en gris con "Falta precio" en productos y en la pantalla de venta y no se pueden vender ni cotizar (también lo valida el servidor). Pantalla `/productos/precios` ("Poner precios") con precio sugerido = costo + margen por defecto; el técnico se calcula solo. Contador en Productos e Inicio, filtro "Falta precio" y aviso en la ficha. Es un estado calculado (sin precio público > 0), no una columna.
+- Costo obligatorio cuando hay existencia inicial (formulario e importación); un costo promedio 0 se trata como desconocido.
+- "Comprar ya", "Pronto" y el contador de Inicio se calculan en vivo con la existencia actual (`liveStatusExpr`), no con la foto de las 3:00 a. m.
+- Búsqueda por varias palabras en cualquier orden (venta, productos, inventario).
+- Códigos internos: no se pueden borrar, el siguiente considera todo código del rango interno y hay un índice único por producto; las violaciones de unicidad llegan como conflicto con mensaje claro.
+- Renombrar marca o categoría rehace la búsqueda de sus productos; editar un producto ya no redondea precios y costo a 2 decimales.
+- Pantallas de error con `retry` (recargan datos), pantalla global en español y la insignia de tasa no tumba la página si falla la base.
+- Importación: sin foto de auditoría por fila (una sola entrada con todos los productos); conviene subir por partes de unas 300 filas.
+
+Pendiente: cambio en USD con centavos (decisión del dueño).
 
 ## Próximos pasos
 

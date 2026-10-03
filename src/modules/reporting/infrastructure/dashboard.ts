@@ -1,8 +1,9 @@
 import { and, count, desc, eq, gte, inArray, isNull, lt, sql } from "drizzle-orm";
-import { productStats, products, saleItems, sales, stockLevels, users } from "@/db/schema";
+import { productStats, products, saleItems, sales, stockLevels, stockSettings, users } from "@/db/schema";
 import { businessDate } from "@/lib/format";
 import { D, roundTo } from "@/lib/money";
 import { getOpenCashSession } from "@/modules/cash/application/session";
+import { statusExpr } from "@/modules/inventory/infrastructure/stock-query";
 import { getStatsComputedAt } from "../application/product-stats";
 import { addDays, dayEndExclusive, dayStart, diffDays, eachDay, startOfMonth } from "../domain/date-range";
 import { dayExpr, netQty, pctChange, resolveScope, SOLD_STATUSES, sumOf, type ScopeOptions } from "./common";
@@ -95,12 +96,15 @@ export async function getDashboardData(opts: DashboardOptions = {}): Promise<Das
       .innerJoin(sales, eq(sales.id, saleItems.saleId))
       .where(and(soldFilter, between(today, today)))
       .then((r) => r[0]),
+    // Live status (not the 3:00 a. m. snapshot): a product sold down today counts today.
     dbx
-      .select({ status: productStats.status, count: count() })
-      .from(productStats)
-      .innerJoin(products, eq(products.id, productStats.productId))
-      .where(and(eq(productStats.warehouseId, warehouseId), isNull(products.deletedAt), eq(products.isActive, true)))
-      .groupBy(productStats.status),
+      .select({ status: statusExpr, count: count() })
+      .from(products)
+      .leftJoin(stockLevels, and(eq(stockLevels.productId, products.id), eq(stockLevels.warehouseId, warehouseId)))
+      .leftJoin(stockSettings, and(eq(stockSettings.productId, products.id), eq(stockSettings.warehouseId, warehouseId)))
+      .leftJoin(productStats, and(eq(productStats.productId, products.id), eq(productStats.warehouseId, warehouseId)))
+      .where(and(isNull(products.deletedAt), eq(products.isActive, true)))
+      .groupBy(sql`1`),
     dbx
       .select({ value: sumOf(sql`${stockLevels.quantity} * ${products.costAvgUsd}`) })
       .from(stockLevels)

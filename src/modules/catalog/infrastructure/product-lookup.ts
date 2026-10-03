@@ -3,7 +3,7 @@ import { db, type DbOrTx } from "@/db/client";
 import { priceListItems, priceLists, productBarcodes, productImages, products, stockLevels, taxes, units } from "@/db/schema";
 import { getStorage } from "@/lib/storage";
 import { D } from "@/lib/money";
-import { normalizeSearch } from "../domain/search-text";
+import { normalizeSearch, searchPatterns } from "../domain/search-text";
 
 /** Product data needed by the POS, quotes and purchases. Shared contract. */
 export interface ProductForSale {
@@ -136,10 +136,11 @@ export async function searchProducts(q: string, opts: LookupOptions & { limit?: 
   let ids = [...new Set(exact.map((r) => r.id))];
   if (ids.length < limit) {
     const normalized = normalizeSearch(term);
+    const words = searchPatterns(term);
     const fuzzy = await dbx
       .select({ id: products.id })
       .from(products)
-      .where(and(activeFilter, ilike(products.searchText, `%${normalized}%`)))
+      .where(and(activeFilter, ...words.map((w) => ilike(products.searchText, w))))
       .orderBy(desc(sql`similarity(${products.searchText}, ${normalized})`), products.name)
       .limit(limit);
     for (const r of fuzzy) if (!ids.includes(r.id)) ids.push(r.id);

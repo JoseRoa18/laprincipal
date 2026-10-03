@@ -1,4 +1,4 @@
-import { FileUp, FolderTree, Package, Plus, SearchX, Tags } from "lucide-react";
+import { CircleDollarSign, FileUp, FolderTree, Package, Plus, SearchX, Tags } from "lucide-react";
 import Link from "next/link";
 import { EmptyState } from "@/components/app/empty-state";
 import { Money } from "@/components/app/money";
@@ -12,7 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { can, requireUser } from "@/lib/auth-guards";
 import { formatPct, formatQty } from "@/lib/format";
 import { listBrands, listCategoryOptions } from "@/modules/catalog/infrastructure/catalog-options";
-import { listProducts, parseListFilter } from "@/modules/catalog/infrastructure/products-list";
+import { countProductsWithoutPrice, listProducts, parseListFilter } from "@/modules/catalog/infrastructure/products-list";
 import { priceMargin } from "@/modules/catalog/domain/pricing";
 import { LinkRow } from "@/modules/catalog/ui/link-row";
 import { ProductFilters } from "@/modules/catalog/ui/product-filters";
@@ -20,6 +20,7 @@ import { ProductThumb } from "@/modules/catalog/ui/product-thumb";
 import { getDefaultLocation } from "@/modules/core/application/context";
 import { fromUsd } from "@/modules/currency/domain/conversion";
 import { getRatesSnapshot } from "@/modules/currency/infrastructure/rates";
+import { cn } from "cn";
 
 export const metadata = { title: "Productos" };
 
@@ -31,17 +32,18 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
   const page = parsePage(params.page);
   const filter = parseListFilter(params);
   const location = await getDefaultLocation();
-  const [{ rows, total }, categories, brands, rates] = await Promise.all([
+  const canManage = can(user.role, "manage_products");
+  const [{ rows, total }, categories, brands, rates, withoutPrice] = await Promise.all([
     listProducts(filter, { warehouseId: location.warehouseId, page, pageSize: DEFAULT_PAGE_SIZE }),
     listCategoryOptions(),
     listBrands(),
     getRatesSnapshot(),
+    canManage ? countProductsWithoutPrice() : Promise.resolve(0),
   ]);
-  const canManage = can(user.role, "manage_products");
   const showCosts = can(user.role, "view_costs");
   const hasVes = Boolean(rates.rateSet.VES);
   const bs = (usd: string | null) => (usd && hasVes ? fromUsd(usd, "VES", rates.rateSet) : null);
-  const hasFilters = Boolean(filter.q || filter.categoryId || filter.brandId || filter.stock !== "all" || filter.active !== "1");
+  const hasFilters = Boolean(filter.q || filter.categoryId || filter.brandId || filter.stock !== "all" || filter.active !== "1" || filter.price !== "all");
 
   const exportParams = new URLSearchParams();
   for (const [k, v] of Object.entries(params)) if (typeof v === "string" && v && k !== "page") exportParams.set(k, v);
@@ -67,6 +69,11 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
             {user.role === "admin" ? (
               <Button variant="outline" size="sm" className="hidden md:inline-flex" render={<Link href="/productos/importar" />}>
                 <FileUp /> Importar
+              </Button>
+            ) : null}
+            {canManage && withoutPrice > 0 ? (
+              <Button variant="outline" size="lg" className="h-11 border-amber-400" render={<Link href="/productos/precios" />}>
+                <CircleDollarSign /> Poner precios ({withoutPrice})
               </Button>
             ) : null}
             {canManage ? (
@@ -138,7 +145,10 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
           <ul className="space-y-2 md:hidden">
             {rows.map((p) => (
               <li key={p.id}>
-                <Link href={`/productos/${p.id}`} className="bg-card flex gap-3 rounded-xl border p-3 active:bg-muted/50">
+                <Link
+                  href={`/productos/${p.id}`}
+                  className={cn("bg-card flex gap-3 rounded-xl border p-3 active:bg-muted/50", (!p.isActive || !priced(p)) && "opacity-60")}
+                >
                   <ProductThumb url={p.thumbUrl} alt="" size={56} />
                   <div className="min-w-0 flex-1 space-y-1">
                     <p className="truncate font-medium leading-tight">{p.name}</p>
@@ -150,7 +160,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
                       <span>
                         <span className="text-muted-foreground">Público </span>
-                        {p.publicPriceUsd ? <Money value={p.publicPriceUsd} /> : "—"}
+                        {priced(p) ? <Money value={p.publicPriceUsd!} /> : <MissingPrice />}
                         {bs(p.publicPriceUsd) ? (
                           <span className="text-muted-foreground">
                             {" "}
@@ -197,7 +207,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
                 {rows.map((p) => {
                   const margin = showCosts ? priceMargin(p.publicPriceUsd ?? "", p.costAvgUsd) : null;
                   return (
-                    <LinkRow key={p.id} href={`/productos/${p.id}`} className={!p.isActive ? "opacity-60" : undefined}>
+                    <LinkRow key={p.id} href={`/productos/${p.id}`} className={!p.isActive || !priced(p) ? "opacity-60" : undefined}>
                       <TableCell>
                         <ProductThumb url={p.thumbUrl} alt="" size={44} />
                       </TableCell>
@@ -214,7 +224,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
                       </TableCell>
                       <TableCell className="text-muted-foreground max-w-48 truncate text-xs">{p.categoryPath ?? "—"}</TableCell>
                       <TableCell className="text-right">
-                        {p.publicPriceUsd ? <Money value={p.publicPriceUsd} /> : "—"}
+                        {priced(p) ? <Money value={p.publicPriceUsd!} /> : <MissingPrice />}
                         {bs(p.publicPriceUsd) ? (
                           <p className="text-muted-foreground text-xs">
                             <Money value={bs(p.publicPriceUsd)!} currency="VES" />
@@ -252,5 +262,18 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
         </>
       )}
     </div>
+  );
+}
+
+/** Without a selling price the product is registered but cannot be sold. */
+function priced(p: { publicPriceUsd: string | null }): boolean {
+  return Boolean(p.publicPriceUsd && Number(p.publicPriceUsd) > 0);
+}
+
+function MissingPrice() {
+  return (
+    <Badge variant="outline" className="border-amber-400 text-amber-800 dark:text-amber-300">
+      Falta precio
+    </Badge>
   );
 }

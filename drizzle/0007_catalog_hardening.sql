@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "product_barcodes_internal_uidx" ON "product_barcodes" USING btree ("product_id") WHERE "product_barcodes"."type" = 'INTERNAL';

@@ -80,6 +80,18 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
         }
       />
       {!product.isActive ? <Badge variant="secondary">Producto inactivo: no aparece en el punto de venta</Badge> : null}
+      {!(product.prices.publicUsd && Number(product.prices.publicUsd) > 0) ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-100">
+          <p>
+            <span className="font-medium">Falta precio:</span> el producto está registrado pero no se puede vender ni cotizar hasta ponerle el precio público.
+          </p>
+          {canManage ? (
+            <Button size="sm" render={<Link href="/productos/precios" />}>
+              Poner precio
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="grid gap-4 lg:grid-cols-3">
         <Card className="lg:row-span-2">

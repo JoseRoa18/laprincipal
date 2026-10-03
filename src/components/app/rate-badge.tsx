@@ -12,8 +12,19 @@ import { getRatesSnapshot } from "@/modules/currency/infrastructure/rates";
  * When the Bs rate is behind it asks the BCV again after the response.
  */
 export async function RateBadge({ canEdit }: { canEdit: boolean }) {
-  const snap = await getRatesSnapshot();
   const href = canEdit ? "/configuracion/tasas" : "#";
+  // The badge is in every page's header: a brief database failure here must not take the page down.
+  const snap = await getRatesSnapshot().catch((err: unknown) => {
+    console.error("[rate-badge]", err);
+    return null;
+  });
+  if (!snap) {
+    return (
+      <Badge variant="secondary" className="gap-1 font-normal">
+        <TriangleAlert className="size-3" /> Tasa no disponible
+      </Badge>
+    );
+  }
   if (snap.missing.includes(BCV_CURRENCY) || snap.stale.includes(BCV_CURRENCY)) after(() => refreshBcvRateIfDue());
 
   if (snap.missing.length > 0) {

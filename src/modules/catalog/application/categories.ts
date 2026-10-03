@@ -1,10 +1,10 @@
-import { and, count, eq, isNull, ne, sql } from "drizzle-orm";
+import { and, count, eq, isNull, ne, sql, type SQL } from "drizzle-orm";
 import { db, type Tx } from "@/db/client";
 import { brands, categories, products } from "@/db/schema";
 import { AppError, notFound } from "@/lib/errors";
 import { writeAudit } from "@/modules/core/application/audit";
 import { slugify, type BrandInput, type CategoryInput } from "../domain/category-schema";
-import type { ActorUser } from "./catalog-shared";
+import { rebuildSearchText, type ActorUser } from "./catalog-shared";
 
 async function uniqueSlug(tx: Tx, base: string, excludeId?: string): Promise<string> {
   let slug = base || "categoria";
@@ -60,6 +60,8 @@ export async function updateCategory(id: string, input: CategoryInput & { isActi
       .set({ name: input.name, parentId: input.parentId, sortOrder: input.sortOrder, slug, isActive: input.isActive ?? before.isActive })
       .where(eq(categories.id, id))
       .returning();
+    // The category name is part of each product's search text: a renamed category must be found by its new name.
+    if (before.name !== row.name) await rebuildSearchTextWhere(tx, eq(products.categoryId, id));
     await writeAudit(tx, { userId: user.id, action: "category.update", entityType: "category", entityId: id, before, after: row });
     return row;
   });
@@ -122,6 +124,7 @@ export async function updateBrand(id: string, input: BrandInput & { isActive?: b
       .set({ name: input.name, isActive: input.isActive ?? before.isActive })
       .where(eq(brands.id, id))
       .returning();
+    if (before.name !== row.name) await rebuildSearchTextWhere(tx, eq(products.brandId, id));
     await writeAudit(tx, { userId: user.id, action: "brand.update", entityType: "brand", entityId: id, before, after: row });
     return row;
   });
@@ -145,4 +148,10 @@ export async function deleteBrand(id: string, user: ActorUser): Promise<DeleteRe
     await writeAudit(tx, { userId: user.id, action: "brand.delete", entityType: "brand", entityId: id, before });
     return { deleted: true, deactivated: false };
   });
+}
+
+/** Rebuild the search text of the products matching `where` (after renaming their brand or category). */
+async function rebuildSearchTextWhere(tx: Tx, where: SQL): Promise<void> {
+  const rows = await tx.select({ id: products.id }).from(products).where(where);
+  for (const r of rows) await rebuildSearchText(tx, r.id);
 }

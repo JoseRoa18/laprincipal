@@ -122,7 +122,7 @@ export async function parseImportWorkbook(buffer: Buffer): Promise<ParsedWorkboo
   const wb = new ExcelJS.Workbook();
   await wb.xlsx.load(buffer as unknown as ExcelJS.Buffer);
   const ws = wb.getWorksheet("Productos") ?? wb.worksheets[0];
-  if (!ws) return { rows: [], headers: [], unknownHeaders: [], missingRequired: ["Nombre", "Precio público USD"] };
+  if (!ws) return { rows: [], headers: [], unknownHeaders: [], missingRequired: ["Nombre"] };
 
   const headerRow = ws.getRow(1);
   const columnMap = new Map<number, ImportColumnKey>();

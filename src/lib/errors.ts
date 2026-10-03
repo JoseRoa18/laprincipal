@@ -1,3 +1,5 @@
+import { isUniqueViolation } from "@/modules/core/application/db-errors";
+
 export type AppErrorCode =
   | "VALIDATION"
   | "NOT_FOUND"
@@ -37,6 +39,9 @@ export type ActionResult<T = undefined> =
 export function toActionError(err: unknown): ActionResult<never> {
   if (err instanceof AppError) {
     return { ok: false, error: { code: err.code, message: err.message, details: err.details } };
+  }
+  if (isUniqueViolation(err)) {
+    return { ok: false, error: { code: "CONFLICT", message: "Ya existe un registro con esos datos (por ejemplo, un código o SKU repetido). Revisa y vuelve a intentar." } };
   }
   console.error(err);
   return {
