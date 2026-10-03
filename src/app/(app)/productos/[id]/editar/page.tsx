@@ -7,6 +7,7 @@ import { getProductFormOptions } from "@/modules/catalog/infrastructure/catalog-
 import { getProductDetail, getProductFormData } from "@/modules/catalog/infrastructure/product-detail";
 import { ProductForm } from "@/modules/catalog/ui/product-form";
 import { ProductGallery } from "@/modules/catalog/ui/product-gallery";
+import { ProductStickyBar } from "@/modules/catalog/ui/product-sticky-bar";
 import { getDefaultLocation } from "@/modules/core/application/context";
 
 export const metadata = { title: "Editar producto" };
@@ -21,18 +22,24 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
   if (!data || !detail) notFound();
 
   return (
-    <div className="mx-auto max-w-5xl space-y-4">
-      <PageHeader back={{ href: `/productos/${id}`, label: "Volver al producto" }} title={`Editar: ${data.name}`} description={`${data.sku}${data.primaryBarcode ? ` · código ${data.primaryBarcode}` : ""}`} />
-      <Card>
-        <CardHeader>
-          <CardTitle>Fotos</CardTitle>
-          <CardDescription>Las fotos se guardan al instante; el resto del formulario, al pulsar Guardar.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ProductGallery productId={detail.id} productName={detail.name} images={detail.images} canEdit aiEnabled={isAiPhotoEnabled()} />
-        </CardContent>
-      </Card>
-      <ProductForm mode="edit" productId={data.id} initialValues={data.values} options={options} canViewCosts={can(user.role, "view_costs")} />
-    </div>
+    <>
+      {/* Outside the column so it sticks for the whole page and adds no gap. */}
+      <ProductStickyBar watchId="product-edit-title" name={data.name} sku={data.sku} barcode={data.primaryBarcode} thumbUrl={detail.images[0]?.thumbUrl ?? null} />
+      <div className="mx-auto max-w-5xl space-y-4">
+        <div id="product-edit-title">
+          <PageHeader back={{ href: `/productos/${id}`, label: "Volver al producto" }} title={`Editar: ${data.name}`} description={`${data.sku}${data.primaryBarcode ? ` · código ${data.primaryBarcode}` : ""}`} />
+        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Fotos</CardTitle>
+            <CardDescription>Las fotos se guardan al instante; el resto del formulario, al pulsar Guardar.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ProductGallery productId={detail.id} productName={detail.name} images={detail.images} canEdit aiEnabled={isAiPhotoEnabled()} />
+          </CardContent>
+        </Card>
+        <ProductForm mode="edit" productId={data.id} initialValues={data.values} options={options} canViewCosts={can(user.role, "view_costs")} />
+      </div>
+    </>
   );
 }
