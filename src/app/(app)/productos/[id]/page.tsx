@@ -51,6 +51,8 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
 
   const canManage = can(user.role, "manage_products");
   const showCosts = can(user.role, "view_costs");
+  // Suppliers and stock movements are back-office information: sellers only look products up.
+  const showBackOffice = can(user.role, "purchases");
   const amounts = (usd: string | null) => (usd ? displayAmounts(usd, rates.rateSet, rates.currencies) : null);
   const publicAmounts = amounts(product.prices.publicUsd);
   const techAmounts = amounts(product.prices.techUsd);
@@ -60,6 +62,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
   return (
     <div className="space-y-4">
       <PageHeader
+        back={{ href: "/productos", label: "Volver a productos" }}
         title={product.name}
         description={[product.partNumber ? `N.º de parte ${product.partNumber}` : null, product.sku, product.brand?.name].filter(Boolean).join(" · ")}
         actions={
@@ -248,94 +251,98 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Proveedores</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {product.suppliers.length === 0 ? (
-              <p className="text-muted-foreground text-sm">Se llenará con las entradas por compra.</p>
-            ) : (
-              <ul className="divide-y">
-                {product.suppliers.map((s) => (
-                  <li key={s.supplierId} className="flex items-start gap-2 py-2 text-sm">
-                    <div className="min-w-0 flex-1">
-                      <p className="font-medium">
-                        {s.name} {s.isPreferred ? <Badge variant="secondary">Preferido</Badge> : null}
-                      </p>
-                      <p className="text-muted-foreground text-xs">
-                        {s.supplierCode ? `Código ${s.supplierCode} · ` : ""}
-                        {s.packSize > 1 ? `Empaque de ${s.packSize} · ` : ""}
-                        {showCosts && s.lastCostUsd ? (
-                          <>
-                            Último costo <Money value={s.lastCostUsd} />
-                            {" · "}
-                          </>
-                        ) : null}
-                        {s.lastPurchaseAt ? `Última compra ${formatDate(s.lastPurchaseAt)} · ` : ""}
-                        Entrega {s.leadTimeDays} días
-                      </p>
-                    </div>
-                    {canManage ? (
-                      <SupplierLinkDialog productId={product.id} supplierId={s.supplierId} title={s.name} supplierCode={s.supplierCode} packSize={s.packSize} />
-                    ) : null}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between gap-2">
-              Últimos movimientos
-              <Button variant="ghost" size="sm" render={<Link href={`/inventario/movimientos?product=${product.id}`} />}>
-                Ver kardex completo <ArrowRight />
-              </Button>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {product.movements.length === 0 ? (
-              <p className="text-muted-foreground text-sm">Sin movimientos de inventario.</p>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Fecha</TableHead>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead className="text-right">Cantidad</TableHead>
-                    <TableHead className="text-right">Saldo</TableHead>
-                    {showCosts ? <TableHead className="hidden text-right md:table-cell">Costo</TableHead> : null}
-                    <TableHead className="hidden md:table-cell">Usuario</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {product.movements.map((m) => (
-                    <TableRow key={m.id}>
-                      <TableCell className="tabular-nums">{formatDateTime(m.createdAt)}</TableCell>
-                      <TableCell>
-                        {MOVEMENT_TYPE_LABEL[m.type] ?? m.type}
-                        {m.reasonName ? <span className="text-muted-foreground text-xs"> · {m.reasonName}</span> : null}
-                      </TableCell>
-                      <TableCell className={`text-right tabular-nums ${D(m.quantity).lt(0) ? "text-destructive" : "text-emerald-700"}`}>
-                        {D(m.quantity).gt(0) ? "+" : ""}
-                        {formatQty(m.quantity, product.unit.decimals)}
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums">{formatQty(m.balanceAfter, product.unit.decimals)}</TableCell>
-                      {showCosts ? (
-                        <TableCell className="hidden text-right md:table-cell">
-                          <Money value={m.unitCostUsd} />
-                        </TableCell>
+        {showBackOffice ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>Proveedores</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {product.suppliers.length === 0 ? (
+                <p className="text-muted-foreground text-sm">Se llenará con las entradas por compra.</p>
+              ) : (
+                <ul className="divide-y">
+                  {product.suppliers.map((s) => (
+                    <li key={s.supplierId} className="flex items-start gap-2 py-2 text-sm">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium">
+                          {s.name} {s.isPreferred ? <Badge variant="secondary">Preferido</Badge> : null}
+                        </p>
+                        <p className="text-muted-foreground text-xs">
+                          {s.supplierCode ? `Código ${s.supplierCode} · ` : ""}
+                          {s.packSize > 1 ? `Empaque de ${s.packSize} · ` : ""}
+                          {showCosts && s.lastCostUsd ? (
+                            <>
+                              Último costo <Money value={s.lastCostUsd} />
+                              {" · "}
+                            </>
+                          ) : null}
+                          {s.lastPurchaseAt ? `Última compra ${formatDate(s.lastPurchaseAt)} · ` : ""}
+                          Entrega {s.leadTimeDays} días
+                        </p>
+                      </div>
+                      {canManage ? (
+                        <SupplierLinkDialog productId={product.id} supplierId={s.supplierId} title={s.name} supplierCode={s.supplierCode} packSize={s.packSize} />
                       ) : null}
-                      <TableCell className="text-muted-foreground hidden md:table-cell">{m.userName ?? "—"}</TableCell>
-                    </TableRow>
+                    </li>
                   ))}
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
+                </ul>
+              )}
+            </CardContent>
+          </Card>
+        ) : null}
+
+        {showBackOffice ? (
+          <Card className="lg:col-span-2">
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between gap-2">
+                Últimos movimientos
+                <Button variant="ghost" size="sm" render={<Link href={`/inventario/movimientos?product=${product.id}`} />}>
+                  Ver kardex completo <ArrowRight />
+                </Button>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {product.movements.length === 0 ? (
+                <p className="text-muted-foreground text-sm">Sin movimientos de inventario.</p>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Fecha</TableHead>
+                      <TableHead>Tipo</TableHead>
+                      <TableHead className="text-right">Cantidad</TableHead>
+                      <TableHead className="text-right">Saldo</TableHead>
+                      {showCosts ? <TableHead className="hidden text-right md:table-cell">Costo</TableHead> : null}
+                      <TableHead className="hidden md:table-cell">Usuario</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {product.movements.map((m) => (
+                      <TableRow key={m.id}>
+                        <TableCell className="tabular-nums">{formatDateTime(m.createdAt)}</TableCell>
+                        <TableCell>
+                          {MOVEMENT_TYPE_LABEL[m.type] ?? m.type}
+                          {m.reasonName ? <span className="text-muted-foreground text-xs"> · {m.reasonName}</span> : null}
+                        </TableCell>
+                        <TableCell className={`text-right tabular-nums ${D(m.quantity).lt(0) ? "text-destructive" : "text-emerald-700"}`}>
+                          {D(m.quantity).gt(0) ? "+" : ""}
+                          {formatQty(m.quantity, product.unit.decimals)}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums">{formatQty(m.balanceAfter, product.unit.decimals)}</TableCell>
+                        {showCosts ? (
+                          <TableCell className="hidden text-right md:table-cell">
+                            <Money value={m.unitCostUsd} />
+                          </TableCell>
+                        ) : null}
+                        <TableCell className="text-muted-foreground hidden md:table-cell">{m.userName ?? "—"}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        ) : null}
 
         <Card>
           <CardHeader>

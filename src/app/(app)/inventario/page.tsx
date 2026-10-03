@@ -7,7 +7,7 @@ import { Pagination, parsePage } from "@/components/app/pagination";
 import { SearchInput } from "@/components/app/search-input";
 import { STOCK_STATUS_LABEL } from "@/components/app/stock-status-badge";
 import { Button } from "@/components/ui/button";
-import { can, requireUser } from "@/lib/auth-guards";
+import { can, requireRole } from "@/lib/auth-guards";
 import { fromUsd } from "@/modules/currency/domain/conversion";
 import { getRatesSnapshot } from "@/modules/currency/infrastructure/rates";
 import { STOCK_STATUSES, isStockStatus, listCategoryOptions, listStock } from "@/modules/inventory/infrastructure/stock-query";
@@ -22,7 +22,7 @@ type Params = Record<string, string | string[] | undefined>;
 const str = (v: string | string[] | undefined) => (typeof v === "string" ? v : "");
 
 export default async function InventoryPage({ searchParams }: { searchParams: Promise<Params> }) {
-  const user = await requireUser();
+  const user = await requireRole("admin", "warehouse");
   const params = await searchParams;
   const page = parsePage(params.page);
   const q = str(params.q);

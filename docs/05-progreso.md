@@ -1,6 +1,6 @@
 # La Principal 2050 — Progreso de la Fase 1
 
-Actualizado: 2026-10-03. **Estado: Fase 1 completa y publicada** en https://laprincipal.vercel.app (Supabase + Vercel, ver `docs/07-despliegue.md`). Verificada en local: typecheck, lint, 188 pruebas y los scripts de humo.
+Actualizado: 2026-10-03. **Estado: Fase 1 completa y publicada** en https://laprincipal.vercel.app (Supabase + Vercel, ver `docs/07-despliegue.md`). Verificada en local: typecheck, lint, 197 pruebas y los scripts de humo.
 
 ## Estado por módulo
 
@@ -61,9 +61,20 @@ Verificación automática: `pnpm typecheck`, `pnpm lint`, `pnpm test`, y `pnpm e
 - Reporte "Ajustes y mermas" (`/reportes/ajustes`): pérdidas, sobrantes y neto por motivo, por producto y por movimiento, con enlace al ajuste o conteo.
 - Exportación a PDF de todos los reportes (`format=pdf` en `/api/reports/export`), generada desde las mismas hojas del Excel.
 
+## Mejoras posteriores (2026-10-03, tarde)
+
+- Tasa de Bs automática del BCV: se lee de bcv.org.ve con TLS verificado (la app incluye el certificado intermedio que el sitio no envía) y, si falla o la tasa publicada rige desde un día futuro, de ve.dolarapi.com. Se guarda con su "Fecha Valor" (la del viernes rige desde el lunes). Corre en la tarea diaria de las 3:00 a. m., con el botón "Actualizar desde el BCV" y en segundo plano cuando una página nota la tasa atrasada (máximo cada 30 minutos). Rechaza lecturas que cambien a menos de la mitad o más del doble. Carga manual de Bs solo como emergencia; COP sigue manual. Una tasa futura ya publicada evita el aviso de "tasa vieja" en fines de semana, nunca más de 7 días.
+- Enlace "← Volver a …" arriba del título en las 49 subpáginas (`PageHeader back`), en lugar de los botones de volver que había en distintos estilos.
+
+## Rol vendedor (2026-10-03)
+
+- Decisión del dueño: el vendedor solo vende. Ve Vender (con cliente y ventas en espera) y Productos (sin costos, proveedores ni movimientos); entra directo a Vender. Ventas, devoluciones, cotizaciones, clientes, caja e inventario pasan a ser del administrador (inventario también de almacén).
+- Después de cobrar, todos van a `/vender/venta/[id]` (cambio, ticket, WhatsApp, nueva venta). El vendedor solo abre, reimprime o reenvía las ventas que hizo ese día (`canOpenSale`, también en el ticket, la nota de entrega PDF y WhatsApp).
+- Permisos: `quote` nuevo (admin); `return_sale` y `cash` pasan a solo admin. Si la caja está cerrada, el vendedor ve "Pídele al administrador que la abra".
+
 ## Próximos pasos
 
 1. Subir estos cambios a `main`: Vercel aplica la migración `0003` al construir.
 2. Probar en el local con los equipos reales (ver pendientes) y hacer un día de prueba completo en producción.
 3. Revisar el plan de Vercel: el plan Hobby es solo para uso personal no comercial; para el negocio corresponde Pro.
-4. Fase 2: números de serie y garantías, promociones simples, notificaciones, modo offline básico, impresión ESC/POS directa, crédito a técnicos, tasa BCV automática.
+4. Fase 2: números de serie y garantías, promociones simples, notificaciones, modo offline básico, impresión ESC/POS directa, crédito a técnicos.

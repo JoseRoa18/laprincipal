@@ -31,7 +31,7 @@ function hrefWith(params: Params, overrides: Record<string, string | undefined>)
 }
 
 export default async function CustomersPage({ searchParams }: { searchParams: Promise<Params> }) {
-  await requireRole("admin", "seller");
+  await requireRole("admin");
   const params = await searchParams;
   const page = parsePage(params.page);
   const q = typeof params.q === "string" ? params.q : "";

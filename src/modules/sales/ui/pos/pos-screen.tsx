@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, PauseCircle, TriangleAlert, UserRound, Wallet } from "lucide-react";
+import { PauseCircle, TriangleAlert, UserRound, Wallet } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -17,6 +17,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { BackLink } from "@/components/app/back-link";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -147,7 +148,7 @@ function PosInner({ config }: { config: PosConfig }) {
       return;
     }
     if (cashBlocked) {
-      toast.error("La caja está cerrada. Ábrela en Caja antes de cobrar.");
+      toast.error(config.user.role === "admin" ? "La caja está cerrada. Ábrela en Caja antes de cobrar." : "La caja está cerrada. Pídele al administrador que la abra.");
       return;
     }
     const current = cartTotals(store.getState().lines, store.getState().globalDiscount);
@@ -156,7 +157,7 @@ function PosInner({ config }: { config: PosConfig }) {
       return;
     }
     setCheckoutOpen(true);
-  }, [store, ratesBlocked, cashBlocked, config.policies.maxDiscountPct]);
+  }, [store, ratesBlocked, cashBlocked, config.policies.maxDiscountPct, config.user.role]);
 
   const primaryAction = useCallback(() => {
     if (isSale) openCheckout();
@@ -238,9 +239,7 @@ function PosInner({ config }: { config: PosConfig }) {
             </>
           ) : (
             <>
-              <Button type="button" variant="ghost" size="sm" render={<Link href="/cotizaciones" />}>
-                <ArrowLeft /> Cotizaciones
-              </Button>
+              <BackLink href="/cotizaciones" label="Volver a cotizaciones" />
               <span className="font-semibold">Nueva cotización</span>
             </>
           )}
@@ -275,7 +274,8 @@ function PosInner({ config }: { config: PosConfig }) {
           <Wallet />
           <AlertTitle>La caja está cerrada</AlertTitle>
           <AlertDescription>
-            Puedes armar el carrito, pero para cobrar hay que abrir la caja. <Link href="/caja">Ir a Caja</Link>
+            Puedes armar el carrito, pero para cobrar hay que abrir la caja.{" "}
+            {config.user.role === "admin" ? <Link href="/caja">Ir a Caja</Link> : "Pídele al administrador que la abra."}
           </AlertDescription>
         </Alert>
       ) : null}
@@ -332,7 +332,7 @@ function PosInner({ config }: { config: PosConfig }) {
               store.getState().clear();
               void queryClient.invalidateQueries({ queryKey: HELD_SALES_KEY });
               toast.success(`Venta ${result.number} registrada`);
-              router.push(`/ventas/${result.saleId}?nueva=1&imprimir=${opts.print ? 1 : 0}&whatsapp=${opts.whatsapp ? 1 : 0}`);
+              router.push(`/vender/venta/${result.saleId}?imprimir=${opts.print ? 1 : 0}&whatsapp=${opts.whatsapp ? 1 : 0}`);
             }}
           />
           <HoldDialog open={holdOpen} onOpenChange={setHoldOpen} initialLabel={holdLabel} onSubmit={hold} />

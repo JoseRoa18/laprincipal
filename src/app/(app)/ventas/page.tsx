@@ -25,7 +25,7 @@ function str(v: string | string[] | undefined): string {
 }
 
 export default async function SalesPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
-  await requireRole("admin", "seller");
+  await requireRole("admin");
   const params = await searchParams;
   const today = businessDate();
   const from = DATE.test(str(params.desde)) ? str(params.desde) : today;

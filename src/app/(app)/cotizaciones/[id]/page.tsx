@@ -1,9 +1,7 @@
-import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Money } from "@/components/app/money";
 import { PageHeader } from "@/components/app/page-header";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { requireRole } from "@/lib/auth-guards";
@@ -17,7 +15,7 @@ import { QuoteStatusBadge } from "@/modules/sales/ui/status-badge";
 export const metadata = { title: "Cotización" };
 
 export default async function QuoteDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  await requireRole("admin", "seller");
+  await requireRole("admin");
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const quote = await getQuoteDetail(id);
@@ -27,13 +25,9 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
   return (
     <div className="space-y-4">
       <PageHeader
+        back={{ href: "/cotizaciones", label: "Volver a cotizaciones" }}
         title={`Cotización ${quote.number ?? ""}`}
         description={`${formatDateTime(quote.createdAt)} · ${quote.seller.name} · ${quote.customer ? quote.customer.name : "Consumidor final"}`}
-        actions={
-          <Button variant="ghost" render={<Link href="/cotizaciones" />}>
-            <ArrowLeft /> Cotizaciones
-          </Button>
-        }
       />
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <QuoteStatusBadge status={quote.status} />

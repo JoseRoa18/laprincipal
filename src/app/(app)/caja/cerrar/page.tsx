@@ -1,7 +1,5 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { PageHeader } from "@/components/app/page-header";
-import { Button } from "@/components/ui/button";
 import { requireRole } from "@/lib/auth-guards";
 import { formatDateTime } from "@/lib/format";
 import { D } from "@/lib/money";
@@ -13,7 +11,7 @@ import { CloseSessionForm } from "@/modules/cash/ui/close-session-form";
 export const metadata = { title: "Cerrar caja" };
 
 export default async function CloseCashPage() {
-  await requireRole("admin", "seller");
+  await requireRole("admin");
   const session = await getOpenCashSession();
   if (!session) redirect("/caja");
   const summary = await getSessionSummary(session.id);
@@ -53,13 +51,9 @@ export default async function CloseCashPage() {
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <PageHeader
+        back={{ href: "/caja", label: "Volver a caja" }}
         title="Cerrar caja"
         description={`${summary.session.number ?? ""} · abierta por ${summary.session.openedBy.name} el ${formatDateTime(summary.session.openedAt)}`}
-        actions={
-          <Button variant="outline" render={<Link href="/caja" />}>
-            Volver a caja
-          </Button>
-        }
       />
       <CloseSessionForm
         sessionNumber={summary.session.number ?? ""}

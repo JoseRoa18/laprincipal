@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/db/client";
 import { parseInput, runAction } from "@/lib/action";
-import { assertRole } from "@/lib/auth-guards";
+import { assertRole, can } from "@/lib/auth-guards";
 import { AppError } from "@/lib/errors";
 import { authorizeSupervisor, verifyUserPin } from "@/modules/auth/application/pin";
 import { writeAudit } from "@/modules/core/application/audit";
@@ -54,6 +54,7 @@ export async function discardHeldSaleAction(saleId: string) {
 export async function saveQuoteAction(input: unknown) {
   return runAction(async () => {
     const { user, seller } = await sellerContext();
+    if (!can(user.role, "quote")) throw new AppError("FORBIDDEN", "Solo el administrador hace cotizaciones.");
     const data = parseInput(createQuoteSchema, input);
     const result = await createQuote(db, data, { userId: user.id, sellerId: seller.id, role: seller.role });
     revalidatePath("/cotizaciones");

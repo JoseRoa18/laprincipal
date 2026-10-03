@@ -21,7 +21,7 @@ import { getDefaultCashRegister } from "@/modules/core/application/context";
 export const metadata = { title: "Caja" };
 
 export default async function CashPage() {
-  const user = await requireRole("admin", "seller");
+  const user = await requireRole("admin");
   const register = await getDefaultCashRegister();
   const session = await getOpenCashSession(undefined, register.id);
   const isAdmin = user.role === "admin";

@@ -20,7 +20,7 @@ export default async function LabelsPage({ searchParams }: { searchParams: Promi
   }
   return (
     <div className="space-y-4">
-      <PageHeader title="Etiquetas" description="Elige productos y cantidades, y genera el PDF para el rollo o para una hoja A4." />
+      <PageHeader back={{ href: "/productos", label: "Volver a productos" }} title="Etiquetas" description="Elige productos y cantidades, y genera el PDF para el rollo o para una hoja A4." />
       <LabelsPicker initial={initial} />
     </div>
   );

@@ -12,7 +12,6 @@ import { formatDate, formatDateTime, formatPct, formatQty } from "@/lib/format";
 import type { AbcClass, StockStatus } from "@/modules/inventory/domain/velocity";
 import { listCategoryOptions } from "@/modules/reporting/infrastructure/categories";
 import { getVelocityReport, STATUS_ORDER, type VelocitySort } from "@/modules/reporting/infrastructure/velocity-report";
-import { BackToReports } from "@/modules/reporting/ui/back-to-reports";
 import { ExportButton } from "@/modules/reporting/ui/export-button";
 import { ParamSelect } from "@/modules/reporting/ui/param-select";
 import { RecomputeButton } from "@/modules/reporting/ui/recompute-button";
@@ -71,6 +70,7 @@ export default async function VelocityReportPage({ searchParams }: { searchParam
   return (
     <div className="space-y-6">
       <PageHeader
+        back={{ href: "/reportes", label: "Volver a reportes" }}
         title="Velocidad de venta y reposición"
         description={
           report.computedAt
@@ -79,7 +79,6 @@ export default async function VelocityReportPage({ searchParams }: { searchParam
         }
         actions={
           <>
-            <BackToReports />
             <ExportButton report="velocity" params={exportParams} disabled={totalProducts === 0} />
             <RecomputeButton />
           </>

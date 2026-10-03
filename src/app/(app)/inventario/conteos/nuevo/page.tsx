@@ -10,7 +10,7 @@ export default async function NewCountPage() {
   const categories = await listCategoryOptions();
   return (
     <div className="space-y-6">
-      <PageHeader title="Nuevo conteo" description="Elige qué contar. La app guarda la existencia esperada de cada producto al empezar." />
+      <PageHeader back={{ href: "/inventario/conteos", label: "Volver a conteos" }} title="Nuevo conteo" description="Elige qué contar. La app guarda la existencia esperada de cada producto al empezar." />
       <CountCreateForm categories={categories} />
     </div>
   );

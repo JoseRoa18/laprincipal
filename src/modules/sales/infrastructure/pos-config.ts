@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { priceLists } from "@/db/schema";
 import type { SessionUser } from "@/lib/auth-guards";
+import { can } from "@/lib/permissions";
 import { listPinUsers } from "@/modules/auth/application/pin";
 import { getOpenCashSession } from "@/modules/cash/application/session";
 import { getDefaultLocation } from "@/modules/core/application/context";
@@ -52,6 +53,7 @@ export async function loadPosConfig(opts: { user: SessionUser; mode: "sale" | "q
     },
     paymentMethods,
     cashSessionOpen: Boolean(session),
+    canQuote: can(opts.user.role, "quote"),
     pinUsers,
     priceLists: {
       publicId: lists.find((l) => l.code === "PUBLIC")?.id ?? null,

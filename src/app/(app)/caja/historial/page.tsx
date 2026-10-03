@@ -5,7 +5,6 @@ import { Money } from "@/components/app/money";
 import { PageHeader } from "@/components/app/page-header";
 import { DEFAULT_PAGE_SIZE, Pagination, parsePage } from "@/components/app/pagination";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { requireRole } from "@/lib/auth-guards";
 import { formatDateTime } from "@/lib/format";
@@ -23,13 +22,9 @@ export default async function CashHistoryPage({ searchParams }: { searchParams: 
   return (
     <div className="space-y-4">
       <PageHeader
+        back={{ href: "/caja", label: "Volver a caja" }}
         title="Historial de cajas"
         description={`${total} ${total === 1 ? "sesión" : "sesiones"}`}
-        actions={
-          <Button variant="outline" render={<Link href="/caja" />}>
-            Volver a caja
-          </Button>
-        }
       />
 
       {rows.length === 0 ? (

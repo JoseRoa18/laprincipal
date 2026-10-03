@@ -11,6 +11,7 @@ export const dynamic = "force-dynamic";
 export async function GET(req: NextRequest) {
   const user = await getSessionUser();
   if (!user) return new NextResponse("Unauthorized", { status: 401 });
+  if (!can(user.role, "manage_products")) return new NextResponse("Forbidden", { status: 403 });
   const params: Record<string, string> = {};
   req.nextUrl.searchParams.forEach((value, key) => {
     params[key] = value;

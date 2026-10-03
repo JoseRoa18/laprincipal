@@ -17,6 +17,7 @@ export default async function WhatToBuyPage() {
   return (
     <div className="space-y-4">
       <PageHeader
+        back={{ href: "/compras", label: "Volver a compras" }}
         title="Qué comprar"
         description={total > 0 ? `${total} ${total === 1 ? "producto" : "productos"} por debajo de su punto de reorden o por agotarse, agrupados por proveedor` : "Sugerencia de compra agrupada por proveedor"}
         actions={

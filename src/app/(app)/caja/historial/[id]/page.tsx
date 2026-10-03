@@ -1,10 +1,8 @@
 import { LockOpen } from "lucide-react";
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { reopenCashSessionAction } from "@/app/(app)/caja/actions";
 import { ConfirmButton } from "@/components/app/confirm-button";
 import { PageHeader } from "@/components/app/page-header";
-import { Button } from "@/components/ui/button";
 import { requireRole } from "@/lib/auth-guards";
 import { getOpenCashSession } from "@/modules/cash/application/session";
 import { getSessionSummary } from "@/modules/cash/application/session-summary";
@@ -16,7 +14,7 @@ import { getCompanySettings } from "@/modules/settings/infrastructure/settings";
 export const metadata = { title: "Cierre de caja" };
 
 export default async function CashSessionPage({ params }: { params: Promise<{ id: string }> }) {
-  const user = await requireRole("admin", "seller");
+  const user = await requireRole("admin");
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const detail = await getCashSessionDetail(id);
@@ -91,14 +89,12 @@ export default async function CashSessionPage({ params }: { params: Promise<{ id
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <PageHeader
+        back={isAdmin ? { href: "/caja/historial", label: "Volver al historial" } : { href: "/caja", label: "Volver a caja" }}
         className="no-print"
         title={`Cierre de caja ${detail.number ?? ""}`}
         description={detail.status === "open" ? "La sesión sigue abierta; estos totales cambian con cada venta." : undefined}
         actions={
           <>
-            <Button variant="outline" render={<Link href={isAdmin ? "/caja/historial" : "/caja"} />}>
-              {isAdmin ? "Historial" : "Volver a caja"}
-            </Button>
             {detail.status === "closed" ? <PrintButton /> : null}
             {canReopen ? (
               <ConfirmButton

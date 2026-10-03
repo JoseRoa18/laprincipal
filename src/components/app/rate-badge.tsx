@@ -1,13 +1,20 @@
 import { TriangleAlert } from "lucide-react";
 import Link from "next/link";
+import { after } from "next/server";
 import { Badge } from "@/components/ui/badge";
 import { formatMoney } from "@/lib/format";
+import { refreshBcvRateIfDue } from "@/modules/currency/application/bcv-sync";
+import { BCV_CURRENCY } from "@/modules/currency/domain/bcv";
 import { getRatesSnapshot } from "@/modules/currency/infrastructure/rates";
 
-/** Server component: shows today's rates or a warning when they are missing. */
+/**
+ * Server component: shows today's rates or a warning when they are missing.
+ * When the Bs rate is behind it asks the BCV again after the response.
+ */
 export async function RateBadge({ canEdit }: { canEdit: boolean }) {
   const snap = await getRatesSnapshot();
   const href = canEdit ? "/configuracion/tasas" : "#";
+  if (snap.missing.includes(BCV_CURRENCY) || snap.stale.includes(BCV_CURRENCY)) after(() => refreshBcvRateIfDue());
 
   if (snap.missing.length > 0) {
     return (

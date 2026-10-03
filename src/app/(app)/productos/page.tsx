@@ -96,7 +96,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
 
       <div className="space-y-2">
         <SearchInput placeholder="Nombre, número de parte, equivalencia, modelo o código" autoFocus={false} />
-        <ProductFilters categories={categories} brands={brands} filter={filter} exportHref={total > 0 ? exportHref : null} />
+        <ProductFilters categories={categories} brands={brands} filter={filter} exportHref={total > 0 && canManage ? exportHref : null} />
       </div>
 
       {rows.length === 0 ? (

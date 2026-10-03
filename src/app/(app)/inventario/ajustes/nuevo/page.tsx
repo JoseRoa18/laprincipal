@@ -10,7 +10,7 @@ export default async function NewAdjustmentPage() {
   const reasons = await listAdjustmentReasons();
   return (
     <div className="space-y-6">
-      <PageHeader title="Nuevo ajuste" description="Elige el motivo, agrega los productos y aplica" />
+      <PageHeader back={{ href: "/inventario/ajustes", label: "Volver a ajustes" }} title="Nuevo ajuste" description="Elige el motivo, agrega los productos y aplica" />
       <AdjustmentForm reasons={reasons} showCosts={can(user.role, "view_costs")} />
     </div>
   );

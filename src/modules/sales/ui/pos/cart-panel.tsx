@@ -172,9 +172,11 @@ export function CartPanel({ config, totals, onCustomerChange, onCheckout, onHold
             <Button type="button" variant="outline" size="lg" className="h-12" disabled={lines.length === 0} onClick={onHold}>
               <PauseCircle /> En espera
             </Button>
-            <Button type="button" variant="outline" size="lg" className="h-12" disabled={lines.length === 0} onClick={onQuote}>
-              <FileText /> Cotizar
-            </Button>
+            {config.canQuote ? (
+              <Button type="button" variant="outline" size="lg" className="h-12" disabled={lines.length === 0} onClick={onQuote}>
+                <FileText /> Cotizar
+              </Button>
+            ) : null}
             <Button type="button" size="lg" className="h-12 flex-1 text-base" disabled={lines.length === 0} onClick={onCheckout}>
               Cobrar <Kbd className="bg-primary-foreground/20 text-primary-foreground">F9</Kbd>
             </Button>

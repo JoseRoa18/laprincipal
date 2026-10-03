@@ -22,7 +22,7 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
 
   return (
     <div className="mx-auto max-w-5xl space-y-4">
-      <PageHeader title={`Editar: ${data.name}`} description={`${data.sku}${data.primaryBarcode ? ` · código ${data.primaryBarcode}` : ""}`} />
+      <PageHeader back={{ href: `/productos/${id}`, label: "Volver al producto" }} title={`Editar: ${data.name}`} description={`${data.sku}${data.primaryBarcode ? ` · código ${data.primaryBarcode}` : ""}`} />
       <Card>
         <CardHeader>
           <CardTitle>Fotos</CardTitle>

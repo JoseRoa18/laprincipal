@@ -1,6 +1,4 @@
-import Link from "next/link";
 import { PageHeader } from "@/components/app/page-header";
-import { Button } from "@/components/ui/button";
 import { requireRole } from "@/lib/auth-guards";
 import { getStorage } from "@/lib/storage";
 import { getCompanySettings, getSettingUpdatedAt } from "@/modules/settings/infrastructure/settings";
@@ -16,13 +14,9 @@ export default async function CompanySettingsPage() {
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <PageHeader
+        back={{ href: "/configuracion", label: "Volver a configuración" }}
         title="Empresa"
         description="Datos que aparecen en tickets, cotizaciones y reportes."
-        actions={
-          <Button variant="outline" render={<Link href="/configuracion" />}>
-            Volver a configuración
-          </Button>
-        }
       />
       <CompanyForm
         defaultValues={{ name: company.name, taxId: company.taxId, address: company.address, phone: company.phone, email: company.email }}

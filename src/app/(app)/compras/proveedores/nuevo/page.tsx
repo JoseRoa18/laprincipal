@@ -10,7 +10,7 @@ export default async function NewSupplierPage() {
   const currencies = await listCurrencies();
   return (
     <div className="space-y-6">
-      <PageHeader title="Nuevo proveedor" description="Solo el nombre es obligatorio; el resto ayuda a calcular cuándo comprar." />
+      <PageHeader back={{ href: "/compras/proveedores", label: "Volver a proveedores" }} title="Nuevo proveedor" description="Solo el nombre es obligatorio; el resto ayuda a calcular cuándo comprar." />
       <SupplierForm currencies={currencies.map((c) => c.code)} />
     </div>
   );

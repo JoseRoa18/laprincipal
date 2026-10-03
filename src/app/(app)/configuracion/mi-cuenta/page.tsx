@@ -1,8 +1,6 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/app/page-header";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireUser } from "@/lib/auth-guards";
 import { formatDateTime } from "@/lib/format";
@@ -19,13 +17,9 @@ export default async function MyAccountPage() {
   return (
     <div className="space-y-6">
       <PageHeader
+        back={user.role === "seller" ? { href: "/vender", label: "Volver a vender" } : { href: "/inicio", label: "Volver al inicio" }}
         title="Mi cuenta"
         description="Tus datos de acceso, tu contraseña y tu PIN de mostrador."
-        actions={
-          <Button variant="outline" render={<Link href="/inicio" />}>
-            Volver al inicio
-          </Button>
-        }
       />
 
       <Card>

@@ -27,6 +27,7 @@ export default async function CountsPage({ searchParams }: { searchParams: Promi
   return (
     <div className="space-y-4">
       <PageHeader
+        back={{ href: "/inventario", label: "Volver a inventario" }}
         title="Conteos físicos"
         description="Cuenta desde el celular y ajusta las diferencias con un clic"
         actions={

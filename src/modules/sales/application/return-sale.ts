@@ -5,6 +5,7 @@ import { paymentMethods, saleItems, saleReturnItems, saleReturns, sales, type Us
 import { AppError, forbidden, notFound } from "@/lib/errors";
 import { formatQty } from "@/lib/format";
 import { D, roundTo, sum, toMoneyDb, toQtyDb } from "@/lib/money";
+import { can } from "@/lib/permissions";
 import { getOpenCashSession } from "@/modules/cash/application/session";
 import { writeAudit } from "@/modules/core/application/audit";
 import { nextDocumentNumber } from "@/modules/core/application/numbering";
@@ -35,8 +36,7 @@ export interface ReturnResult {
  * sale. Restocking creates `return_in` movements at the line's historical cost.
  */
 export async function createReturn(dbx: Db, input: CreateReturnInput, ctx: ReturnContext): Promise<ReturnResult> {
-  // Mirrors PERMISSIONS.return_sale in src/lib/auth-guards (kept out of here so tests run without next-auth).
-  if (ctx.role !== "admin" && ctx.role !== "seller") throw forbidden();
+  if (!can(ctx.role, "return_sale")) throw forbidden();
   const policies = await getSetting("policies", dbx);
   const session = await getOpenCashSession(dbx, ctx.cashRegisterId);
   const currencies = await listCurrencies(dbx);

@@ -46,11 +46,22 @@ export const statsSchema = z.object({
 });
 export type StatsSettings = z.infer<typeof statsSchema>;
 
+/** Last automatic or manual query of the BCV rate (written by the app, not edited by people). */
+export const bcvSyncSchema = z.object({
+  lastAttemptAt: z.string().nullable().default(null),
+  lastSuccessAt: z.string().nullable().default(null),
+  lastError: z.string().nullable().default(null),
+  /** "bcv" (bcv.org.ve) or "dolarapi" (fallback mirror). */
+  lastSource: z.string().nullable().default(null),
+});
+export type BcvSyncStatus = z.infer<typeof bcvSyncSchema>;
+
 const SCHEMAS = {
   company: companySchema,
   policies: policiesSchema,
   printing: printingSchema,
   stats: statsSchema,
+  bcvSync: bcvSyncSchema,
 } as const;
 
 type SettingKey = keyof typeof SCHEMAS;
@@ -65,7 +76,7 @@ export async function getSetting<K extends SettingKey>(key: K, dbx: DbOrTx = db)
 export async function saveSetting<K extends SettingKey>(
   key: K,
   value: SettingValue<K>,
-  userId: string,
+  userId: string | null,
   dbx: DbOrTx = db,
 ): Promise<SettingValue<K>> {
   const parsed = SCHEMAS[key].parse(value) as SettingValue<K>;

@@ -9,7 +9,6 @@ import { requireRole } from "@/lib/auth-guards";
 import { formatDate, formatQty } from "@/lib/format";
 import { getRatesSnapshot } from "@/modules/currency/infrastructure/rates";
 import { getNoMovementReport } from "@/modules/reporting/infrastructure/no-movement-report";
-import { BackToReports } from "@/modules/reporting/ui/back-to-reports";
 import { Equivalents } from "@/modules/reporting/ui/equivalents";
 import { ExportButton } from "@/modules/reporting/ui/export-button";
 import { KpiCard } from "@/modules/reporting/ui/kpi-card";
@@ -37,11 +36,11 @@ export default async function NoMovementReportPage({ searchParams }: { searchPar
   return (
     <div className="space-y-6">
       <PageHeader
+        back={{ href: "/reportes", label: "Volver a reportes" }}
         title="Productos sin movimiento"
         description={`Con existencia y sin ventas en los últimos ${days} días.`}
         actions={
           <>
-            <BackToReports />
             <ExportButton report="no_movement" params={{ days: String(days) }} disabled={report.count === 0} />
           </>
         }

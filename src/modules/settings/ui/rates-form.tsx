@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { useTransition } from "react";
+import { useId, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { setRatesAction } from "@/app/(app)/configuracion/tasas/actions";
@@ -25,6 +25,7 @@ const LABEL: Record<string, string> = { VES: "Bs por 1 USD", COP: "COP por 1 USD
 
 export function RatesForm({ currencies, today }: { currencies: RateCurrency[]; today: string }) {
   const router = useRouter();
+  const formId = useId();
   const [pending, startTransition] = useTransition();
   const {
     register,
@@ -56,12 +57,12 @@ export function RatesForm({ currencies, today }: { currencies: RateCurrency[]; t
 
   return (
     <form onSubmit={onSubmit} className="space-y-4" noValidate>
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2">
         {currencies.map((c) => (
           <Field key={c.code} data-invalid={Boolean(errors.rates?.[c.code]) || undefined}>
-            <FieldLabel htmlFor={`rate-${c.code}`}>{LABEL[c.code] ?? `${c.code} por 1 USD`}</FieldLabel>
+            <FieldLabel htmlFor={`${formId}-rate-${c.code}`}>{LABEL[c.code] ?? `${c.code} por 1 USD`}</FieldLabel>
             <Input
-              id={`rate-${c.code}`}
+              id={`${formId}-rate-${c.code}`}
               inputMode="decimal"
               autoComplete="off"
               placeholder={c.currentRate ? formatMoney(c.currentRate, c.code, { symbol: "" }).trim() : "0"}
@@ -73,8 +74,8 @@ export function RatesForm({ currencies, today }: { currencies: RateCurrency[]; t
           </Field>
         ))}
         <Field data-invalid={Boolean(errors.effectiveDate) || undefined}>
-          <FieldLabel htmlFor="effectiveDate">Fecha</FieldLabel>
-          <Input id="effectiveDate" type="date" max={today} className="h-11" {...register("effectiveDate")} />
+          <FieldLabel htmlFor={`${formId}-date`}>Fecha</FieldLabel>
+          <Input id={`${formId}-date`} type="date" max={today} className="h-11" {...register("effectiveDate")} />
           <FieldError errors={[errors.effectiveDate]} />
         </Field>
       </div>

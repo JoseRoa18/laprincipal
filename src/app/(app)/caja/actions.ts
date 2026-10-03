@@ -21,7 +21,7 @@ function revalidateCash(sessionId?: string) {
 
 export async function openCashSessionAction(input: unknown) {
   return runAction(async () => {
-    const user = await assertRole("admin", "seller");
+    const user = await assertRole("admin");
     const data = parseInput(openSessionSchema, input);
     const session = await openCashSession({
       userId: user.id,
@@ -35,7 +35,7 @@ export async function openCashSessionAction(input: unknown) {
 
 export async function addCashMovementAction(input: unknown) {
   return runAction(async () => {
-    const user = await assertRole("admin", "seller");
+    const user = await assertRole("admin");
     const data = parseInput(movementSchema, input);
     const session = await getOpenCashSession();
     if (!session) throw new AppError("CASH_SESSION_REQUIRED", "No hay una caja abierta.");
@@ -69,7 +69,7 @@ export async function addCashMovementAction(input: unknown) {
 /** Blind count: stores the counted cash and only then returns the expected amounts. */
 export async function registerCashCountAction(input: unknown) {
   return runAction(async () => {
-    const user = await assertRole("admin", "seller");
+    const user = await assertRole("admin");
     const data = parseInput(registerCountSchema, input);
     const session = await getOpenCashSession();
     if (!session) throw new AppError("CASH_SESSION_REQUIRED", "No hay una caja abierta.");
@@ -84,7 +84,7 @@ export async function registerCashCountAction(input: unknown) {
 
 export async function closeCashSessionAction(input: unknown) {
   return runAction(async () => {
-    const user = await assertRole("admin", "seller");
+    const user = await assertRole("admin");
     const data = parseInput(closeSessionSchema, input);
     const session = await getOpenCashSession();
     if (!session) throw new AppError("CASH_SESSION_REQUIRED", "No hay una caja abierta.");

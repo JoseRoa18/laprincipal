@@ -53,7 +53,7 @@ DATABASE_URL="<pooler 6543>" ADMIN_EMAIL="tu@correo.com" ADMIN_PASSWORD="Contras
 | `NODE_ENV` | `production` (Vercel lo fija) |
 
 3. **Build Command**: `pnpm db:migrate && pnpm build` (aplica migraciones pendientes antes de construir). Install Command: `pnpm install`.
-4. Desplegar. Las tareas programadas de `vercel.json` (estadísticas diarias 03:00 Caracas, respaldo semanal) se activan solas en el plan Hobby con frecuencia diaria máxima.
+4. Desplegar. Las tareas programadas de `vercel.json` (tarea diaria 03:00 Caracas: tasa BCV, vencimiento de cotizaciones y estadísticas; respaldo semanal) se activan solas en el plan Hobby con frecuencia diaria máxima. La tasa BCV no necesita variables nuevas: la función sale a internet hacia bcv.org.ve y ve.dolarapi.com.
 5. Abrir la URL, iniciar sesión con el usuario admin creado en la semilla y cambiar la contraseña en **Configuración → Mi cuenta**.
 
 ## 4. Dominio propio (opcional)

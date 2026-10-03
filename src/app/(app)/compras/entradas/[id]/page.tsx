@@ -2,7 +2,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Money } from "@/components/app/money";
 import { PageHeader } from "@/components/app/page-header";
-import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { requireRole } from "@/lib/auth-guards";
 import { businessDate, formatDate, formatDateTime, formatMoney, formatQty } from "@/lib/format";
@@ -47,6 +46,7 @@ export default async function ReceiptDetailPage({ params }: { params: Promise<{ 
     return (
       <div className="space-y-6">
         <PageHeader
+          back={{ href: "/compras/entradas", label: "Volver a entradas" }}
           title="Entrada en borrador"
           description={`Creada por ${receipt.createdByName} el ${formatDateTime(receipt.createdAt)}. Revisa y aplica cuando la mercancía esté contada.`}
           actions={<ReceiptStatusBadge status={receipt.status} />}
@@ -98,15 +98,13 @@ export default async function ReceiptDetailPage({ params }: { params: Promise<{ 
   return (
     <div className="space-y-6">
       <PageHeader
+        back={{ href: "/compras/entradas", label: "Volver a entradas" }}
         title={`Entrada ${receipt.number ?? ""}`.trim()}
         description={description}
         actions={
           <>
             <ReceiptStatusBadge status={receipt.status} />
             {receipt.status === "applied" && user.role === "admin" ? <VoidReceiptDialog receiptId={receipt.id} number={receipt.number} /> : null}
-            <Button variant="outline" render={<Link href="/compras/entradas" />}>
-              Volver a entradas
-            </Button>
           </>
         }
       />

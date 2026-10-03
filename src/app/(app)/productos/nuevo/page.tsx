@@ -14,7 +14,7 @@ export default async function NewProductPage() {
   const options = await getProductFormOptions();
   return (
     <div className="mx-auto max-w-5xl space-y-4">
-      <PageHeader title="Nuevo producto" description="Foto, datos básicos, precios y stock inicial. Solo el nombre y el precio público son obligatorios." />
+      <PageHeader back={{ href: "/productos", label: "Volver a productos" }} title="Nuevo producto" description="Foto, datos básicos, precios y stock inicial. Solo el nombre y el precio público son obligatorios." />
       <ProductForm
         mode="create"
         initialValues={emptyProductForm({ unitId: options.defaultUnitId, taxId: options.defaultTaxId })}

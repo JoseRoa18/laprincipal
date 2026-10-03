@@ -28,7 +28,7 @@ const TABS: { value: QuoteStatus | "all"; label: string }[] = [
 ];
 
 export default async function QuotesPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
-  await requireRole("admin", "seller");
+  await requireRole("admin");
   const params = await searchParams;
   const q = typeof params.q === "string" ? params.q : "";
   const statusRaw = typeof params.estado === "string" ? params.estado : "open";

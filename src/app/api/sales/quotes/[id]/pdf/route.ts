@@ -6,7 +6,7 @@ import { getCompanySettings, getPrintingSettings } from "@/modules/settings/infr
 
 /** Quote (A4 PDF), rendered on demand. */
 export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
-  const guard = await requireApiRole("admin", "seller");
+  const guard = await requireApiRole("admin");
   if (guard.error) return guard.error;
   const { id } = await ctx.params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) return new NextResponse("Id inválido", { status: 400 });

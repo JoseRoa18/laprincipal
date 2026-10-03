@@ -11,7 +11,6 @@ import { getRatesSnapshot } from "@/modules/currency/infrastructure/rates";
 import { describeRange, formatDay, parseDateRange, rangeDays } from "@/modules/reporting/domain/date-range";
 import { pctChange } from "@/modules/reporting/infrastructure/common";
 import { getSalesReport } from "@/modules/reporting/infrastructure/sales-report";
-import { BackToReports } from "@/modules/reporting/ui/back-to-reports";
 import { Equivalents } from "@/modules/reporting/ui/equivalents";
 import { ExportButton } from "@/modules/reporting/ui/export-button";
 import { KpiCard } from "@/modules/reporting/ui/kpi-card";
@@ -39,11 +38,11 @@ export default async function SalesReportPage({ searchParams }: { searchParams: 
   return (
     <div className="space-y-6">
       <PageHeader
+        back={{ href: "/reportes", label: "Volver a reportes" }}
         title="Ventas"
         description={describeRange(range)}
         actions={
           <>
-            <BackToReports />
             <ExportButton report="sales" params={exportParams} disabled={!hasData} />
           </>
         }

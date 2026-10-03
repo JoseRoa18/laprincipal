@@ -40,6 +40,8 @@ export interface PosConfig {
   policies: PosPolicies;
   paymentMethods: PosPaymentMethod[];
   cashSessionOpen: boolean;
+  /** Only admins save quotes; sellers only sell. */
+  canQuote: boolean;
   pinUsers: { id: string; name: string; role: UserRole }[];
   priceLists: { publicId: string | null; techId: string | null };
   /** A quote or held sale to load into the cart on mount. */

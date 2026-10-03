@@ -14,7 +14,7 @@ export default async function EditSupplierPage({ params }: { params: Promise<{ i
   if (!supplier) notFound();
   return (
     <div className="space-y-6">
-      <PageHeader title={`Editar ${supplier.name}`} />
+      <PageHeader back={{ href: `/compras/proveedores/${id}`, label: "Volver al proveedor" }} title={`Editar ${supplier.name}`} />
       <SupplierForm initial={supplier} currencies={currencies.map((c) => c.code)} />
     </div>
   );

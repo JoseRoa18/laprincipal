@@ -10,7 +10,9 @@ Fecha: 2026-09-08. Principio rector: cada pantalla se entiende sin manual. Lo av
 
 **Celular y tablet:** barra inferior con Inicio, Vender, Productos, Inventario y Más. "Vender" abre el POS a pantalla completa. El registro de productos con cámara está pensado para el celular.
 
-**Roles:** Administrador ve todo. Vendedor ve Inicio, Vender, Ventas, Productos (solo consulta), Clientes y Caja. Almacén ve Inicio, Productos, Inventario y Compras.
+**Subpáginas:** toda pantalla dentro de una sección (por ejemplo Configuración → Motivos, Inventario → Conteos → Nuevo) muestra arriba del título el enlace "← Volver a …" hacia su pantalla padre (`back` de `PageHeader`, componente `BackLink`). No se usan botones "Volver" en la fila de acciones.
+
+**Roles:** Administrador ve todo. Vendedor solo vende: ve Vender y Productos (solo consulta, sin costos, proveedores ni movimientos); entra directo a Vender; tras cobrar ve `/vender/venta/[id]` y puede reimprimir o reenviar solo las ventas que hizo hoy. Almacén ve Inicio, Productos, Inventario y Compras.
 
 ---
 
@@ -23,10 +25,11 @@ Fecha: 2026-09-08. Principio rector: cada pantalla se entiende sin manual. Lo av
 | 3 | `/inicio` | Inicio | Ventas de hoy y del mes en USD con equivalentes, transacciones, ticket promedio, productos por comprar, alertas, estado de caja, tasa del día editable. | Todos (según rol) |
 | 4 | `/vender` | Punto de venta | Buscar o escanear, carrito, cantidades, descuentos, cliente, ventas en espera, cobrar. | Vendedor, Admin |
 | 5 | (diálogo) | Cobrar | Total en USD, Bs y COP; agregar pagos por método y moneda; saldo pendiente; cambio en USD o COP; imprimir o compartir. | Vendedor, Admin |
-| 6 | `/ventas` | Ventas | Lista con filtros por fecha, vendedor, cliente, método y estado. | Vendedor, Admin |
-| 7 | `/ventas/[id]` | Detalle de venta | Líneas, pagos, tasas usadas, reimprimir, devolver, anular. | Vendedor, Admin |
-| 8 | `/ventas/[id]/devolver` | Devolución | Elegir líneas y cantidades, motivo, reingreso a stock, forma de reembolso. | Admin, Vendedor con permiso |
-| 9 | `/cotizaciones` y `/cotizaciones/[id]` | Cotizaciones | Crear desde el POS o desde cero, vigencia, PDF por WhatsApp, convertir a venta. | Vendedor, Admin |
+| 5b | `/vender/venta/[id]` | Venta registrada | Cambio a entregar, imprimir ticket, WhatsApp, nueva venta. El vendedor solo abre las suyas del día. | Vendedor, Admin |
+| 6 | `/ventas` | Ventas | Lista con filtros por fecha, vendedor, cliente, método y estado. | Admin |
+| 7 | `/ventas/[id]` | Detalle de venta | Líneas, pagos, tasas usadas, reimprimir, devolver, anular. | Admin |
+| 8 | `/ventas/[id]/devolver` | Devolución | Elegir líneas y cantidades, motivo, reingreso a stock, forma de reembolso. | Admin |
+| 9 | `/cotizaciones` y `/cotizaciones/[id]` | Cotizaciones | Crear desde el POS o desde cero, vigencia, PDF por WhatsApp, convertir a venta. | Admin |
 | 10 | `/productos` | Productos | Lista con búsqueda por nombre, parte, equivalencia, modelo o código; filtros; estado de stock; acciones masivas. | Todos |
 | 11 | `/productos/nuevo` y `/productos/[id]/editar` | Ficha de producto | Formulario en pasos: foto con IA → datos básicos → compatibilidades y equivalencias → precios y costo → stock y ubicación. Campos avanzados ocultos. | Admin, Almacén |
 | 12 | `/productos/[id]` | Detalle de producto | Fotos, stock, precios en tres monedas, kardex, velocidad y semáforo, proveedores, historial de precios. | Todos |
@@ -41,13 +44,13 @@ Fecha: 2026-09-08. Principio rector: cada pantalla se entiende sin manual. Lo av
 | 21 | `/compras/proveedores` y `/compras/proveedores/[id]` | Proveedores | Ficha, productos que surte con código y empaque editables, historial de costos. | Admin, Almacén |
 | 22 | `/compras/entradas` y `/compras/entradas/nueva` | Entradas por compra | Documento del proveedor, moneda y tasa, productos, costos, gastos adicionales; aplicar. | Admin, Almacén |
 | 23 | `/compras/que-comprar` | Qué comprar | Sugerencia agrupada por proveedor con cantidades editables; exportar a Excel. | Admin, Almacén |
-| 24 | `/clientes` y `/clientes/[id]` | Clientes | Lista, ficha simple, historial. Alta rápida desde el POS. | Vendedor, Admin |
-| 25 | `/caja` | Caja | Abrir con fondo USD y COP; sesión actual con totales por método; ingresos y retiros. El efectivo esperado solo lo ve el administrador. | Vendedor, Admin |
-| 26 | `/caja/cerrar` | Cierre de caja | Conteo ciego por moneda: "Registrar conteo" guarda lo contado en el servidor y solo entonces muestra esperado y diferencia; "Volver a contar" queda anotado. Referencias electrónicas, justificación, reporte imprimible. | Vendedor, Admin |
+| 24 | `/clientes` y `/clientes/[id]` | Clientes | Lista, ficha simple, historial. Alta rápida desde el POS (también para el vendedor). | Admin |
+| 25 | `/caja` | Caja | Abrir con fondo USD y COP; sesión actual con totales por método; ingresos y retiros. | Admin |
+| 26 | `/caja/cerrar` | Cierre de caja | Conteo ciego por moneda: "Registrar conteo" guarda lo contado en el servidor y solo entonces muestra esperado y diferencia; "Volver a contar" queda anotado. Referencias electrónicas, justificación, reporte imprimible. | Admin |
 | 27 | `/caja/historial` | Historial de cajas | Sesiones anteriores y sus cierres. | Admin |
 | 28 | `/reportes` | Reportes | Ventas, inventario valorizado, velocidad y ABC, margen, sin movimiento, ajustes y mermas (`/reportes/ajustes`), qué comprar; filtros; gráficos; exportar a Excel y PDF. | Admin |
-| 29 | `/configuracion` | Configuración | Empresa, tasas de cambio, impuestos, métodos de pago, motivos, unidades, series, impresión, usuarios y PIN, políticas, respaldos. | Admin |
-| 30 | `/imprimir/ticket/[id]` | Ticket | Vista de impresión 58/80 mm con montos en USD y Bs. | Vendedor, Admin |
+| 29 | `/configuracion` | Configuración | Empresa, tasas de cambio (Bs automática del BCV, COP manual), impuestos, métodos de pago, motivos, unidades, series, impresión, usuarios y PIN, políticas, respaldos. | Admin |
+| 30 | `/imprimir/ticket/[id]` | Ticket | Vista de impresión 58/80 mm con montos en USD y Bs. | Admin; Vendedor solo sus ventas del día |
 
 ---
 

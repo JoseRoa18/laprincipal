@@ -81,7 +81,7 @@ async function main() {
   await session.expectOk("/vender", "Vende");
   await session.expectOk("/ventas", sale.number);
   await session.expectOk(`/ventas/${sale.saleId}`, sale.number);
-  await session.expectOk(`/ventas/${sale.saleId}?nueva=1&imprimir=0`, "registrada");
+  await session.expectOk(`/vender/venta/${sale.saleId}?imprimir=0`, "registrada");
   await session.expectOk(`/ventas/${sale.saleId}/devolver`, "Devolver");
   await session.expectOk("/cotizaciones", "Cotizaciones");
   await session.expectOk("/cotizaciones/nueva", "Nueva cotización");

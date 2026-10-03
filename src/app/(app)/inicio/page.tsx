@@ -1,5 +1,6 @@
 import { Package, ShoppingCart, TriangleAlert, Wallet } from "lucide-react";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { AnimatedMoney } from "@/components/app/animated-money";
 import { Money } from "@/components/app/money";
 import { PageHeader } from "@/components/app/page-header";
@@ -8,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { can, requireUser } from "@/lib/auth-guards";
 import { formatDateTime, formatQty } from "@/lib/format";
+import { homeForRole } from "@/lib/navigation";
 import { getRatesSnapshot } from "@/modules/currency/infrastructure/rates";
 import { formatDay } from "@/modules/reporting/domain/date-range";
 import { getDashboardData } from "@/modules/reporting/infrastructure/dashboard";
@@ -26,6 +28,8 @@ function elapsed(since: Date): string {
 
 export default async function HomePage() {
   const user = await requireUser();
+  // Sellers only sell: no sales figures, straight to the counter.
+  if (user.role === "seller") redirect(homeForRole(user.role));
   const [rates, data] = await Promise.all([getRatesSnapshot(), getDashboardData()]);
   const firstName = user.name.split(" ")[0];
   const showSales = user.role !== "warehouse";
@@ -236,7 +240,7 @@ export default async function HomePage() {
             </CardContent>
           </Card>
         ) : null}
-        {user.role !== "seller" ? (
+        {can(user.role, "manage_products") ? (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">

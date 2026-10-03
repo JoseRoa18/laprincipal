@@ -1,5 +1,7 @@
 # Reporte — Paquete C: Ventas y punto de venta (POS)
 
+> **Nota (2026-10-03):** el vendedor ya solo vende. Ventas, devoluciones, cotizaciones, clientes y caja pasaron a ser del administrador; las columnas de rol de este informe reflejan el diseño original. Ver "Rol vendedor" en `docs/05-progreso.md`.
+
 Fecha: 2026-09-08. Rutas `/vender`, `/ventas/**`, `/cotizaciones/**`, `/imprimir/ticket/[id]`, `/api/sales/**`. Módulo `src/modules/sales/{application,infrastructure,ui}` (el dominio `pricing.ts` / `payments.ts` ya existía y no se tocó).
 
 ## 1. Qué se construyó

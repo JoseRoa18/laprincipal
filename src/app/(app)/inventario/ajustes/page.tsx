@@ -27,6 +27,7 @@ export default async function AdjustmentsPage({ searchParams }: { searchParams: 
   return (
     <div className="space-y-4">
       <PageHeader
+        back={{ href: "/inventario", label: "Volver a inventario" }}
         title="Ajustes de inventario"
         description="Entradas y salidas manuales con motivo"
         actions={

@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth-guards";
+import { userCanOpenSale } from "@/modules/sales/application/sale-access";
 import { getSaleDetail } from "@/modules/sales/infrastructure/sales-queries";
 import { PrintControls } from "@/modules/sales/ui/ticket/print-controls";
 import { TicketView } from "@/modules/sales/ui/ticket/ticket-view";
@@ -19,11 +20,12 @@ export default async function TicketPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  await requireUser();
+  const user = await requireUser();
   const [{ id }, sp] = await Promise.all([params, searchParams]);
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const [sale, company, printing] = await Promise.all([getSaleDetail(id), getCompanySettings(), getPrintingSettings()]);
-  if (!sale || sale.status === "held") notFound();
+  // Admins reprint any ticket; a seller only those of the sales they made today.
+  if (!sale || sale.status === "held" || !userCanOpenSale(user, sale)) notFound();
   const auto = sp.auto === "1";
 
   return (

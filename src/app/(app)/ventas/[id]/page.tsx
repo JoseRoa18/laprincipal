@@ -1,9 +1,7 @@
-import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Money } from "@/components/app/money";
 import { PageHeader } from "@/components/app/page-header";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { can, requireRole } from "@/lib/auth-guards";
@@ -12,26 +10,18 @@ import { D } from "@/lib/money";
 import { hoursSince } from "@/modules/sales/application/labels";
 import { getSaleDetail } from "@/modules/sales/infrastructure/sales-queries";
 import { SaleActions } from "@/modules/sales/ui/sales/sale-actions";
-import { SaleSuccessBanner } from "@/modules/sales/ui/sales/sale-success-banner";
 import { SaleStatusBadge } from "@/modules/sales/ui/status-badge";
 import { getPolicies } from "@/modules/settings/infrastructure/settings";
 
 export const metadata = { title: "Detalle de venta" };
 
-export default async function SaleDetailPage({
-  params,
-  searchParams,
-}: {
-  params: Promise<{ id: string }>;
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
-}) {
-  const user = await requireRole("admin", "seller");
-  const [{ id }, sp] = await Promise.all([params, searchParams]);
+export default async function SaleDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const user = await requireRole("admin");
+  const { id } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const [sale, policies] = await Promise.all([getSaleDetail(id), getPolicies()]);
   if (!sale || sale.status === "held") notFound();
 
-  const isNew = sp.nueva === "1";
   const ageHours = hoursSince(sale.saleDate);
   const canReturn = can(user.role, "return_sale") && (sale.status === "completed" || sale.status === "partially_refunded");
   const canVoid = can(user.role, "void_sale") && sale.status === "completed";
@@ -39,27 +29,10 @@ export default async function SaleDetailPage({
 
   return (
     <div className="space-y-4">
-      {isNew ? (
-        <SaleSuccessBanner
-          saleId={sale.id}
-          number={sale.number}
-          totalUsd={sale.totalUsd}
-          changeUsd={sale.changeUsd}
-          changeCurrencyCode={sale.changeCurrencyCode}
-          changeAmount={sale.changeAmount}
-          autoPrint={sp.imprimir === "1"}
-          wantsWhatsapp={sp.whatsapp === "1"}
-        />
-      ) : null}
-
       <PageHeader
+        back={{ href: "/ventas", label: "Volver a ventas" }}
         title={`Venta ${sale.number ?? ""}`}
         description={`${formatDateTime(sale.saleDate)} · ${sale.seller.name} · ${sale.customer ? sale.customer.name : "Consumidor final"}`}
-        actions={
-          <Button variant="ghost" render={<Link href="/ventas" />}>
-            <ArrowLeft /> Ventas
-          </Button>
-        }
       />
       <div className="flex flex-wrap items-center gap-2">
         <SaleStatusBadge status={sale.status} />

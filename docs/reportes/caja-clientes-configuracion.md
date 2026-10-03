@@ -1,5 +1,7 @@
 # Reporte — Paquete D: Caja, clientes y configuración
 
+> **Nota (2026-10-03):** el vendedor ya solo vende. Ventas, devoluciones, cotizaciones, clientes y caja pasaron a ser del administrador; las columnas de rol de este informe reflejan el diseño original. Ver "Rol vendedor" en `docs/05-progreso.md`.
+
 Fecha: 2026-09-08. Alcance: `src/modules/cash` (excepto `application/session.ts`), `src/modules/customers`, `src/modules/settings`, `src/modules/auth/{domain,infrastructure,ui}`, `/caja/**`, `/clientes/**`, `/configuracion/**`, `/api/backups/**`, `/api/cron/backup`, pruebas y humo del paquete.
 
 ---
@@ -36,7 +38,7 @@ Archivos: `src/modules/customers/{domain/schema.ts, application/customers.ts, in
 |---|---|
 | `/configuracion` | Tarjetas a cada sección y aviso cuando falta la tasa de hoy. |
 | `/configuracion/empresa` | Nombre, RIF, dirección, teléfono, correo y logo (se reduce en el navegador a 600 px y se guarda como WebP —PNG si el navegador no codifica WebP— en el bucket `product-photos`, ruta `company/logo.webp`). `saveSetting("company")` + auditoría. |
-| `/configuracion/tasas` | Tasa del día "Bs por 1 USD" y "COP por 1 USD" con fecha (por defecto hoy, no futura); `upsertRate` + auditoría `rate.set`; historial por moneda con quién la cargó, insignia **vigente** y aviso cuando la tasa no es de hoy o falta. Enlazada desde la insignia de la cabecera y el inicio. |
+| `/configuracion/tasas` | Bs: tasa oficial del BCV (vigente, próxima con su fecha valor, última consulta, botón "Actualizar desde el BCV" y carga manual de emergencia). COP: tasa manual con fecha (por defecto hoy, no futura); `upsertRate` + auditoría `rate.set`. Historial por moneda con quién la cargó, insignias **vigente** y **próxima**, aviso cuando la tasa no es de hoy o falta. Enlazada desde la insignia de la cabecera y el inicio. |
 | `/configuracion/impuestos` | CRUD de impuestos (nombre, tasa %, por defecto único, activo). |
 | `/configuracion/metodos-de-pago` | Interruptores activo / requiere referencia / cuenta en gaveta / permite cambio, recargo % (IGTF), orden y nombre; crear métodos para monedas existentes. |
 | `/configuracion/motivos` | CRUD de motivos de ajuste (nombre, tipo, activo, orden). |
@@ -103,7 +105,7 @@ Los fixtures de integración (`tests/fixtures.ts`) crean sus propias monedas, se
 - **Reabrir** descarta el conteo de cierre (queda en `audit_logs`, entrada `cash_session.reopen` con `before.closingSummary`).
 - **`CRON_SECRET`** no está en `.env.local` (solo en `.env.example`): `/api/cron/backup` responde 500 "no configurado" hasta agregarlo.
 - **Logo WebP**: se codifica con `canvas.toDataURL("image/webp")`; en navegadores sin soporte se guarda PNG (`company/logo.png`).
-- Sin descarga automática de la tasa BCV (fuera del MVP).
+- Resuelto (2026-10-03): la tasa de Bs se descarga del BCV (ver `docs/02-arquitectura.md`).
 
 Estado de la verificación global (no atribuible al paquete):
 

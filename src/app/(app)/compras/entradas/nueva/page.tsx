@@ -64,7 +64,7 @@ export default async function NewReceiptPage({ searchParams }: { searchParams: P
   if (suppliers.length === 0) {
     return (
       <div className="space-y-6">
-        <PageHeader title="Nueva entrada" />
+        <PageHeader back={{ href: "/compras/entradas", label: "Volver a entradas" }} title="Nueva entrada" />
         <EmptyState
           title="Primero registra un proveedor"
           description="Toda entrada por compra se registra a nombre de un proveedor, con su moneda y su documento."
@@ -76,7 +76,7 @@ export default async function NewReceiptPage({ searchParams }: { searchParams: P
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Nueva entrada por compra" description="Registra lo recibido con el documento del proveedor. Al aplicar, el stock y el costo promedio se actualizan." />
+      <PageHeader back={{ href: "/compras/entradas", label: "Volver a entradas" }} title="Nueva entrada por compra" description="Registra lo recibido con el documento del proveedor. Al aplicar, el stock y el costo promedio se actualizan." />
       <ReceiptForm
         suppliers={suppliers}
         currencies={rates.currencies.map((c) => c.code)}

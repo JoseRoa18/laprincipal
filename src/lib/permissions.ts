@@ -3,6 +3,7 @@ import type { UserRole } from "@/db/schema/enums";
 /** Pure permission table (no framework imports) so domain/application code and tests can use it. */
 export type Permission =
   | "sell"
+  | "quote"
   | "void_sale"
   | "return_sale"
   | "manage_products"
@@ -15,16 +16,18 @@ export type Permission =
   | "settings"
   | "manage_users";
 
+/** Sellers only sell: POS (with customer pick or quick create and held sales) and product lookup. */
 export const PERMISSIONS: Record<Permission, UserRole[]> = {
   sell: ["admin", "seller"],
+  quote: ["admin"],
   void_sale: ["admin"],
-  return_sale: ["admin", "seller"],
+  return_sale: ["admin"],
   manage_products: ["admin", "warehouse"],
   view_costs: ["admin", "warehouse"],
   adjust_stock: ["admin", "warehouse"],
   count_stock: ["admin", "warehouse"],
   purchases: ["admin", "warehouse"],
-  cash: ["admin", "seller"],
+  cash: ["admin"],
   reports: ["admin"],
   settings: ["admin"],
   manage_users: ["admin"],

@@ -10,7 +10,7 @@ import { shareQuoteDocument } from "@/modules/sales/application/share-document";
 
 export async function cancelQuoteAction(quoteId: string) {
   return runAction(async () => {
-    const user = await assertRole("admin", "seller");
+    const user = await assertRole("admin");
     const id = parseInput(z.uuid(), quoteId);
     await cancelQuote(db, id, { userId: user.id });
     revalidatePath("/cotizaciones");
@@ -20,7 +20,7 @@ export async function cancelQuoteAction(quoteId: string) {
 
 export async function shareQuoteWhatsAppAction(quoteId: string) {
   return runAction(async () => {
-    await assertRole("admin", "seller");
+    await assertRole("admin");
     const id = parseInput(z.uuid(), quoteId);
     return shareQuoteDocument(id);
   });

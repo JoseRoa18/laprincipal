@@ -5,7 +5,7 @@ import { Money } from "@/components/app/money";
 import { PageHeader } from "@/components/app/page-header";
 import { Pagination, parsePage } from "@/components/app/pagination";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { can, requireUser } from "@/lib/auth-guards";
+import { can, requireRole } from "@/lib/auth-guards";
 import { businessDate, formatDateTime, formatQty } from "@/lib/format";
 import { getProductsForSale } from "@/modules/catalog/infrastructure/product-lookup";
 import { getDefaultLocation } from "@/modules/core/application/context";
@@ -29,7 +29,7 @@ function defaultRange() {
 }
 
 export default async function MovementsPage({ searchParams }: { searchParams: Promise<Params> }) {
-  const user = await requireUser();
+  const user = await requireRole("admin", "warehouse");
   const params = await searchParams;
   const page = parsePage(params.page);
   const showCosts = can(user.role, "view_costs");
@@ -50,7 +50,7 @@ export default async function MovementsPage({ searchParams }: { searchParams: Pr
 
   return (
     <div className="space-y-4">
-      <PageHeader title="Kardex" description="Todos los movimientos de inventario con su saldo" />
+      <PageHeader back={{ href: "/inventario", label: "Volver a inventario" }} title="Kardex" description="Todos los movimientos de inventario con su saldo" />
 
       <div className="flex flex-col gap-2 lg:flex-row lg:flex-wrap lg:items-center">
         <MovementProductFilter selected={product ? { id: product.id, name: product.name, sku: product.sku } : null} />

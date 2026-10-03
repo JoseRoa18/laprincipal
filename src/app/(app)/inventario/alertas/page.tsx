@@ -6,7 +6,7 @@ import { StockStatusBadge } from "@/components/app/stock-status-badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { can, requireUser } from "@/lib/auth-guards";
+import { can, requireRole } from "@/lib/auth-guards";
 import { formatDate, formatQty } from "@/lib/format";
 import { getAlerts } from "@/modules/inventory/infrastructure/alerts";
 import type { StockRow } from "@/modules/inventory/infrastructure/stock-query";
@@ -109,7 +109,7 @@ function AlertTable({ rows, canBuy, emptyText, showLastSale }: { rows: StockRow[
 }
 
 export default async function AlertsPage() {
-  const user = await requireUser();
+  const user = await requireRole("admin", "warehouse");
   const alerts = await getAlerts();
   const canBuy = can(user.role, "purchases");
   const tabs = [
@@ -124,6 +124,7 @@ export default async function AlertsPage() {
   return (
     <div className="space-y-4">
       <PageHeader
+        back={{ href: "/inventario", label: "Volver a inventario" }}
         title="Alertas"
         description={`Stock bajo, agotado, sin movimiento en ${alerts.noMovementDays} días y exceso`}
         actions={canBuy ? <Button render={<Link href="/compras/que-comprar" />}>Ver qué comprar</Button> : undefined}

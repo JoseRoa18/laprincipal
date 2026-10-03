@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { userCanOpenSale } from "@/modules/sales/application/sale-access";
 import { requireApiRole } from "@/modules/sales/infrastructure/api-guard";
 import { renderSalePdf } from "@/modules/sales/infrastructure/pdf/documents";
 import { getSaleDetail } from "@/modules/sales/infrastructure/sales-queries";
@@ -11,7 +12,8 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
   const { id } = await ctx.params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) return new NextResponse("Id inválido", { status: 400 });
   const sale = await getSaleDetail(id);
-  if (!sale || sale.status === "held") return new NextResponse("No encontrada", { status: 404 });
+  // A seller only gets the delivery note of the sales they made today.
+  if (!sale || sale.status === "held" || !userCanOpenSale(guard.user, sale)) return new NextResponse("No encontrada", { status: 404 });
   const [company, printing] = await Promise.all([getCompanySettings(), getPrintingSettings()]);
   const pdf = await renderSalePdf(sale, company, printing);
   return new NextResponse(new Uint8Array(pdf), {

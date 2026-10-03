@@ -34,7 +34,7 @@ const QUOTE_STATUS: Record<string, string> = {
 };
 
 export default async function CustomerDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  await requireRole("admin", "seller");
+  await requireRole("admin");
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const customer = await getCustomer(id);
@@ -46,6 +46,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
   return (
     <div className="space-y-6">
       <PageHeader
+        back={{ href: "/clientes", label: "Volver a clientes" }}
         title={customer.name}
         description={[doc, customer.kind === "company" ? "Empresa" : "Persona"].filter(Boolean).join(" · ")}
         actions={

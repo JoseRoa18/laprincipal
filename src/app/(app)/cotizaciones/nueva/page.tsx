@@ -5,7 +5,7 @@ import { PosScreen } from "@/modules/sales/ui/pos/pos-screen";
 export const metadata = { title: "Nueva cotización" };
 
 export default async function NewQuotePage() {
-  const user = await requireRole("admin", "seller");
+  const user = await requireRole("admin");
   const config = await loadPosConfig({ user, mode: "quote" });
   return <PosScreen config={config} />;
 }

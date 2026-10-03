@@ -38,6 +38,7 @@ export default async function SupplierDetailPage({ params }: { params: Promise<{
   return (
     <div className="space-y-6">
       <PageHeader
+        back={{ href: "/compras/proveedores", label: "Volver a proveedores" }}
         title={supplier.name}
         description={supplier.isActive ? undefined : "Proveedor inactivo"}
         actions={

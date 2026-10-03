@@ -134,7 +134,7 @@ Reglas de implementación que cumplen las reglas 1, 3, 5, 6 y 10 del prompt maes
 - `exchange_rates`: una fila por moneda y fecha, con fuente y usuario. El servicio `currency` devuelve la tasa vigente y convierte con redondeo correcto.
 - Una venta guarda `rate_ves` y `rate_cop`; cada pago guarda moneda, monto, tasa y `amount_usd`.
 - Pantalla de pago: la app muestra el saldo pendiente en las tres monedas y lo actualiza con cada pago agregado. El cambio se calcula en USD y se propone en efectivo USD o COP.
-- Mejora opcional: Vercel Cron que descarga la tasa BCV cada mañana y la deja como "pendiente de confirmar" para el administrador.
+- Tasa BCV (Bs): `currency/infrastructure/bcv-client.ts` lee bcv.org.ve con TLS verificado (el sitio envía un intermedio equivocado; la app incluye el correcto, Sectigo DV R36) y usa ve.dolarapi.com como respaldo. `currency/application/bcv-sync.ts` guarda la tasa con su fecha valor (fuente `bcv_api`, auditoría `rate.bcv`, estado en `settings.bcvSync`). Corre en la tarea diaria, con el botón de `/configuracion/tasas` y en segundo plano (`after()` desde la insignia de tasa) si la tasa de Bs quedó atrasada, como máximo cada 30 minutos.
 
 ---
 

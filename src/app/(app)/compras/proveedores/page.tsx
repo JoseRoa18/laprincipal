@@ -27,6 +27,7 @@ export default async function SuppliersPage({ searchParams }: { searchParams: Pr
   return (
     <div className="space-y-4">
       <PageHeader
+        back={{ href: "/compras", label: "Volver a compras" }}
         title="Proveedores"
         description="A quién le compras, en qué moneda y cuánto tarda"
         actions={

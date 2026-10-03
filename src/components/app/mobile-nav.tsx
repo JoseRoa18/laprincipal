@@ -20,7 +20,7 @@ export function MobileNav({ user }: { user: SessionUser }) {
       className="bg-background/95 supports-backdrop-filter:bg-background/80 fixed inset-x-0 bottom-0 z-40 border-t backdrop-blur md:hidden"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
-      <ul className="grid grid-cols-5">
+      <ul className="grid" style={{ gridTemplateColumns: `repeat(${items.length + 1}, minmax(0, 1fr))` }}>
         {items.map((item) => {
           const active = isNavActive(item, pathname);
           return (

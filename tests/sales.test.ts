@@ -299,11 +299,10 @@ describe.skipIf(SKIP)("sales: complete, void, return, quotes", () => {
     const sale = await completeSale(db, completeSaleSchema.parse({ lines: [{ productId: product.id, quantity: "3" }], payments: [{ paymentMethodId: cashUsdId, amount: "30" }] }), ctx);
     const [item] = await db.select().from(saleItems).where(eq(saleItems.saleId, sale.saleId));
 
-    const partial = await createReturn(
-      db,
-      createReturnSchema.parse({ saleId: sale.saleId, items: [{ saleItemId: item.id, quantity: "1" }], restock: true, refundMethodId: cashCopId, reasonText: "Pieza equivocada" }),
-      { userId: adminId, role: "seller", cashRegisterId: registerId },
-    );
+    const returnInput = createReturnSchema.parse({ saleId: sale.saleId, items: [{ saleItemId: item.id, quantity: "1" }], restock: true, refundMethodId: cashCopId, reasonText: "Pieza equivocada" });
+    // Sellers only sell: returns are for the administrator.
+    await expect(createReturn(db, returnInput, { userId: adminId, role: "seller", cashRegisterId: registerId })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    const partial = await createReturn(db, returnInput, { userId: adminId, role: "admin", cashRegisterId: registerId });
     expect(partial.number).toMatch(/^D-\d{6}$/);
     expect(partial.totalUsd).toBe("10.00");
     expect(partial.refundCurrencyCode).toBe("COP");

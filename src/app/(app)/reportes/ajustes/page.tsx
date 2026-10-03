@@ -11,7 +11,6 @@ import { businessDate, formatDateTime, formatQty } from "@/lib/format";
 import { MOVEMENT_TYPE_LABEL } from "@/modules/inventory/infrastructure/labels";
 import { describeRange, parseDateRange } from "@/modules/reporting/domain/date-range";
 import { getAdjustmentsReport, type AdjustmentGroupRow, type AdjustmentMovementRow } from "@/modules/reporting/infrastructure/adjustments-report";
-import { BackToReports } from "@/modules/reporting/ui/back-to-reports";
 import { ExportButton } from "@/modules/reporting/ui/export-button";
 import { KpiCard } from "@/modules/reporting/ui/kpi-card";
 import { PeriodFilter } from "@/modules/reporting/ui/period-filter";
@@ -142,11 +141,11 @@ export default async function AdjustmentsReportPage({ searchParams }: { searchPa
   return (
     <div className="space-y-6">
       <PageHeader
+        back={{ href: "/reportes", label: "Volver a reportes" }}
         title="Ajustes y mermas"
         description={describeRange(range)}
         actions={
           <>
-            <BackToReports />
             <ExportButton report="adjustments" params={{ from: range.from, to: range.to }} disabled={!hasData} />
           </>
         }

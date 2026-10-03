@@ -16,7 +16,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import type { SessionUser } from "@/lib/auth-guards";
-import { isNavActive, navForRole } from "@/lib/navigation";
+import { homeForRole, isNavActive, navForRole } from "@/lib/navigation";
 import { UserMenu } from "./user-menu";
 
 export function AppSidebar({ user, companyName }: { user: SessionUser; companyName: string }) {
@@ -28,7 +28,7 @@ export function AppSidebar({ user, companyName }: { user: SessionUser; companyNa
     <Sidebar collapsible="icon">
       <SidebarHeader>
         <Link
-          href="/inicio"
+          href={homeForRole(user.role)}
           className="flex h-10 items-center gap-2 rounded-md px-2 group-data-[collapsible=icon]:justify-center"
           onClick={() => setOpenMobile(false)}
         >

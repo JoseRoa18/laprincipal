@@ -31,6 +31,7 @@ export default async function ReceiptsPage({ searchParams }: { searchParams: Pro
   return (
     <div className="space-y-4">
       <PageHeader
+        back={{ href: "/compras", label: "Volver a compras" }}
         title="Entradas por compra"
         description="Mercancía recibida con el documento del proveedor"
         actions={

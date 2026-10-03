@@ -11,7 +11,7 @@ const idSchema = z.string().uuid("Cliente inválido");
 
 export async function createCustomerAction(input: unknown) {
   return runAction(async () => {
-    const user = await assertRole("admin", "seller");
+    const user = await assertRole("admin");
     const row = await createCustomer(input as CustomerInput, user.id);
     revalidatePath("/clientes");
     return { id: row.id };
@@ -20,7 +20,7 @@ export async function createCustomerAction(input: unknown) {
 
 export async function updateCustomerAction(id: string, input: unknown) {
   return runAction(async () => {
-    const user = await assertRole("admin", "seller");
+    const user = await assertRole("admin");
     const customerId = parseInput(idSchema, id);
     const row = await updateCustomer(customerId, input as CustomerInput, user.id);
     revalidatePath("/clientes");
@@ -31,7 +31,7 @@ export async function updateCustomerAction(id: string, input: unknown) {
 
 export async function setCustomerActiveAction(id: string, isActive: boolean) {
   return runAction(async () => {
-    const user = await assertRole("admin", "seller");
+    const user = await assertRole("admin");
     const customerId = parseInput(idSchema, id);
     const row = await setCustomerActive(customerId, parseInput(z.boolean(), isActive), user.id);
     revalidatePath("/clientes");
@@ -43,7 +43,7 @@ export async function setCustomerActiveAction(id: string, isActive: boolean) {
 /** Quick lookup for autocomplete fields (POS, quotes). */
 export async function searchCustomersAction(q: string) {
   return runAction(async () => {
-    await assertRole("admin", "seller");
+    await assertRole("admin");
     return searchCustomers(parseInput(z.string().max(100), q), 10);
   });
 }

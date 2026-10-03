@@ -1,5 +1,4 @@
 import { DatabaseBackup, Download, FileSpreadsheet } from "lucide-react";
-import Link from "next/link";
 import { EmptyState } from "@/components/app/empty-state";
 import { PageHeader } from "@/components/app/page-header";
 import { Badge } from "@/components/ui/badge";
@@ -29,13 +28,9 @@ export default async function BackupsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
+        back={{ href: "/configuracion", label: "Volver a configuración" }}
         title="Respaldos"
         description="El plan gratuito de Supabase no incluye respaldos automáticos. Desde aquí puedes guardar una copia completa de los datos y exportarlos a Excel."
-        actions={
-          <Button variant="outline" render={<Link href="/configuracion" />}>
-            Volver a configuración
-          </Button>
-        }
       />
 
       <div className="grid gap-4 lg:grid-cols-2">

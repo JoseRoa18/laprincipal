@@ -356,11 +356,15 @@ function CheckoutForm({
           <AlertDescription>
             <p>{error.message}</p>
             {error.code === "CASH_SESSION_REQUIRED" ? (
-              <Link href="/caja" className="font-medium">
-                Ir a Caja
-              </Link>
+              config.user.role === "admin" ? (
+                <Link href="/caja" className="font-medium">
+                  Ir a Caja
+                </Link>
+              ) : (
+                <p className="font-medium">Pídele al administrador que abra la caja.</p>
+              )
             ) : null}
-            {error.code === "RATES_REQUIRED" ? (
+            {error.code === "RATES_REQUIRED" && config.user.role === "admin" ? (
               <Link href="/configuracion/tasas" className="font-medium">
                 Cargar tasa del día
               </Link>

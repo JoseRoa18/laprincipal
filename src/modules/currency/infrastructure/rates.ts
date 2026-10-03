@@ -1,4 +1,4 @@
-import { and, desc, eq, lte } from "drizzle-orm";
+import { and, desc, eq, gt, lte } from "drizzle-orm";
 import { db, type DbOrTx } from "@/db/client";
 import { currencies, exchangeRates } from "@/db/schema";
 import { businessDate } from "@/lib/format";
@@ -20,9 +20,18 @@ export interface RatesSnapshot {
   rateSet: RateSet;
   /** Non-base active currencies with no rate at all. */
   missing: string[];
-  /** Currencies whose latest rate is older than today. */
+  /**
+   * Currencies whose rate in force is older than today. A newer rate already
+   * published (the BCV publishes Monday's on Friday) keeps it current over a
+   * weekend or holiday, but never for more than a week.
+   */
   stale: string[];
 }
+
+/** Longest gap a published future rate can cover (weekend plus holidays). */
+const MAX_GAP_DAYS = 7;
+
+const daysBetween = (from: string, to: string) => (Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000;
 
 export async function listCurrencies(dbx: DbOrTx = db): Promise<CurrencyInfo[]> {
   const rows = await dbx.select().from(currencies).where(eq(currencies.isActive, true)).orderBy(currencies.sortOrder);
@@ -57,14 +66,21 @@ export async function getRatesSnapshot(date = businessDate(), dbx: DbOrTx = db):
     }
     rates.push({ currencyCode: c.code, rate: row.rate, effectiveDate: row.effectiveDate, source: row.source });
     rateSet[c.code] = row.rate;
-    if (row.effectiveDate < date) stale.push(c.code);
+    if (row.effectiveDate < date) {
+      const [next] = await dbx
+        .select({ id: exchangeRates.id })
+        .from(exchangeRates)
+        .where(and(eq(exchangeRates.currencyCode, c.code), gt(exchangeRates.effectiveDate, date)))
+        .limit(1);
+      if (!next || daysBetween(row.effectiveDate, date) > MAX_GAP_DAYS) stale.push(c.code);
+    }
   }
 
   return { today: date, currencies: list, rates, rateSet, missing, stale };
 }
 
 export async function upsertRate(
-  input: { currencyCode: string; rate: string; effectiveDate: string; source?: "manual" | "bcv_api"; userId: string },
+  input: { currencyCode: string; rate: string; effectiveDate: string; source?: "manual" | "bcv_api"; userId: string | null },
   dbx: DbOrTx = db,
 ) {
   const [row] = await dbx

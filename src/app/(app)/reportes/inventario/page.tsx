@@ -10,7 +10,6 @@ import { requireRole } from "@/lib/auth-guards";
 import { formatPct, formatQty } from "@/lib/format";
 import { getRatesSnapshot } from "@/modules/currency/infrastructure/rates";
 import { getInventoryValuation, type InventorySort } from "@/modules/reporting/infrastructure/inventory-report";
-import { BackToReports } from "@/modules/reporting/ui/back-to-reports";
 import { Equivalents } from "@/modules/reporting/ui/equivalents";
 import { ExportButton } from "@/modules/reporting/ui/export-button";
 import { KpiCard } from "@/modules/reporting/ui/kpi-card";
@@ -37,11 +36,11 @@ export default async function InventoryReportPage({ searchParams }: { searchPara
   return (
     <div className="space-y-6">
       <PageHeader
+        back={{ href: "/reportes", label: "Volver a reportes" }}
         title="Inventario valorizado"
         description="Cuánto vale la mercancía en existencia, a costo promedio."
         actions={
           <>
-            <BackToReports />
             <ExportButton report="inventory" params={{ sort }} disabled={v.withStock === 0} />
           </>
         }

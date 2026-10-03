@@ -10,7 +10,7 @@ export default async function ImportPage() {
   const jobs = await listImportJobs(10);
   return (
     <div className="mx-auto max-w-6xl space-y-4">
-      <PageHeader title="Importar productos desde Excel" description="Descarga la plantilla, llénala y súbela. Se validan todas las filas antes de guardar." />
+      <PageHeader back={{ href: "/productos", label: "Volver a productos" }} title="Importar productos desde Excel" description="Descarga la plantilla, llénala y súbela. Se validan todas las filas antes de guardar." />
       <ImportWizard jobs={jobs} />
     </div>
   );

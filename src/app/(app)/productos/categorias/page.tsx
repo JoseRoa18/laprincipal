@@ -12,7 +12,7 @@ export default async function CategoriesPage() {
   const [tree, brands] = await Promise.all([listCategoryTree(), listBrands(undefined, { includeInactive: true, withCounts: true })]);
   return (
     <div className="space-y-4">
-      <PageHeader title="Categorías y marcas" description="Organiza el catálogo. Lo que ya se usa en productos no se borra: se desactiva." />
+      <PageHeader back={{ href: "/productos", label: "Volver a productos" }} title="Categorías y marcas" description="Organiza el catálogo. Lo que ya se usa en productos no se borra: se desactiva." />
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>

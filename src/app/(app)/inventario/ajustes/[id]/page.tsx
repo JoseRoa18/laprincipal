@@ -2,7 +2,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Money } from "@/components/app/money";
 import { PageHeader } from "@/components/app/page-header";
-import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { can, requireRole } from "@/lib/auth-guards";
 import { formatDateTime, formatQty } from "@/lib/format";
@@ -26,6 +25,7 @@ export default async function AdjustmentDetailPage({ params }: { params: Promise
     return (
       <div className="space-y-6">
         <PageHeader
+          back={{ href: "/inventario/ajustes", label: "Volver a ajustes" }}
           title="Ajuste en borrador"
           description={`Creado por ${adj.createdByName} el ${formatDateTime(adj.createdAt)}. Revisa y aplica cuando esté listo.`}
           actions={<AdjustmentStatusBadge status={adj.status} />}
@@ -66,14 +66,12 @@ export default async function AdjustmentDetailPage({ params }: { params: Promise
   return (
     <div className="space-y-6">
       <PageHeader
+        back={{ href: "/inventario/ajustes", label: "Volver a ajustes" }}
         title={`Ajuste ${adj.number ?? ""}`.trim()}
         description={`${adj.reasonName} · ${adj.status === "applied" ? `Aplicado por ${adj.appliedByName ?? adj.createdByName} el ${formatDateTime(adj.appliedAt)}` : `Cancelado · creado el ${formatDateTime(adj.createdAt)}`}`}
         actions={
           <>
             <AdjustmentStatusBadge status={adj.status} />
-            <Button variant="outline" render={<Link href="/inventario/ajustes" />}>
-              Volver a ajustes
-            </Button>
           </>
         }
       />

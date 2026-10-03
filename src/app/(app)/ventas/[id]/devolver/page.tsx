@@ -1,9 +1,6 @@
-import { ArrowLeft } from "lucide-react";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/app/page-header";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
 import { requireRole } from "@/lib/auth-guards";
 import { formatDateTime } from "@/lib/format";
 import { listCurrencies } from "@/modules/currency/infrastructure/rates";
@@ -14,7 +11,7 @@ import { ReturnForm } from "@/modules/sales/ui/sales/return-form";
 export const metadata = { title: "Devolución" };
 
 export default async function ReturnPage({ params }: { params: Promise<{ id: string }> }) {
-  await requireRole("admin", "seller");
+  await requireRole("admin");
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const sale = await getSaleDetail(id);
@@ -26,13 +23,9 @@ export default async function ReturnPage({ params }: { params: Promise<{ id: str
   return (
     <div className="space-y-4">
       <PageHeader
+        back={{ href: `/ventas/${id}`, label: "Volver a la venta" }}
         title={`Devolver de la venta ${sale.number ?? ""}`}
         description={`${formatDateTime(sale.saleDate)} · ${sale.customer ? sale.customer.name : "Consumidor final"}`}
-        actions={
-          <Button variant="ghost" render={<Link href={`/ventas/${sale.id}`} />}>
-            <ArrowLeft /> Volver a la venta
-          </Button>
-        }
       />
       {!returnable ? (
         <Alert>

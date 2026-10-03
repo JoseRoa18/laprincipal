@@ -1,7 +1,5 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/app/page-header";
-import { Button } from "@/components/ui/button";
 import { can, requireRole } from "@/lib/auth-guards";
 import { formatDateTime } from "@/lib/format";
 import { getCount } from "@/modules/inventory/infrastructure/counts";
@@ -29,14 +27,12 @@ export default async function CountDetailPage({ params }: { params: Promise<{ id
   return (
     <div className="space-y-4">
       <PageHeader
+        back={{ href: "/inventario/conteos", label: "Volver a conteos" }}
         title={title}
         description={description}
         actions={
           <>
             <CountStatusBadge status={count.status} />
-            <Button variant="outline" render={<Link href="/inventario/conteos" />}>
-              Volver a conteos
-            </Button>
           </>
         }
       />

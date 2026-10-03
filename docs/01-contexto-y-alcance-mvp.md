@@ -30,7 +30,7 @@
 | # | Tema | Decisión |
 |---|---|---|
 | D1 | País y fiscalidad | Venezuela. IVA 16 % incluido en los precios mostrados. Sin factura fiscal ni integración con SENIAT en el MVP; la app emite ticket o nota de entrega. Sin IGTF (queda como impuesto configurable, apagado). |
-| D2 | Moneda base | Precios y costos en USD. Bs y COP se calculan con la tasa del día, cargada a mano con historial. Descarga automática de la tasa BCV como mejora opcional. |
+| D2 | Moneda base | Precios y costos en USD. La tasa de Bs es la oficial del BCV y la app la descarga sola (decisión del dueño, 2026-10-03); la de COP se carga a mano. Ambas con historial. |
 | D3 | Dónde corre | En la nube: Supabase (base de datos, autenticación, archivos) y Vercel (aplicación). Accesible desde PC y celulares dentro y fuera del local. |
 | D4 | Métodos de pago | Efectivo USD, Efectivo COP, Zelle (USD), Binance (USDT tratado como USD), Punto de venta (Bs) y Pago Móvil (Bs). No existe efectivo en Bs. El cambio se entrega en efectivo USD o COP. |
 | D5 | Clientes y precios | Dos listas de precios: Público y Técnico. Cliente opcional en cada venta. Sin crédito: toda venta se paga completa. |
@@ -59,7 +59,7 @@
 ### 4.1 Acceso y usuarios
 - Login con correo y contraseña (Supabase Auth). El administrador crea los usuarios; no hay registro público.
 - PIN de 4 dígitos para cambiar de vendedor en el mostrador sin cerrar sesión.
-- Roles: Administrador (todo), Vendedor (vender, cotizar, clientes, consultar stock, su caja), Almacén (entradas, ajustes, conteos, etiquetas, productos).
+- Roles: Administrador (todo, incluidas caja, cotizaciones, devoluciones y clientes), Vendedor (solo vende: punto de venta con cliente y ventas en espera, y consulta de productos sin costos; decisión del dueño, 2026-10-03), Almacén (entradas, ajustes, conteos, etiquetas, productos).
 - Auditoría de precios, ajustes, anulaciones, devoluciones, tasas y usuarios.
 
 ### 4.2 Productos
@@ -153,6 +153,8 @@ Arranque sin historial: los primeros 30 días se usan el mínimo y máximo manua
 
 - Monedas: USD (base, 2 decimales), VES (2 decimales), COP (0 decimales, efectivo redondeado a 100).
 - Tasa del día por moneda: unidades por 1 USD, con fecha, fuente y usuario. Se usa la última tasa vigente.
+- Bs: tasa oficial del BCV, descargada de bcv.org.ve (respaldo: ve.dolarapi.com) cada día a las 3:00 a. m., con el botón "Actualizar desde el BCV" y en segundo plano si la tasa quedó atrasada. Se guarda con su "Fecha Valor": la publicada el viernes rige desde el lunes. Carga manual solo si el BCV no responde.
+- COP: siempre manual.
 - Cada venta guarda las tasas usadas; los reportes históricos no cambian aunque la tasa cambie.
 - Cada pago registra método, moneda, monto en esa moneda, tasa y equivalente en USD.
 - La caja se abre, cuenta y cierra por moneda de efectivo (USD y COP).
@@ -163,7 +165,7 @@ Arranque sin historial: los primeros 30 días se usan el mínimo y máximo manua
 
 ## 8. Fuera del MVP
 
-- Fase 2: números de serie con garantía; devoluciones a proveedor; promociones simples; notificaciones por WhatsApp y correo; PWA con modo offline básico; impresión ESC/POS directa; crédito a técnicos con cuentas por cobrar; descarga automática de tasa BCV.
+- Fase 2: números de serie con garantía; devoluciones a proveedor; promociones simples; notificaciones por WhatsApp y correo; PWA con modo offline básico; impresión ESC/POS directa; crédito a técnicos con cuentas por cobrar.
 - Fase 3: factura fiscal (máquina fiscal o proveedor autorizado); API y webhooks; catálogo público o por WhatsApp; multi-sucursal.
 - Fase 4: pronóstico avanzado y detección de anomalías.
 
