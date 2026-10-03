@@ -47,7 +47,7 @@ export async function addCashMovementAction(input: unknown) {
       }
       const admin = await getUserById(data.adminId);
       if (!admin || admin.role !== "admin" || !admin.isActive) throw new AppError("FORBIDDEN", "El usuario elegido no es un administrador activo.");
-      const ok = await verifyUserPin(admin.id, data.pin);
+      const ok = await verifyUserPin(admin.id, data.pin, user.id);
       if (!ok) throw new AppError("FORBIDDEN", "PIN incorrecto.", { fields: { pin: "PIN incorrecto" } });
       authorizedBy = admin.id;
     }

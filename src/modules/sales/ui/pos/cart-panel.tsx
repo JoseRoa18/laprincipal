@@ -39,7 +39,7 @@ export function CartPanel({ config, totals, onCustomerChange, onCheckout, onHold
   const [discountOpen, setDiscountOpen] = useState(false);
 
   const amounts = displayAmounts(totals.totalUsd, config.rates.rateSet, config.rates.currencies);
-  const overLimit = exceedsDiscountLimit(totals, config.policies.maxDiscountPct) && !supervisorIsValid(supervisor);
+  const overLimit = exceedsDiscountLimit(totals, config.policies.maxDiscountPct) && !supervisorIsValid(supervisor, totals);
   const isQuote = config.mode === "quote";
 
   return (

@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import type { Db } from "@/db/client";
-import { saleItems, sales, type UserRole } from "@/db/schema";
+import { cashSessions, saleItems, sales, type UserRole } from "@/db/schema";
 import { AppError, forbidden, notFound } from "@/lib/errors";
 import { writeAudit } from "@/modules/core/application/audit";
 import { applyMovements } from "@/modules/inventory/application/stock";
@@ -31,6 +31,18 @@ export async function voidSale(dbx: Db, input: VoidSaleInput, ctx: VoidContext):
     }
     const hoursSince = (Date.now() - sale.saleDate.getTime()) / 3_600_000;
     const outsideWindow = hoursSince > policies.voidWindowHours;
+    // A void takes the sale out of its own cash session. For an old sale, or one whose
+    // drawer was already counted and closed, the money comes back from today's drawer:
+    // that is a return, which records the refund in the open session.
+    if (outsideWindow) {
+      throw new AppError("INVALID_STATE", `Pasaron más de ${policies.voidWindowHours} horas desde la venta: usa Devolver para registrar el reembolso.`);
+    }
+    if (sale.cashSessionId) {
+      const [session] = await tx.select({ status: cashSessions.status }).from(cashSessions).where(eq(cashSessions.id, sale.cashSessionId)).for("share");
+      if (session?.status !== "open") {
+        throw new AppError("INVALID_STATE", "La venta es de una caja ya cerrada: usa Devolver para registrar el reembolso en la caja de hoy.");
+      }
+    }
 
     const items = await tx.select().from(saleItems).where(eq(saleItems.saleId, sale.id));
     await applyMovements(

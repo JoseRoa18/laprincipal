@@ -3,9 +3,9 @@ import { and, eq, isNotNull } from "drizzle-orm";
 import { db, type DbOrTx } from "@/db/client";
 import { users, type UserRole } from "@/db/schema";
 import { AppError } from "@/lib/errors";
-
-const MAX_ATTEMPTS = 5;
-const LOCK_MINUTES = 15;
+import { writeAudit } from "@/modules/core/application/audit";
+import { isTrivialPin, lockMessage, PIN_REQUESTER_POLICY, PIN_TARGET_POLICY, type ThrottlePolicy } from "../domain/throttle";
+import { clearAttempts, reserveAttempt } from "./throttle";
 
 export const PIN_REGEX = /^\d{4,6}$/;
 
@@ -24,59 +24,65 @@ export async function listPinUsers(dbx: DbOrTx = db): Promise<PinUser[]> {
     .orderBy(users.name);
 }
 
-/**
- * Verify a user's PIN with lockout after repeated failures.
- * Returns true on success; false on mismatch; throws when locked.
+async function reserveOrThrow(key: string, policy: ThrottlePolicy, dbx: DbOrTx) {
+  const lockedUntil = await reserveAttempt(key, policy, dbx);
+  if (lockedUntil) throw new AppError("FORBIDDEN", lockMessage(lockedUntil));
+}
+
+/*
+ * Throttle keys. Guesses are counted per (person typing, PIN owner), so typing
+ * your own PIN right never resets the count of guesses at someone else's, and
+ * per PIN owner, so several accounts cannot share the guessing.
  */
-export async function verifyUserPin(userId: string, pin: string, dbx: DbOrTx = db): Promise<boolean> {
-  const [user] = await dbx.select().from(users).where(eq(users.id, userId)).limit(1);
-  if (!user || !user.isActive || !user.pinHash) return false;
+const requesterKey = (requesterId: string, target: string) => `pin:${requesterId}>${target}`;
+const targetKey = (userId: string) => `pin-target:${userId}`;
 
-  if (user.pinLockedUntil && user.pinLockedUntil > new Date()) {
-    const minutes = Math.ceil((user.pinLockedUntil.getTime() - Date.now()) / 60_000);
-    throw new AppError("FORBIDDEN", `PIN bloqueado por intentos fallidos. Intenta en ${minutes} min.`);
-  }
+/**
+ * Verify `userId`'s PIN as typed by `requesterId` (the signed-in user). The
+ * attempt is counted before the check, so parallel guesses are throttled too;
+ * failures go to the audit log. Throws when the attempts are locked.
+ */
+export async function verifyUserPin(userId: string, pin: string, requesterId: string, dbx: DbOrTx = db): Promise<boolean> {
+  await reserveOrThrow(requesterKey(requesterId, userId), PIN_REQUESTER_POLICY, dbx);
+  await reserveOrThrow(targetKey(userId), PIN_TARGET_POLICY, dbx);
 
-  const ok = PIN_REGEX.test(pin) && (await compare(pin, user.pinHash));
+  const [user] = await dbx.select({ isActive: users.isActive, pinHash: users.pinHash }).from(users).where(eq(users.id, userId)).limit(1);
+  const ok = Boolean(user?.isActive && user.pinHash && PIN_REGEX.test(pin) && (await compare(pin, user.pinHash)));
   if (ok) {
-    if (user.pinFailedAttempts > 0 || user.pinLockedUntil) {
-      await dbx.update(users).set({ pinFailedAttempts: 0, pinLockedUntil: null }).where(eq(users.id, userId));
-    }
+    await clearAttempts(requesterKey(requesterId, userId), dbx);
+    await clearAttempts(targetKey(userId), dbx);
     return true;
   }
-
-  const attempts = user.pinFailedAttempts + 1;
-  await dbx
-    .update(users)
-    .set({
-      pinFailedAttempts: attempts >= MAX_ATTEMPTS ? 0 : attempts,
-      pinLockedUntil: attempts >= MAX_ATTEMPTS ? new Date(Date.now() + LOCK_MINUTES * 60_000) : null,
-    })
-    .where(eq(users.id, userId));
+  await writeAudit(dbx, { userId: requesterId, action: "pin.failed", entityType: "user", entityId: userId });
   return false;
 }
 
-/** Find an admin whose PIN matches (supervisor authorization for discounts, voids). */
-export async function authorizeSupervisor(pin: string, dbx: DbOrTx = db): Promise<PinUser | null> {
-  if (!PIN_REGEX.test(pin)) return null;
-  const admins = await dbx
-    .select({ id: users.id, name: users.name, role: users.role })
-    .from(users)
-    .where(and(eq(users.isActive, true), eq(users.role, "admin"), isNotNull(users.pinHash)));
+/** Find an active admin whose PIN matches (supervisor authorization for discounts). */
+export async function authorizeSupervisor(pin: string, requesterId: string, dbx: DbOrTx = db): Promise<PinUser | null> {
+  const key = requesterKey(requesterId, "supervisor");
+  await reserveOrThrow(key, PIN_REQUESTER_POLICY, dbx);
+  const admins = PIN_REGEX.test(pin)
+    ? await dbx
+        .select({ id: users.id, name: users.name, role: users.role, pinHash: users.pinHash })
+        .from(users)
+        .where(and(eq(users.isActive, true), eq(users.role, "admin"), isNotNull(users.pinHash)))
+    : [];
   for (const admin of admins) {
-    try {
-      if (await verifyUserPin(admin.id, pin, dbx)) return admin;
-    } catch {
-      // locked admin: keep trying others
+    if (await compare(pin, admin.pinHash!)) {
+      await clearAttempts(key, dbx);
+      return { id: admin.id, name: admin.name, role: admin.role };
     }
   }
+  await writeAudit(dbx, { userId: requesterId, action: "pin.failed", entityType: "user", entityId: null, after: { target: "supervisor" } });
   return null;
 }
 
 export async function setUserPin(userId: string, pin: string, dbx: DbOrTx = db): Promise<void> {
   if (!PIN_REGEX.test(pin)) throw new AppError("VALIDATION", "El PIN debe tener entre 4 y 6 dígitos.");
+  if (isTrivialPin(pin)) throw new AppError("VALIDATION", "Ese PIN es muy fácil de adivinar (como 1234 o 0000). Elige otro.");
   await dbx
     .update(users)
     .set({ pinHash: await hash(pin, 10), pinFailedAttempts: 0, pinLockedUntil: null })
     .where(eq(users.id, userId));
+  await clearAttempts(targetKey(userId), dbx);
 }

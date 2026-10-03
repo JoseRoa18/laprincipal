@@ -1,5 +1,7 @@
+import Decimal from "decimal.js";
 import ExcelJS from "exceljs";
 import { D } from "@/lib/money";
+import { isValidEan13, isValidUpc } from "../domain/barcodes";
 import { IMPORT_COLUMNS, matchHeader, type ImportColumnKey, type RawImportRow } from "../domain/import-rows";
 import type { ProductExportRow } from "./products-list";
 
@@ -28,9 +30,9 @@ export async function buildImportTemplate(lists: { categoryPaths: string[]; unit
     const col = ws.getColumn(key);
     col.numFmt = key === "warrantyDays" || key === "initialStock" || key === "minStock" || key === "maxStock" ? "0.###" : "0.00";
   }
-  // Barcodes and SKUs must stay text so Excel does not turn them into scientific notation.
-  ws.getColumn("barcode").numFmt = "@";
-  ws.getColumn("sku").numFmt = "@";
+  // Codes must stay text: Excel would turn barcodes into scientific notation, drop
+  // leading zeros, or read part numbers like 3-4 as dates.
+  for (const key of ["barcode", "sku", "partNumber", "equivalences", "location", "compatibilities"] satisfies ImportColumnKey[]) ws.getColumn(key).numFmt = "@";
 
   const help = wb.addWorksheet("Instrucciones");
   help.columns = [
@@ -42,7 +44,10 @@ export async function buildImportTemplate(lists: { categoryPaths: string[]; unit
   for (const c of IMPORT_COLUMNS) help.addRow({ col: c.header.replace("*", ""), req: c.required ? "Sí" : "No", hint: c.hint });
   help.addRow({});
   help.addRow({ col: "Ejemplo", hint: "Compresor Embraco 1/3 HP | EMB-123 | Refrigeración > Compresores | Embraco | u | 120,50 | 108,45 | 80 | 3 | 1 | 10 | P2-E3 | 7591234567890 | FFI12HBX, EMB123 | Nevera Mabe RMS400; Nevera LG GT32 | | 90" });
-  help.addRow({ col: "Notas", hint: "Los números aceptan coma o punto decimal. Las filas con errores no se importan; corrígelas y vuelve a subir el archivo. Puedes deshacer una importación desde la misma pantalla." });
+  help.addRow({
+    col: "Notas",
+    hint: "Los números aceptan coma o punto decimal. Las filas con errores no se importan: corrige solo esas filas y súbelas en un archivo nuevo (los productos ya importados aparecerían como repetidos). Puedes deshacer una importación desde la misma pantalla.",
+  });
 
   const ref = wb.addWorksheet("Listas");
   ref.columns = [
@@ -87,6 +92,24 @@ function cellToString(value: ExcelJS.CellValue): string {
   return String(value).trim();
 }
 
+const NUMERIC_KEYS = new Set<ImportColumnKey>(["publicPrice", "techPrice", "cost", "initialStock", "minStock", "maxStock", "warrantyDays"]);
+
+/** The number Excel stored, as text the parser reads unambiguously (decimal comma, no grouping): 1.125 → "1,125". */
+function numericCellToString(value: ExcelJS.CellValue): string {
+  const v = value && typeof value === "object" && "result" in value ? (value.result as ExcelJS.CellValue) : value;
+  if (typeof v === "number" && Number.isFinite(v)) return new Decimal(v).toFixed().replace(".", ",");
+  return cellToString(value);
+}
+
+/** A barcode cell Excel stored as a number lost its leading zeros: restore them when the check digit confirms it. */
+function barcodeCellToString(value: ExcelJS.CellValue): string {
+  if (typeof value !== "number" || !Number.isInteger(value)) return cellToString(value);
+  const digits = String(value);
+  if (digits.length === 11 && isValidUpc(`0${digits}`)) return `0${digits}`;
+  if (digits.length === 12 && !isValidUpc(digits) && isValidEan13(`0${digits}`)) return `0${digits}`;
+  return digits;
+}
+
 export interface ParsedWorkbook {
   rows: RawImportRow[];
   headers: string[];
@@ -122,7 +145,8 @@ export async function parseImportWorkbook(buffer: Buffer): Promise<ParsedWorkboo
     const values: Partial<Record<ImportColumnKey, string>> = {};
     let hasData = false;
     for (const [colNumber, key] of columnMap) {
-      const text = cellToString(row.getCell(colNumber).value);
+      const value = row.getCell(colNumber).value;
+      const text = NUMERIC_KEYS.has(key) ? numericCellToString(value) : key === "barcode" ? barcodeCellToString(value) : cellToString(value);
       if (text) hasData = true;
       values[key] = text;
     }

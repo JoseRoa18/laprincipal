@@ -9,6 +9,7 @@ import { writeAudit } from "@/modules/core/application/audit";
 import { getDefaultLocation } from "@/modules/core/application/context";
 import { applyMovement, lockStock } from "@/modules/inventory/application/stock";
 import { validateImportRows, type ImportColumnKey, type ImportLookups, type ImportRowResult } from "../domain/import-rows";
+import { compactCode, normalizeSearch } from "../domain/search-text";
 import { getInitialStockReasonId, getProductFormOptions, listBrands, listCategoryOptions } from "../infrastructure/catalog-options";
 import { parseImportWorkbook } from "../infrastructure/excel";
 import { lockCatalogSequences, type ActorUser } from "./catalog-shared";
@@ -39,15 +40,18 @@ async function buildLookups(dbx: DbOrTx): Promise<ImportLookups> {
     () => getProductFormOptions(dbx),
     () => listCategoryOptions(dbx, { includeInactive: false }),
     () => listBrands(dbx, { includeInactive: true }),
-    () => dbx.select({ sku: products.sku }).from(products),
+    () => dbx.select({ sku: products.sku, name: products.name, partNumber: products.partNumber, deletedAt: products.deletedAt }).from(products),
     () => dbx.select({ code: productBarcodes.code }).from(productBarcodes),
   ]);
+  const live = skus.filter((p) => !p.deletedAt);
   return {
     categories: categories.map((c) => ({ id: c.id, name: c.name, parentId: c.parentId })),
     units: options.units,
     brands: brands.map((b) => ({ id: b.id, name: b.name })),
     existingSkus: new Set(skus.map((s) => s.sku.toUpperCase())),
     existingBarcodes: new Set(codes.map((c) => c.code)),
+    existingPartNumbers: new Map(live.filter((p) => p.partNumber && compactCode(p.partNumber)).map((p) => [compactCode(p.partNumber!), p.sku])),
+    existingNames: new Map(live.map((p) => [normalizeSearch(p.name), p.sku])),
     defaultUnitId: options.defaultUnitId,
     defaultTaxId: options.defaultTaxId,
   };
@@ -111,6 +115,9 @@ export async function applyImport(jobId: string, user: ActorUser): Promise<Apply
 
   const location = await getDefaultLocation();
   return db.transaction(async (tx) => {
+    // Two clicks on "Aplicar" (or two devices): the second waits here and finds it applied.
+    const [locked] = await tx.select({ status: importJobs.status }).from(importJobs).where(eq(importJobs.id, jobId)).for("update");
+    if (locked?.status !== "ready") throw new AppError("INVALID_STATE", "Esta importación ya fue aplicada o cancelada.");
     await lockCatalogSequences(tx);
     // Re-validate against the current catalog: things may have changed since the preview.
     const { results } = await validateBuffer(file.data, tx);

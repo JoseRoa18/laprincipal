@@ -74,39 +74,52 @@ export async function createCount(input: CountCreateInput, actor: Actor, dbx: Db
   });
 }
 
-async function loadOpenCount(tx: DbOrTx, countId: string, forUpdate = false) {
+async function loadOpenCount(tx: DbOrTx, countId: string, lock: boolean | "share" = false) {
   const base = tx.select().from(stockCounts).where(eq(stockCounts.id, countId));
-  const [count] = forUpdate ? await base.for("update") : await base;
+  const [count] = lock === "share" ? await base.for("share") : lock ? await base.for("update") : await base;
   if (!count) throw notFound("El conteo");
   if (count.status !== "open") throw new AppError("INVALID_STATE", "Este conteo ya fue aplicado o cancelado.");
   return count;
 }
 
 /**
- * Record (or clear) the counted quantity of one item. `expectedHidden` tells
- * the caller not to send the difference back while a blind count is running.
+ * Record (or clear) the counted quantity of one item. The difference is taken
+ * against the system stock at the moment it is counted (kept in
+ * `system_qty_at_count`), so sales made while the count is open are not
+ * subtracted twice when it is applied. `expectedHidden` tells the caller not
+ * to send the difference back while a blind count is running.
  */
 export async function recordCountItem(input: CountItemInput, actor: Actor, dbx: DbOrTx = db) {
-  const count = await loadOpenCount(dbx, input.countId);
-  const [item] = await dbx
-    .select()
-    .from(stockCountItems)
-    .where(and(eq(stockCountItems.id, input.itemId), eq(stockCountItems.countId, input.countId)))
-    .limit(1);
-  if (!item) throw notFound("El producto del conteo");
+  return inTransaction(dbx, async (tx) => {
+    // Shared lock: several phones count at once; applying the count waits for them.
+    const count = await loadOpenCount(tx, input.countId, "share");
+    const [item] = await tx
+      .select()
+      .from(stockCountItems)
+      .where(and(eq(stockCountItems.id, input.itemId), eq(stockCountItems.countId, input.countId)))
+      .limit(1);
+    if (!item) throw notFound("El producto del conteo");
 
-  const counted = input.countedQty === null ? null : D(input.countedQty);
-  const [updated] = await dbx
-    .update(stockCountItems)
-    .set({
-      countedQty: counted === null ? null : toQtyDb(counted),
-      difference: counted === null ? null : toQtyDb(counted.minus(D(item.expectedQty))),
-      countedBy: counted === null ? null : actor.id,
-      countedAt: counted === null ? null : new Date(),
-    })
-    .where(eq(stockCountItems.id, item.id))
-    .returning();
-  return { ...updated, expectedHidden: hidesExpected(count) };
+    const counted = input.countedQty === null ? null : D(input.countedQty);
+    const [level] = await tx
+      .select({ quantity: stockLevels.quantity })
+      .from(stockLevels)
+      .where(and(eq(stockLevels.productId, item.productId), eq(stockLevels.warehouseId, count.warehouseId)))
+      .limit(1);
+    const systemNow = D(level?.quantity ?? 0);
+    const [updated] = await tx
+      .update(stockCountItems)
+      .set({
+        countedQty: counted === null ? null : toQtyDb(counted),
+        systemQtyAtCount: counted === null ? null : toQtyDb(systemNow),
+        difference: counted === null ? null : toQtyDb(counted.minus(systemNow)),
+        countedBy: counted === null ? null : actor.id,
+        countedAt: counted === null ? null : new Date(),
+      })
+      .where(eq(stockCountItems.id, item.id))
+      .returning();
+    return { ...updated, expectedHidden: hidesExpected(count) };
+  });
 }
 
 /** End the counting phase of a blind count: expected quantities and differences become visible. */
@@ -137,10 +150,20 @@ export async function addCountItem(input: CountAddItemInput, actor: Actor, dbx: 
     .limit(1);
   if (!product || product.deletedAt) throw notFound("El producto");
 
+  // Two phones scanning the same new product at once add it only once (unique count + product).
   const [item] = await dbx
     .insert(stockCountItems)
     .values({ countId: count.id, productId: product.id, expectedQty: toQtyDb(product.quantity) })
+    .onConflictDoNothing({ target: [stockCountItems.countId, stockCountItems.productId] })
     .returning();
+  if (!item) {
+    const [again] = await dbx
+      .select()
+      .from(stockCountItems)
+      .where(and(eq(stockCountItems.countId, count.id), eq(stockCountItems.productId, product.id)))
+      .limit(1);
+    return again;
+  }
   await writeAudit(dbx, { userId: actor.id, action: "count.add_item", entityType: "stock_count", entityId: count.id, after: item });
   return item;
 }

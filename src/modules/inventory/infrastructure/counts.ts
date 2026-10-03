@@ -164,7 +164,7 @@ async function selectCountItems(dbx: DbOrTx, where: SQL, expectedHidden: boolean
       locationCode: products.locationCode,
       unitSymbol: units.symbol,
       unitDecimals: units.decimals,
-      expectedQty: stockCountItems.expectedQty,
+      expectedQty: sql<string>`coalesce(${stockCountItems.systemQtyAtCount}, ${stockCountItems.expectedQty})`,
       countedQty: stockCountItems.countedQty,
       difference: stockCountItems.difference,
       costAvgUsd: products.costAvgUsd,

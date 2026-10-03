@@ -19,7 +19,6 @@ export function ChangePasswordForm({ email }: { email: string }) {
   const {
     register,
     handleSubmit,
-    reset,
     setError,
     formState: { errors },
   } = useForm<ChangeOwnPasswordInput, unknown, z.output<typeof changeOwnPasswordSchema>>({
@@ -32,7 +31,9 @@ export function ChangePasswordForm({ email }: { email: string }) {
       const result = await changeOwnPasswordAction(data);
       if (result.ok) {
         toast.success("Contraseña actualizada");
-        reset();
+        // The change ends every session, this one too: sign in again with the new password.
+        // Full navigation: /salir is a route handler that clears the session cookie.
+        window.location.href = new URL("/salir?aviso=clave", window.location.origin).toString();
       } else {
         applyFieldErrors(result, setError);
         toast.error(result.error.message);

@@ -129,7 +129,7 @@ function VoidForm({
         <DialogTitle>Anular la venta {number}</DialogTitle>
         <DialogDescription>
           Los productos vuelven al inventario y la venta queda marcada como anulada. Esta acción no se puede deshacer.
-          {outsideVoidWindow ? ` Han pasado más de ${voidWindowHours} horas: solo un administrador puede anularla.` : ""}
+          {outsideVoidWindow ? ` Han pasado más de ${voidWindowHours} horas: ya no se puede anular; usa Devolver.` : ""}
         </DialogDescription>
       </DialogHeader>
       <div className="space-y-2">

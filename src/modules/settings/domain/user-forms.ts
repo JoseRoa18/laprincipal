@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isTrivialPin } from "@/modules/auth/domain/throttle";
 
 /**
  * Zod schemas for user management and "Mi cuenta". Pure module (no database
@@ -10,7 +11,10 @@ export const PIN_REGEX = /^\d{4,6}$/;
 
 export const roleSchema = z.enum(["admin", "seller", "warehouse"]);
 export const passwordSchema = z.string().min(8, "La contraseña debe tener al menos 8 caracteres").max(100);
-export const pinSchema = z.string().regex(PIN_REGEX, "El PIN debe tener entre 4 y 6 dígitos");
+export const pinSchema = z
+  .string()
+  .regex(PIN_REGEX, "El PIN debe tener entre 4 y 6 dígitos")
+  .refine((pin) => !isTrivialPin(pin), "Ese PIN es muy fácil de adivinar (como 1234 o 0000). Elige otro.");
 export const emailSchema = z
   .string()
   .trim()

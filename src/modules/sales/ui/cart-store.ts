@@ -4,7 +4,7 @@ import { createContext, useContext, useMemo } from "react";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { D, roundTo } from "@/lib/money";
-import { computeTotals, effectiveDiscountPct, type SaleTotals } from "../domain/pricing";
+import { computeTotals, exceedsDiscountLimit as exceedsLimit, type SaleTotals } from "../domain/pricing";
 import type { CartCustomer, CartLineData, CartPayload, PosProduct } from "../application/schemas";
 
 export interface GlobalDiscount {
@@ -16,6 +16,8 @@ export interface SupervisorAuth {
   token: string;
   expiresAt: number;
   name: string;
+  /** Highest discount % the admin approved. */
+  maxPct: string;
 }
 
 export interface CartState {
@@ -28,6 +30,12 @@ export interface CartState {
   quoteId: string | null;
   quoteNumber: string | null;
   supervisor: SupervisorAuth | null;
+  /**
+   * Checkout attempt id and the cart it belongs to (persisted). Sending the same
+   * id again (lost response, page reloaded) returns the sale already made
+   * instead of charging twice; any change to the cart starts a new attempt.
+   */
+  checkout: { id: string; cart: string } | null;
   /** A quote or held sale waiting for the user to confirm replacing the cart (not persisted). */
   pendingCart: CartPayload | null;
   hydrated: boolean;
@@ -41,6 +49,8 @@ export interface CartState {
   setCustomer: (customer: CartCustomer | null) => void;
   setNotes: (notes: string) => void;
   setSupervisor: (auth: SupervisorAuth | null) => void;
+  /** Id for this checkout attempt (see `checkout`). */
+  checkoutRequestId: () => string;
   setPendingCart: (payload: CartPayload | null) => void;
   /** Refresh prices and stock of the lines with fresh product data. */
   applyProducts: (products: PosProduct[]) => void;
@@ -77,15 +87,35 @@ const EMPTY = {
   quoteId: null,
   quoteNumber: null,
   supervisor: null,
+  checkout: null as { id: string; cart: string } | null,
 };
+
+/** What makes two checkout attempts "the same sale". */
+function cartFingerprint(s: Pick<CartState, "lines" | "customer" | "globalDiscount" | "heldSaleId" | "quoteId">): string {
+  return JSON.stringify([
+    s.lines.map((l) => [l.productId, l.quantity, l.discountType, l.discountValue]),
+    s.customer?.id ?? null,
+    s.globalDiscount,
+    s.heldSaleId,
+    s.quoteId,
+  ]);
+}
 
 /** Persisted cart. The POS and the quote screen use separate storage keys. */
 export function createCartStore(storageKey: string) {
   return create<CartState>()(
     persist(
-      (set) => ({
+      (set, get) => ({
         ...EMPTY,
         pendingCart: null,
+        checkoutRequestId: () => {
+          const cart = cartFingerprint(get());
+          const current = get().checkout;
+          if (current && current.cart === cart) return current.id;
+          const id = crypto.randomUUID();
+          set({ checkout: { id, cart } });
+          return id;
+        },
         hydrated: false,
 
         addProduct: (product, quantity) =>
@@ -174,6 +204,7 @@ export function createCartStore(storageKey: string) {
           quoteId: s.quoteId,
           quoteNumber: s.quoteNumber,
           supervisor: s.supervisor,
+          checkout: s.checkout,
         }),
       },
     ),
@@ -230,11 +261,11 @@ export function useCartTotals(): SaleTotals {
 
 /** Same rule as the server: any line or the whole sale above the role limit. */
 export function exceedsDiscountLimit(totals: SaleTotals, maxPct: number): boolean {
-  const max = D(maxPct);
-  if (totals.lines.some((l) => effectiveDiscountPct(l.grossUsd, l.discountUsd).gt(max))) return true;
-  return effectiveDiscountPct(totals.subtotalUsd, totals.discountUsd).gt(max);
+  return exceedsLimit(totals, maxPct);
 }
 
-export function supervisorIsValid(auth: SupervisorAuth | null): boolean {
-  return Boolean(auth && auth.expiresAt > Date.now() + 5_000);
+/** A still-valid admin approval that covers the cart's current discounts. */
+export function supervisorIsValid(auth: SupervisorAuth | null, totals?: SaleTotals): boolean {
+  if (!auth || auth.expiresAt <= Date.now() + 5_000) return false;
+  return totals ? !exceedsLimit(totals, auth.maxPct) : true;
 }

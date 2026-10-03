@@ -1,7 +1,7 @@
 import type Decimal from "decimal.js";
 import { eq } from "drizzle-orm";
 import type { Db } from "@/db/client";
-import { paymentMethods, saleItems, saleReturnItems, saleReturns, sales, type UserRole } from "@/db/schema";
+import { cashSessions, paymentMethods, saleItems, saleReturnItems, saleReturns, sales, type UserRole } from "@/db/schema";
 import { AppError, forbidden, notFound } from "@/lib/errors";
 import { formatQty } from "@/lib/format";
 import { D, roundTo, sum, toMoneyDb, toQtyDb } from "@/lib/money";
@@ -42,6 +42,11 @@ export async function createReturn(dbx: Db, input: CreateReturnInput, ctx: Retur
   const currencies = await listCurrencies(dbx);
 
   return dbx.transaction(async (tx) => {
+    // The open session must still be open when the refund is written (a close waits for it).
+    if (session) {
+      const [current] = await tx.select({ status: cashSessions.status }).from(cashSessions).where(eq(cashSessions.id, session.id)).for("share");
+      if (current?.status !== "open") throw new AppError("CASH_SESSION_REQUIRED", "La caja se acaba de cerrar. Ábrela de nuevo para registrar la devolución.");
+    }
     const [sale] = await tx.select().from(sales).where(eq(sales.id, input.saleId)).limit(1).for("update");
     if (!sale) throw notFound("La venta");
     if (sale.status !== "completed" && sale.status !== "partially_refunded") {

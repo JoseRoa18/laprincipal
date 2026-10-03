@@ -1,5 +1,9 @@
+import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
+import { cache } from "react";
 import { auth } from "@/auth";
+import { db } from "@/db/client";
+import { users } from "@/db/schema";
 import type { UserRole } from "@/db/schema/enums";
 import { AppError } from "./errors";
 
@@ -10,17 +14,32 @@ export interface SessionUser {
   role: UserRole;
 }
 
-export async function getSessionUser(): Promise<SessionUser | null> {
+/**
+ * The signed cookie says who logged in; the database says whether that still
+ * holds. A deactivated user, or one whose role or password changed after the
+ * login (users.session_version), is out on the next request. Once per request.
+ */
+const loadSession = cache(async (): Promise<{ user: SessionUser | null; revoked: boolean }> => {
   const session = await auth();
   const u = session?.user;
-  if (!u?.id) return null;
-  return { id: u.id, name: u.name ?? "", email: u.email ?? "", role: u.role };
+  if (!u?.id) return { user: null, revoked: false };
+  const [row] = await db
+    .select({ name: users.name, email: users.email, role: users.role, isActive: users.isActive, sessionVersion: users.sessionVersion })
+    .from(users)
+    .where(eq(users.id, u.id))
+    .limit(1);
+  if (!row || !row.isActive || row.sessionVersion !== (u.sv ?? 0)) return { user: null, revoked: true };
+  return { user: { id: u.id, name: row.name, email: row.email, role: row.role }, revoked: false };
+});
+
+export async function getSessionUser(): Promise<SessionUser | null> {
+  return (await loadSession()).user;
 }
 
-/** For pages: redirects to /login when there is no session. */
+/** For pages: redirects to /login when there is no session, or to /salir (clears the cookie) when it was revoked. */
 export async function requireUser(): Promise<SessionUser> {
-  const user = await getSessionUser();
-  if (!user) redirect("/login");
+  const { user, revoked } = await loadSession();
+  if (!user) redirect(revoked ? "/salir?aviso=sesion" : "/login");
   return user;
 }
 

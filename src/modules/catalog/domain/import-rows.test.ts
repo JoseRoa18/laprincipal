@@ -18,6 +18,8 @@ const lookups: ImportLookups = {
   brands: [{ id: "b1", name: "Embraco" }],
   existingSkus: new Set(["LP-000001"]),
   existingBarcodes: new Set(["7591234567890"]),
+  existingPartNumbers: new Map([["emb999", "LP-000001"]]),
+  existingNames: new Map([["relay universal", "LP-000002"]]),
   defaultUnitId: "u",
   defaultTaxId: "tax",
 };
@@ -134,5 +136,21 @@ describe("validateImportRows", () => {
       expect.arrayContaining([expect.stringContaining("repetido (fila 4)"), expect.stringContaining("repetido (fila 4)"), "Máximo debe ser mayor o igual al mínimo"]),
     );
     expect(rows[3].input).toBeNull();
+  });
+});
+
+describe("duplicate products", () => {
+  it("refuses rows that repeat an existing product or an earlier row", () => {
+    const rows = [
+      { rowNumber: 2, values: { name: "Compresor nuevo", partNumber: "EMB-999", publicPrice: "10" } },
+      { rowNumber: 3, values: { name: "Relay Universal", publicPrice: "5" } },
+      { rowNumber: 4, values: { name: "Termostato", partNumber: "TX-9", publicPrice: "7" } },
+      { rowNumber: 5, values: { name: "termostato", partNumber: "tx 9", publicPrice: "7" } },
+    ];
+    const [byPart, byName, first, repeated] = validateImportRows(rows, lookups);
+    expect(byPart.errors.join()).toContain("LP-000001");
+    expect(byName.errors.join()).toContain("LP-000002");
+    expect(first.errors).toEqual([]);
+    expect(repeated.errors.join()).toContain("fila 4");
   });
 });

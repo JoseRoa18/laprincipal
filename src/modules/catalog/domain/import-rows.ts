@@ -2,7 +2,7 @@ import { parseLocalizedNumber } from "@/lib/format";
 import { D } from "@/lib/money";
 import { isValidBarcodeText, normalizeBarcode } from "./barcodes";
 import type { ProductInput } from "./product-schema";
-import { normalizeSearch } from "./search-text";
+import { compactCode, normalizeSearch } from "./search-text";
 import { isValidSku, normalizeSku } from "./sku";
 
 /** Columns of the Excel template, in order. Headers are matched ignoring accents, case and "*". */
@@ -48,6 +48,9 @@ export interface ImportLookups {
   /** Upper-cased SKUs already in the database (including deleted products). */
   existingSkus: Set<string>;
   existingBarcodes: Set<string>;
+  /** Existing (not deleted) products by `compactCode(partNumber)` and by `normalizeSearch(name)` → SKU. */
+  existingPartNumbers: Map<string, string>;
+  existingNames: Map<string, string>;
   defaultUnitId: string;
   defaultTaxId: string;
 }
@@ -209,6 +212,8 @@ function readNumber(value: string | undefined, label: string, errors: string[], 
 export function validateImportRows(rows: RawImportRow[], lookups: ImportLookups): ImportRowResult[] {
   const seenSkus = new Map<string, number>();
   const seenBarcodes = new Map<string, number>();
+  const seenPartNumbers = new Map<string, number>();
+  const seenNames = new Map<string, number>();
   const brandByName = new Map(lookups.brands.map((b) => [normalizeSearch(b.name), b]));
 
   return rows.map((row) => {
@@ -219,6 +224,24 @@ export function validateImportRows(rows: RawImportRow[], lookups: ImportLookups)
     const name = (v.name ?? "").trim();
     if (!name) errors.push("Nombre es obligatorio");
     else if (name.length > 200) errors.push("Nombre: máximo 200 caracteres");
+
+    // Uploading the same file again must not duplicate the catalog and its stock.
+    const partKey = compactCode(v.partNumber ?? "");
+    if (partKey) {
+      const existing = lookups.existingPartNumbers.get(partKey);
+      if (existing) errors.push(`Ya existe un producto con el número de parte ${v.partNumber!.trim()} (${existing})`);
+      const prev = seenPartNumbers.get(partKey);
+      if (prev) errors.push(`El número de parte ${v.partNumber!.trim()} está repetido (fila ${prev})`);
+      else seenPartNumbers.set(partKey, row.rowNumber);
+    }
+    const nameKey = name ? normalizeSearch(name) : "";
+    if (nameKey) {
+      const existing = lookups.existingNames.get(nameKey);
+      if (existing) errors.push(`Ya existe un producto llamado "${name}" (${existing})`);
+      const prev = seenNames.get(nameKey);
+      if (prev) errors.push(`El nombre "${name}" está repetido (fila ${prev})`);
+      else seenNames.set(nameKey, row.rowNumber);
+    }
 
     let sku: string | null = null;
     try {

@@ -39,17 +39,19 @@ interface Props {
   config: PosConfig;
   totals: SaleTotals;
   onSuccess: (result: CompleteSaleResult, opts: { print: boolean; whatsapp: boolean }) => void;
+  /** Rates or prices changed on the server: reload them so the amounts can be reviewed. */
+  onStale: () => void;
 }
 
 const CURRENCY_LABEL: Record<string, string> = { USD: "$", VES: "Bs", COP: "COP" };
 
 /** "Cobrar": mixed payments in three currencies, remaining and change. */
-export function CheckoutDialog({ open, onOpenChange, config, totals, onSuccess }: Props) {
+export function CheckoutDialog({ open, onOpenChange, config, totals, onSuccess, onStale }: Props) {
   const [busy, setBusy] = useState(false);
   return (
     <Dialog open={open} onOpenChange={(o) => !busy && onOpenChange(o)}>
       <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-lg">
-        <CheckoutForm config={config} totals={totals} onSuccess={onSuccess} onCancel={() => onOpenChange(false)} onBusyChange={setBusy} />
+        <CheckoutForm config={config} totals={totals} onSuccess={onSuccess} onStale={onStale} onCancel={() => onOpenChange(false)} onBusyChange={setBusy} />
       </DialogContent>
     </Dialog>
   );
@@ -59,12 +61,14 @@ function CheckoutForm({
   config,
   totals,
   onSuccess,
+  onStale,
   onCancel,
   onBusyChange,
 }: {
   config: PosConfig;
   totals: SaleTotals;
   onSuccess: Props["onSuccess"];
+  onStale: () => void;
   onCancel: () => void;
   onBusyChange: (busy: boolean) => void;
 }) {
@@ -163,7 +167,9 @@ function CheckoutForm({
     setSubmitting(true);
     onBusyChange(true);
     setError(null);
-    const result = await completeSaleAction({
+    let result: Awaited<ReturnType<typeof completeSaleAction>>;
+    try {
+      result = await completeSaleAction({
       lines: lines.map((l) => ({ productId: l.productId, quantity: l.quantity, discountType: l.discountType, discountValue: l.discountValue })),
       customerId: customer?.id ?? null,
       globalDiscount,
@@ -176,12 +182,26 @@ function CheckoutForm({
       quoteId,
       notes: notes.trim() || null,
       allowNegativeStock: extra.allowNegativeStock ?? false,
-    });
-    setSubmitting(false);
-    onBusyChange(false);
+      // Same id while the cart does not change: a retry never charges twice.
+      clientRequestId: store.getState().checkoutRequestId(),
+      clientRates: rateSet,
+      expectedTotalUsd: totals.totalUsd.toFixed(2),
+      });
+    } catch {
+      // No answer (connection lost, server timeout): the sale may or may not exist.
+      setError({
+        code: "INTERNAL",
+        message: "No se pudo confirmar la venta: sin conexión o el servidor no respondió. Revisa la conexión y pulsa Confirmar de nuevo; si ya se registró, no se cobrará dos veces.",
+      });
+      return;
+    } finally {
+      setSubmitting(false);
+      onBusyChange(false);
+    }
     if (!result.ok) {
       setError(result.error);
       if (result.error.code === "FORBIDDEN" && result.error.details?.reason === "discount_limit") setSupervisorOpen(true);
+      if (result.error.code === "CONFLICT") onStale();
       return;
     }
     onSuccess(result.data, { print, whatsapp });
@@ -271,6 +291,7 @@ function CheckoutForm({
                       value={row.amount}
                       onChange={(e) => updateRow(row.key, { amount: e.target.value })}
                       inputMode="decimal"
+                      maxLength={16}
                       aria-label={`Monto en ${method.currencyCode}`}
                       aria-invalid={row.amount.trim() !== "" && !valid}
                       className={cn("h-11 text-right text-base font-semibold", method.currencyCode === "USD" ? "pl-6" : "pl-10")}

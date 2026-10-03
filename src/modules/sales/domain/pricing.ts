@@ -81,8 +81,32 @@ export function computeLine(input: LineInput): ComputedLine {
 }
 
 /**
+ * Split `total` across `weights` in cents by largest remainder: every share is
+ * its exact proportion rounded down to the cent, and the cents left over go to
+ * the shares with the largest fractions. Shares add up to `total`, none is
+ * more than one cent above its exact proportion, and none exceeds its weight.
+ */
+export function prorateCents(total: Decimal, weights: Decimal[]): Decimal[] {
+  const totalWeight = sum(weights);
+  if (totalWeight.lte(0) || total.lte(0)) return weights.map(() => D(0));
+  const exact = weights.map((w) => total.mul(w).div(totalWeight).mul(100));
+  const cents = exact.map((e) => e.floor());
+  let leftover = total.mul(100).round().minus(sum(cents)).toNumber();
+  const order = exact.map((e, i) => ({ i, frac: e.minus(cents[i]) })).sort((a, b) => b.frac.comparedTo(a.frac) || a.i - b.i);
+  for (const { i } of order) {
+    if (leftover <= 0) break;
+    if (cents[i].plus(1).lte(weights[i].mul(100))) {
+      cents[i] = cents[i].plus(1);
+      leftover--;
+    }
+  }
+  return cents.map((c) => c.div(100));
+}
+
+/**
  * Compute all totals. A global discount is prorated across lines in proportion
- * to their net amount so that line totals always add up to the sale total.
+ * to their net amount (by largest remainder) so that line totals always add up
+ * to the sale total and no line goes below zero.
  */
 export function computeTotals(inputs: LineInput[], global?: GlobalDiscount | null): SaleTotals {
   let lines = inputs.map(computeLine);
@@ -92,18 +116,8 @@ export function computeTotals(inputs: LineInput[], global?: GlobalDiscount | nul
     const wanted =
       global.type === "pct" ? netBefore.mul(D(global.value)).div(100) : D(global.value);
     const globalTotal = roundTo(Decimal.min(wanted, netBefore), MONEY_SCALE);
-
-    let allocated = D(0);
-    lines = lines.map((l, i) => {
-      const isLast = i === lines.length - 1;
-      const share = isLast
-        ? globalTotal.minus(allocated)
-        : netBefore.isZero()
-          ? D(0)
-          : roundTo(globalTotal.mul(l.lineTotalUsd).div(netBefore), MONEY_SCALE);
-      allocated = allocated.plus(share);
-      return finishLine({ ...l, discountUsd: l.discountUsd.plus(share) });
-    });
+    const shares = prorateCents(globalTotal, lines.map((l) => l.lineTotalUsd));
+    lines = lines.map((l, i) => finishLine({ ...l, discountUsd: l.discountUsd.plus(shares[i]) }));
   }
 
   const subtotalUsd = sum(lines.map((l) => l.grossUsd));
@@ -118,4 +132,19 @@ export function effectiveDiscountPct(grossUsd: Num, discountUsd: Num): Decimal {
   const g = D(grossUsd);
   if (g.isZero()) return D(0);
   return D(discountUsd).div(g).mul(100);
+}
+
+/**
+ * True when a line or the whole sale is discounted above `maxPct`. One cent
+ * of rounding is allowed: 10 % of $7.25 is $0.725, charged as $0.73.
+ */
+export function exceedsDiscountLimit(totals: SaleTotals, maxPct: Num): boolean {
+  const over = (gross: Decimal, discount: Decimal) => discount.gt(gross.mul(D(maxPct)).div(100).plus("0.01"));
+  return totals.lines.some((l) => over(l.grossUsd, l.discountUsd)) || over(totals.subtotalUsd, totals.discountUsd);
+}
+
+/** Highest effective discount of the sale (any line or the whole), rounded up to 0.01 %: what an admin approves. */
+export function maxDiscountPct(totals: SaleTotals): Decimal {
+  const pcts = [effectiveDiscountPct(totals.subtotalUsd, totals.discountUsd), ...totals.lines.map((l) => effectiveDiscountPct(l.grossUsd, l.discountUsd))];
+  return Decimal.max(D(0), ...pcts).toDecimalPlaces(2, Decimal.ROUND_UP);
 }

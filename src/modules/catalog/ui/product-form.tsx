@@ -59,6 +59,8 @@ export function ProductForm({ mode, productId, initialValues, options, canViewCo
   const brandId = useWatch({ control, name: "brandId" });
   const isActive = useWatch({ control, name: "isActive" });
   const skipNextTechSync = useRef(false);
+  // Id for the product being created: a second Guardar after a lost response returns the same product.
+  const clientId = useRef<string>(crypto.randomUUID());
 
   useEffect(() => {
     if (techEdited) return;
@@ -104,12 +106,13 @@ export function ProductForm({ mode, productId, initialValues, options, canViewCo
       setBusy(true);
       try {
         if (mode === "create") {
-          const res = await createProductAction(values);
+          const res = await createProductAction(values, clientId.current);
           if (!res.ok) {
             applyFieldErrors(res.error.details?.fields as Record<string, unknown> | undefined);
             toast.error(res.error.message);
             return;
           }
+          clientId.current = crypto.randomUUID();
           const failed = await uploadPhotos(res.data.id);
           toast.success(failed > 0 ? `Producto ${res.data.sku} guardado, pero ${failed} foto(s) no se subieron.` : `Producto ${res.data.sku} guardado`);
           if (andNew) {

@@ -1,0 +1,2 @@
+ALTER TABLE "stock_count_items" ADD COLUMN "system_qty_at_count" numeric(18, 3);--> statement-breakpoint
+CREATE UNIQUE INDEX "stock_count_items_count_product_uidx" ON "stock_count_items" USING btree ("count_id","product_id");

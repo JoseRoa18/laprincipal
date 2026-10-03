@@ -37,6 +37,8 @@ export const setRatesSchema = z
   .object({
     effectiveDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Fecha inválida"),
     rates: z.record(z.string(), rateString),
+    /** The user confirmed a rate far from the previous one. */
+    confirmUnusual: z.boolean().optional(),
   })
   .refine((d) => Object.values(d.rates).some((v) => v.trim() !== ""), { path: ["rates"], message: "Escribe al menos una tasa" });
 export type SetRatesInput = z.input<typeof setRatesSchema>;

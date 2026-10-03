@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeLine, computeTotals, effectiveDiscountPct } from "./pricing";
+import { computeLine, computeTotals, effectiveDiscountPct, exceedsDiscountLimit, maxDiscountPct } from "./pricing";
 
 describe("computeLine", () => {
   it("splits IVA included in the price", () => {
@@ -57,8 +57,8 @@ describe("computeTotals", () => {
     expect(t.totalUsd.toFixed(2)).toBe("29.00");
     const sumLines = t.lines.reduce((acc, l) => acc.plus(l.lineTotalUsd), t.lines[0].lineTotalUsd.minus(t.lines[0].lineTotalUsd));
     expect(sumLines.toFixed(2)).toBe("29.00");
-    // 0.33 + 0.33 + 0.34
-    expect(t.lines.map((l) => l.discountUsd.toFixed(2))).toEqual(["0.33", "0.33", "0.34"]);
+    // Largest remainder: equal fractions, so the leftover cent goes to the first line.
+    expect(t.lines.map((l) => l.discountUsd.toFixed(2))).toEqual(["0.34", "0.33", "0.33"]);
   });
 
   it("applies a global percentage discount on top of line discounts", () => {
@@ -80,5 +80,28 @@ describe("computeTotals", () => {
   it("computes the effective discount percentage", () => {
     expect(effectiveDiscountPct("100", "14.5").toFixed(1)).toBe("14.5");
     expect(effectiveDiscountPct("0", "0").toFixed(1)).toBe("0.0");
+  });
+
+  it("never pushes a line below zero when prorating a global discount", () => {
+    const inputs = [...Array.from({ length: 10 }, (_, i) => ({ key: `l${i}`, quantity: 1, unitPriceUsd: "1", taxRate: "0" })), { key: "tiny", quantity: 1, unitPriceUsd: "0.01", taxRate: "0" }];
+    const t = computeTotals(inputs, { type: "amount", value: "1.04" });
+    expect(t.discountUsd.toFixed(2)).toBe("1.04");
+    expect(t.lines.every((l) => l.lineTotalUsd.gte(0))).toBe(true);
+    // Its exact share is a tenth of a cent: it keeps its price instead of going to −$0.03.
+    expect(t.lines.find((l) => l.key === "tiny")!.lineTotalUsd.toFixed(2)).toBe("0.01");
+  });
+
+  it("allows one cent of rounding over the discount limit", () => {
+    // 10 % of $7.25 is $0.725, charged as $0.73: still within a 10 % limit.
+    const line = computeTotals([{ key: "a", quantity: 1, unitPriceUsd: "7.25", taxRate: "0.16", discountType: "pct", discountValue: "10" }]);
+    expect(exceedsDiscountLimit(line, 10)).toBe(false);
+    expect(exceedsDiscountLimit(line, 9)).toBe(true);
+    // Global 10 % on 4 × $9.99 + $0.25.
+    const global = computeTotals(
+      [...Array.from({ length: 4 }, (_, i) => ({ key: `g${i}`, quantity: 1, unitPriceUsd: "9.99", taxRate: "0.16" })), { key: "s", quantity: 1, unitPriceUsd: "0.25", taxRate: "0.16" }],
+      { type: "pct", value: "10" },
+    );
+    expect(exceedsDiscountLimit(global, 10)).toBe(false);
+    expect(maxDiscountPct(global).lte(10.1)).toBe(true);
   });
 });

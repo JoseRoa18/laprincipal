@@ -23,11 +23,12 @@ function revalidateProducts(productId?: string) {
   revalidatePath("/inventario", "layout");
 }
 
-export async function createProductAction(input: unknown) {
+export async function createProductAction(input: unknown, clientId?: string) {
   return runAction(async () => {
     const user = await assertRole("admin", "warehouse");
     const values = parseInput(productFormSchema, input);
-    const result = await createProduct(toProductInput(values), user);
+    const id = clientId === undefined ? undefined : parseInput(idSchema, clientId);
+    const result = await createProduct(toProductInput(values), user, { clientId: id });
     revalidateProducts(result.id);
     return result;
   });

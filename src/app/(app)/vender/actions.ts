@@ -1,11 +1,15 @@
 "use server";
 
+import Decimal from "decimal.js";
+import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/db/client";
+import { users } from "@/db/schema";
 import { parseInput, runAction } from "@/lib/action";
 import { assertRole, can } from "@/lib/auth-guards";
 import { AppError } from "@/lib/errors";
+import { D } from "@/lib/money";
 import { authorizeSupervisor, verifyUserPin } from "@/modules/auth/application/pin";
 import { writeAudit } from "@/modules/core/application/audit";
 import { clearActingSeller, getActingSeller, setActingSeller } from "@/modules/sales/application/acting-seller";
@@ -26,8 +30,9 @@ export async function completeSaleAction(input: unknown) {
   return runAction(async () => {
     const { user, seller } = await sellerContext();
     const data = parseInput(completeSaleSchema, input);
-    const supervisorId = data.supervisorToken ? verifySupervisorToken(data.supervisorToken) : null;
-    const result = await completeSale(db, data, { userId: user.id, sellerId: seller.id, role: seller.role, supervisorId });
+    if (data.quoteId && !can(user.role, "quote")) throw new AppError("FORBIDDEN", "Solo el administrador convierte cotizaciones en venta.");
+    const supervisor = data.supervisorToken ? verifySupervisorToken(data.supervisorToken) : null;
+    const result = await completeSale(db, data, { userId: user.id, sellerId: seller.id, role: seller.role, supervisor });
     revalidatePath("/ventas");
     revalidatePath("/inicio");
     revalidatePath("/vender");
@@ -62,16 +67,19 @@ export async function saveQuoteAction(input: unknown) {
   });
 }
 
-/** Admin PIN → short-lived token that authorizes discounts above the role limit. */
-export async function authorizeDiscountAction(pin: string) {
+const authorizeSchema = z.object({ pin: pinSchema, maxPct: z.string().regex(/^\d{1,3}(\.\d{1,2})?$/) });
+
+/** Admin PIN → short-lived approval for this user of discounts up to `maxPct` (the cart's current discount). */
+export async function authorizeDiscountAction(input: unknown) {
   return runAction(async () => {
     const user = await assertRole("admin", "seller");
-    const value = parseInput(pinSchema, pin);
-    const admin = await authorizeSupervisor(value);
+    const { pin, maxPct } = parseInput(authorizeSchema, input);
+    const admin = await authorizeSupervisor(pin, user.id);
     if (!admin) throw new AppError("FORBIDDEN", "PIN incorrecto o sin permisos de administrador.");
-    const { token, expiresAt } = issueSupervisorToken(admin.id);
-    await writeAudit(db, { userId: user.id, action: "discount.authorize", entityType: "user", entityId: admin.id, after: { adminName: admin.name } });
-    return { token, expiresAt, adminName: admin.name };
+    const approved = Decimal.min(D(maxPct), 100).toFixed(2);
+    const { token, expiresAt } = issueSupervisorToken({ adminId: admin.id, requesterId: user.id, maxPct: approved });
+    await writeAudit(db, { userId: user.id, action: "discount.authorize", entityType: "user", entityId: admin.id, after: { adminName: admin.name, maxPct: approved } });
+    return { token, expiresAt, adminName: admin.name, maxPct: approved };
   });
 }
 
@@ -82,13 +90,15 @@ export async function switchSellerAction(input: unknown) {
   return runAction(async () => {
     const user = await assertRole("admin", "seller");
     const { userId, pin } = parseInput(switchSchema, input);
-    const ok = await verifyUserPin(userId, pin);
+    const ok = await verifyUserPin(userId, pin, user.id);
     if (!ok) throw new AppError("FORBIDDEN", "PIN incorrecto.");
     if (userId === user.id) {
       await clearActingSeller();
       return { id: user.id, name: user.name };
     }
-    await setActingSeller(userId);
+    const [target] = await db.select({ role: users.role }).from(users).where(eq(users.id, userId)).limit(1);
+    if (!target || (target.role !== "admin" && target.role !== "seller")) throw new AppError("FORBIDDEN", "Ese usuario no puede vender.");
+    await setActingSeller(userId, user.id, target.role);
     const seller = await getActingSeller(user);
     if (!seller || !seller.isActing) throw new AppError("FORBIDDEN", "Ese usuario no puede vender.");
     await writeAudit(db, { userId: user.id, action: "seller.switch", entityType: "user", entityId: userId, after: { sellerName: seller.name } });

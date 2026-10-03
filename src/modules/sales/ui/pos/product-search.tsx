@@ -82,11 +82,34 @@ export function ProductSearch({ priceListId, rateVes, onAdd, handle }: Props) {
 
   useEffect(() => () => abort.current?.abort(), []);
 
+  // On a PC the box is always ready for the next scan; on a phone focusing it
+  // would open the keyboard over the cart after every product.
+  const focusIfDesktop = useCallback(() => {
+    if (window.matchMedia("(pointer: fine)").matches) inputRef.current?.focus();
+  }, []);
+  useEffect(() => focusIfDesktop(), [focusIfDesktop]);
+
+  // A USB scanner "types" wherever the focus is. When it is on a button (after
+  // tapping +/−) or nowhere, send the keys to the search box so the scan is not
+  // lost and its Enter does not press that button. Dialogs keep their keys.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const input = inputRef.current;
+      if (!input || e.ctrlKey || e.metaKey || e.altKey || e.defaultPrevented) return;
+      const target = e.target as HTMLElement | null;
+      if (target === input || target?.closest("input, textarea, select, [contenteditable='true'], [role='dialog']")) return;
+      if (document.querySelector("[role='dialog']")) return;
+      if (e.key.length === 1 || (e.key === "Enter" && input.value)) input.focus();
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, []);
+
   function reset() {
     setTerm("");
     setResults([]);
     setSearched(false);
-    inputRef.current?.focus();
+    focusIfDesktop();
   }
 
   function add(product: PosProduct) {
@@ -137,7 +160,12 @@ export function ProductSearch({ priceListId, rateVes, onAdd, handle }: Props) {
     if (e.key === "Enter") {
       e.preventDefault();
       if (results.length > 0 && searched && term.trim() && results[highlight] && !looksLikeCode(term)) add(results[highlight]);
-      else void resolveCode(term);
+      else if (looksLikeCode(term)) {
+        // Empty the box right away: an unknown code must not glue itself to the next scan.
+        const code = term;
+        setTerm("");
+        void resolveCode(code);
+      } else void resolveCode(term);
     } else if (e.key === "ArrowDown") {
       e.preventDefault();
       setHighlight((h) => Math.min(h + 1, Math.max(results.length - 1, 0)));
@@ -161,7 +189,6 @@ export function ProductSearch({ priceListId, rateVes, onAdd, handle }: Props) {
             onKeyDown={onKeyDown}
             placeholder="Buscar o escanear: nombre, número de parte, código…"
             aria-label="Buscar producto"
-            autoFocus
             autoComplete="off"
             className="h-12 pr-16 pl-10 text-base"
             data-pos-search

@@ -9,6 +9,6 @@
       "schedule": "0 8 * * 0"
     }
   ],
-  "buildCommand": "pnpm db:migrate && pnpm build",
+  "buildCommand": "if [ \"$VERCEL_ENV\" = \"production\" ]; then pnpm db:migrate; fi && pnpm build",
   "framework": "nextjs"
 }

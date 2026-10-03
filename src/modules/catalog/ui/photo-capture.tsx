@@ -134,7 +134,11 @@ export function PhotoCapture({ onChange, onAccept, aiEnabled = false, disabled, 
 
   useEffect(() => {
     draftsRef.current = drafts;
-    const accepted = drafts.map(acceptedFromDraft).filter((p): p is AcceptedPhoto => p !== null);
+    // In the new-product form a finished photo nobody decided on is kept, not lost on save:
+    // the improved version when there is one, otherwise the original. "Quitar" discards it.
+    const accepted = drafts
+      .map((d) => acceptedFromDraft(d) ?? (d.status === "processing" ? null : acceptedFromDraft({ ...d, choice: d.processed ? "processed" : "original" })))
+      .filter((p): p is AcceptedPhoto => p !== null);
     const processing = drafts.filter((d) => d.status === "processing").length;
     onChangeRef.current?.(accepted, processing);
   }, [drafts]);
@@ -419,6 +423,9 @@ export function PhotoCapture({ onChange, onAccept, aiEnabled = false, disabled, 
                 </Button>
               </div>
               {d.aiBusy ? <p className="text-muted-foreground mt-2 text-xs">Suele tardar entre 10 y 20 segundos.</p> : null}
+              {!onAccept && !d.choice && d.status !== "processing" ? (
+                <p className="text-muted-foreground mt-2 text-xs">Si no eliges, al guardar se usa {d.processed ? "la versión mejorada" : "la original"}. Con la X la descartas.</p>
+              ) : null}
             </>
           )}
         </div>

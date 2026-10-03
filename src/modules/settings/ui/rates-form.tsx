@@ -43,7 +43,10 @@ export function RatesForm({ currencies, today }: { currencies: RateCurrency[]; t
 
   const onSubmit = handleSubmit((data) => {
     startTransition(async () => {
-      const result = await setRatesAction(data);
+      let result = await setRatesAction(data);
+      if (!result.ok && result.error.details?.confirmUnusual && window.confirm(`${result.error.message} Pulsa Aceptar para guardarla igual.`)) {
+        result = await setRatesAction({ ...data, confirmUnusual: true });
+      }
       if (result.ok) {
         toast.success(`Tasa guardada: ${result.data.map((r) => `${r.currencyCode} ${formatMoney(r.rate, r.currencyCode, { symbol: "" }).trim()}`).join(" · ")}`);
         reset({ effectiveDate: data.effectiveDate, rates: Object.fromEntries(currencies.map((c) => [c.code, ""])) });

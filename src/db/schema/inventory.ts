@@ -11,6 +11,7 @@ import {
   text,
   timestamp,
   uuid,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { money, qty, timestamps } from "./_common";
 import {
@@ -171,11 +172,13 @@ export const stockCountItems = pgTable(
       .references(() => products.id),
     expectedQty: qty("expected_qty").notNull(),
     countedQty: qty("counted_qty"),
+    /** System stock when the item was counted: the difference is taken against it. */
+    systemQtyAtCount: qty("system_qty_at_count"),
     difference: qty("difference"),
     countedBy: uuid("counted_by").references(() => users.id),
     countedAt: timestamp("counted_at", { withTimezone: true }),
   },
-  (t) => [index("stock_count_items_count_idx").on(t.countId)],
+  (t) => [index("stock_count_items_count_idx").on(t.countId), uniqueIndex("stock_count_items_count_product_uidx").on(t.countId, t.productId)],
 );
 
 /** Sales velocity and reorder statistics, recomputed daily. */

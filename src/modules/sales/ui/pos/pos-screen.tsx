@@ -143,21 +143,41 @@ function PosInner({ config }: { config: PosConfig }) {
       searchRef.current?.focus();
       return;
     }
-    if (ratesBlocked) {
-      toast.error("Falta la tasa del día. Cárgala en Configuración → Tasas.");
-      return;
-    }
-    if (cashBlocked) {
-      toast.error(config.user.role === "admin" ? "La caja está cerrada. Ábrela en Caja antes de cobrar." : "La caja está cerrada. Pídele al administrador que la abra.");
+    if (ratesBlocked || cashBlocked) {
+      // Maybe it was fixed on another device since this screen loaded: check again.
+      router.refresh();
+      if (ratesBlocked) toast.error("Falta la tasa del día. Cárgala en Configuración → Tasas y pulsa Cobrar de nuevo.");
+      else
+        toast.error(
+          config.user.role === "admin" ? "La caja está cerrada. Ábrela en Caja antes de cobrar." : "La caja está cerrada. Pídele al administrador que la abra y pulsa Cobrar de nuevo.",
+        );
       return;
     }
     const current = cartTotals(store.getState().lines, store.getState().globalDiscount);
-    if (exceedsDiscountLimit(current, config.policies.maxDiscountPct) && !supervisorIsValid(store.getState().supervisor)) {
+    if (exceedsDiscountLimit(current, config.policies.maxDiscountPct) && !supervisorIsValid(store.getState().supervisor, current)) {
       setSupervisorOpen(true);
       return;
     }
     setCheckoutOpen(true);
-  }, [store, ratesBlocked, cashBlocked, config.policies.maxDiscountPct, config.user.role]);
+  }, [store, ratesBlocked, cashBlocked, config.policies.maxDiscountPct, config.user.role, router]);
+
+  // Rates, cash register and prices can change on other devices: reload them when
+  // the cashier comes back to this window, and when the server says they changed.
+  const reloadData = useCallback(() => {
+    router.refresh();
+    if (!store.getState().quoteId) void refreshProducts(priceListFor(store.getState().customer, config));
+  }, [router, store, refreshProducts, config]);
+  useEffect(() => {
+    const onFocus = () => {
+      if (document.visibilityState === "visible") router.refresh();
+    };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onFocus);
+    };
+  }, [router]);
 
   const primaryAction = useCallback(() => {
     if (isSale) openCheckout();
@@ -257,7 +277,10 @@ function PosInner({ config }: { config: PosConfig }) {
           <AlertTitle>Falta la tasa del día ({config.rates.missing.join(" y ")})</AlertTitle>
           <AlertDescription>
             No se puede {isSale ? "cobrar" : "cotizar en bolívares"} sin tasa.{" "}
-            {config.user.role === "admin" ? <Link href="/configuracion/tasas">Cargar la tasa</Link> : "Pídele al administrador que la cargue."}
+            {config.user.role === "admin" ? <Link href="/configuracion/tasas">Cargar la tasa</Link> : "Pídele al administrador que la cargue."}{" "}
+            <button type="button" className="font-medium underline underline-offset-4" onClick={() => router.refresh()}>
+              Volver a revisar
+            </button>
           </AlertDescription>
         </Alert>
       ) : config.rates.stale.length > 0 ? (
@@ -275,7 +298,10 @@ function PosInner({ config }: { config: PosConfig }) {
           <AlertTitle>La caja está cerrada</AlertTitle>
           <AlertDescription>
             Puedes armar el carrito, pero para cobrar hay que abrir la caja.{" "}
-            {config.user.role === "admin" ? <Link href="/caja">Ir a Caja</Link> : "Pídele al administrador que la abra."}
+            {config.user.role === "admin" ? <Link href="/caja">Ir a Caja</Link> : "Pídele al administrador que la abra."}{" "}
+            <button type="button" className="font-medium underline underline-offset-4" onClick={() => router.refresh()}>
+              Volver a revisar
+            </button>
           </AlertDescription>
         </Alert>
       ) : null}
@@ -327,6 +353,7 @@ function PosInner({ config }: { config: PosConfig }) {
             onOpenChange={setCheckoutOpen}
             config={config}
             totals={totals}
+            onStale={reloadData}
             onSuccess={(result, opts) => {
               setCheckoutOpen(false);
               store.getState().clear();

@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import type { SupervisorAuth } from "../cart-store";
+import { maxDiscountPct } from "../../domain/pricing";
+import { cartTotals, useCartStore, type SupervisorAuth } from "../cart-store";
 
 interface Props {
   open: boolean;
@@ -35,6 +36,7 @@ export function SupervisorDialog({ open, onOpenChange, reason, onAuthorized }: P
 }
 
 function SupervisorForm({ reason, onAuthorized, onCancel }: { reason: string; onAuthorized: (auth: SupervisorAuth) => void; onCancel: () => void }) {
+  const store = useCartStore();
   const [pin, setPin] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -45,13 +47,14 @@ function SupervisorForm({ reason, onAuthorized, onCancel }: { reason: string; on
       return;
     }
     startTransition(async () => {
-      const result = await authorizeDiscountAction(pin);
+      const { lines, globalDiscount } = store.getState();
+      const result = await authorizeDiscountAction({ pin, maxPct: maxDiscountPct(cartTotals(lines, globalDiscount)).toFixed(2) });
       if (!result.ok) {
         setError(result.error.message);
         setPin("");
         return;
       }
-      onAuthorized({ token: result.data.token, expiresAt: result.data.expiresAt, name: result.data.adminName });
+      onAuthorized({ token: result.data.token, expiresAt: result.data.expiresAt, name: result.data.adminName, maxPct: result.data.maxPct });
     });
   }
 

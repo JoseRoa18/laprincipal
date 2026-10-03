@@ -14,7 +14,7 @@ async function main() {
   if (password.length < 8) throw new Error("La contraseña debe tener al menos 8 caracteres");
   const sql = postgres(url, { max: 1, prepare: false, ssl: "require" });
   try {
-    const rows = await sql`update users set password_hash = ${await hash(password, 10)}, updated_at = now() where email = ${email} returning email, role`;
+    const rows = await sql`update users set password_hash = ${await hash(password, 10)}, session_version = session_version + 1, updated_at = now() where email = ${email} returning email, role`;
     if (rows.length === 0) throw new Error(`No existe el usuario ${email}`);
     console.log(`Contraseña actualizada para ${rows[0].email} (${rows[0].role})`);
   } finally {

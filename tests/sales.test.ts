@@ -262,11 +262,37 @@ describe.skipIf(SKIP)("sales: complete, void, return, quotes", () => {
       payments: [{ paymentMethodId: cashUsdId, amount: "75" }],
     });
     await expect(completeSale(db, input, sellerCtx)).rejects.toMatchObject({ code: "FORBIDDEN", details: { reason: "discount_limit" } });
-    const res = await completeSale(db, input, { ...sellerCtx, supervisorId: adminId });
+    // An approval below the discount, or for another user, is not enough.
+    await expect(completeSale(db, input, { ...sellerCtx, supervisor: { adminId, requesterId: sellerCtx.userId, maxPct: "20" } })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(completeSale(db, input, { ...sellerCtx, supervisor: { adminId, requesterId: "someone-else", maxPct: "25" } })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    const res = await completeSale(db, input, { ...sellerCtx, supervisor: { adminId, requesterId: sellerCtx.userId, maxPct: "25" } });
     const [item] = await db.select().from(saleItems).where(eq(saleItems.saleId, res.saleId));
     expect(item.discountAuthorizedBy).toBe(adminId);
     expect(D(item.discountUsd).toFixed(2)).toBe("25.00");
     expect(res.totalUsd).toBe("75.00");
+  });
+
+  it("returns the same sale when one checkout is sent twice, and refuses absurd change or stale rates", async () => {
+    const product = await makeProduct({ price: "10", stock: "5" });
+    const line = [{ productId: product.id, quantity: "1" }];
+    const requestId = crypto.randomUUID();
+    const input = completeSaleSchema.parse({ lines: line, payments: [{ paymentMethodId: cashUsdId, amount: "10" }], clientRequestId: requestId });
+    const first = await completeSale(db, input, ctx);
+    const again = await completeSale(db, input, ctx);
+    expect(again.saleId).toBe(first.saleId);
+    expect((await stockOf(product.id)).quantity.toFixed(0)).toBe("4");
+
+    // A barcode scanned into the cash amount is not a payment.
+    await expect(completeSale(db, completeSaleSchema.parse({ lines: line, payments: [{ paymentMethodId: cashUsdId, amount: "7591234567890" }] }), ctx)).rejects.toMatchObject({
+      code: "VALIDATION",
+    });
+    // The screen computed pesos with an older rate, or showed another total.
+    await expect(
+      completeSale(db, completeSaleSchema.parse({ lines: line, payments: [{ paymentMethodId: cashCopId, amount: "41000" }], clientRates: { COP: "4000" } }), ctx),
+    ).rejects.toMatchObject({ code: "CONFLICT", details: { reason: "rates_changed" } });
+    await expect(
+      completeSale(db, completeSaleSchema.parse({ lines: line, payments: [{ paymentMethodId: cashUsdId, amount: "10" }], expectedTotalUsd: "9.50" }), ctx),
+    ).rejects.toMatchObject({ code: "CONFLICT", details: { reason: "prices_changed" } });
   });
 
   it("voids a sale and restores stock", async () => {

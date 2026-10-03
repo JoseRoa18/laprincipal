@@ -66,6 +66,11 @@ export const completeSaleSchema = z.object({
   notes: z.string().trim().max(500).nullable().optional(),
   /** Admin override when the policy allows negative stock. */
   allowNegativeStock: z.boolean().optional(),
+  /** One per checkout attempt (kept with the cart): makes retries safe. */
+  clientRequestId: z.uuid().optional(),
+  /** Rates the screen used (currency → units per USD) and the total it showed. */
+  clientRates: z.record(z.string(), z.string().regex(/^\d+(\.\d+)?$/)).optional(),
+  expectedTotalUsd: z.string().regex(/^\d+(\.\d+)?$/).optional(),
 });
 export type CompleteSaleInput = z.infer<typeof completeSaleSchema>;
 

@@ -1,5 +1,5 @@
 import { compare, hash } from "bcryptjs";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import type { z } from "zod";
 import { db, type Db } from "@/db/client";
 import { users } from "@/db/schema";
@@ -38,6 +38,9 @@ export interface PublicUser {
   isActive: boolean;
 }
 
+/** Ends every open session of the user (see `loadSession` in src/lib/auth-guards.ts). */
+const bumpSession = sql`${users.sessionVersion} + 1`;
+
 const publicColumns = { id: users.id, name: users.name, email: users.email, role: users.role, isActive: users.isActive };
 
 /** Admin creates a user. Email is stored lower-cased; password and PIN are hashed. */
@@ -72,9 +75,11 @@ export async function updateUser(id: string, input: z.output<typeof updateUserSc
       throw new AppError("VALIDATION", "Debe quedar al menos un administrador activo.");
     }
 
+    // A new role or a deactivation ends the user's open sessions.
+    const accessChanged = before.role !== input.role || before.isActive !== input.isActive;
     const [row] = await tx
       .update(users)
-      .set({ name: input.name, role: input.role, isActive: input.isActive })
+      .set({ name: input.name, role: input.role, isActive: input.isActive, ...(accessChanged ? { sessionVersion: bumpSession } : {}) })
       .where(eq(users.id, id))
       .returning(publicColumns);
     await writeAudit(tx, { userId: actorId, action: "user.update", entityType: "user", entityId: id, before, after: row });
@@ -86,7 +91,7 @@ export async function resetUserPassword(id: string, password: string, actorId: s
   return dbx.transaction(async (tx) => {
     const [row] = await tx.select(publicColumns).from(users).where(eq(users.id, id)).limit(1);
     if (!row) throw new AppError("NOT_FOUND", "El usuario no existe.");
-    await tx.update(users).set({ passwordHash: await hash(password, 10) }).where(eq(users.id, id));
+    await tx.update(users).set({ passwordHash: await hash(password, 10), sessionVersion: bumpSession }).where(eq(users.id, id));
     await writeAudit(tx, { userId: actorId, action: "user.update", entityType: "user", entityId: id, after: { passwordReset: true } });
   });
 }
@@ -108,7 +113,8 @@ export async function changeOwnPassword(userId: string, currentPassword: string,
     if (!(await compare(currentPassword, row.passwordHash))) {
       throw new AppError("VALIDATION", "La contraseña actual no es correcta.", { fields: { currentPassword: "Contraseña incorrecta" } });
     }
-    await tx.update(users).set({ passwordHash: await hash(password, 10) }).where(eq(users.id, userId));
+    // Every session ends, this one included: the user signs in again with the new password.
+    await tx.update(users).set({ passwordHash: await hash(password, 10), sessionVersion: bumpSession }).where(eq(users.id, userId));
     await writeAudit(tx, { userId, action: "user.update", entityType: "user", entityId: userId, after: { passwordChanged: true } });
   });
 }

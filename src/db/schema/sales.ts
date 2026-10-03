@@ -97,6 +97,8 @@ export const sales = pgTable(
     holdLabel: text("hold_label"),
     notes: text("notes"),
     quoteId: uuid("quote_id").references(() => quotes.id),
+    /** Id the checkout screen sends: the same checkout sent twice creates one sale. */
+    clientRequestId: uuid("client_request_id").unique(),
     voidReason: text("void_reason"),
     voidedBy: uuid("voided_by").references(() => users.id),
     voidedAt: timestamp("voided_at", { withTimezone: true }),

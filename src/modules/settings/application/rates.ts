@@ -1,11 +1,12 @@
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq, lt } from "drizzle-orm";
 import type { z } from "zod";
 import { db, type Db } from "@/db/client";
 import { exchangeRates } from "@/db/schema";
 import { AppError } from "@/lib/errors";
 import { businessDate, parseLocalizedNumber } from "@/lib/format";
-import { toRateDb } from "@/lib/money";
+import { D, toRateDb } from "@/lib/money";
 import { writeAudit } from "@/modules/core/application/audit";
+import { isPlausibleRateChange } from "@/modules/currency/domain/bcv";
 import { listCurrencies, upsertRate } from "@/modules/currency/infrastructure/rates";
 import type { setRatesSchema } from "../domain/forms";
 
@@ -27,6 +28,19 @@ export async function setRates(input: z.output<typeof setRatesSchema>, userId: s
         .from(exchangeRates)
         .where(and(eq(exchangeRates.currencyCode, code), eq(exchangeRates.effectiveDate, input.effectiveDate)))
         .limit(1);
+      const [last] = await tx
+        .select({ rate: exchangeRates.rate })
+        .from(exchangeRates)
+        .where(and(eq(exchangeRates.currencyCode, code), lt(exchangeRates.effectiveDate, input.effectiveDate)))
+        .orderBy(desc(exchangeRates.effectiveDate))
+        .limit(1);
+      // "4,100" read as 4.1 or "871.369" as 871369: ask before saving a rate that jumps that much.
+      if (!input.confirmUnusual && !isPlausibleRateChange(last?.rate ?? null, rate)) {
+        throw new AppError("VALIDATION", `La tasa de ${code} (${D(rate).toFixed(2)}) es muy distinta de la anterior (${D(last!.rate).toFixed(2)}). ¿Está bien escrita?`, {
+          confirmUnusual: true,
+          fields: { [`rates.${code}`]: "Revisa la tasa" },
+        });
+      }
       const row = await upsertRate({ currencyCode: code, rate, effectiveDate: input.effectiveDate, source: "manual", userId }, tx);
       await writeAudit(tx, {
         userId,

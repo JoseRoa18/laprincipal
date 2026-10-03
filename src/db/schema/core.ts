@@ -47,10 +47,26 @@ export const users = pgTable(
     pinLockedUntil: timestamp("pin_locked_until", { withTimezone: true }),
     isActive: boolean("is_active").notNull().default(true),
     lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
+    /** Bumped on password reset, role change or deactivation: older sessions stop working. */
+    sessionVersion: integer("session_version").notNull().default(0),
     ...timestamps(),
   },
   (t) => [index("users_role_idx").on(t.role)],
 );
+
+/**
+ * Failed-attempt counters for login and PIN checks, keyed by what is being
+ * protected ("login:<email>", "login-ip:<ip>", "pin-by:<userId>", "pin:<userId>").
+ * Updated with one atomic upsert per attempt so parallel requests all count.
+ */
+export const authThrottle = pgTable("auth_throttle", {
+  key: text("key").primaryKey(),
+  failures: integer("failures").notNull().default(0),
+  /** Consecutive locks: each one lasts longer. */
+  locks: integer("locks").notNull().default(0),
+  lockedUntil: timestamp("locked_until", { withTimezone: true }),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
 
 export const settings = pgTable("settings", {
   key: text("key").primaryKey(),

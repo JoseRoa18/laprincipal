@@ -15,6 +15,7 @@ export const authConfig = {
         token.id = user.id as string;
         token.role = (user as { role?: UserRole }).role ?? "seller";
         token.name = user.name;
+        token.sv = user.sessionVersion ?? 0;
       }
       return token;
     },
@@ -22,6 +23,7 @@ export const authConfig = {
       session.user.id = token.id as string;
       session.user.role = token.role as UserRole;
       session.user.name = (token.name as string | null) ?? session.user.name;
+      session.user.sv = typeof token.sv === "number" ? token.sv : 0;
       return session;
     },
   },

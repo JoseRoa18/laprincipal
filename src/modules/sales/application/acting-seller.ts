@@ -7,7 +7,9 @@ import { getSessionUser, type SessionUser } from "@/lib/auth-guards";
 import { env, isProd } from "@/lib/env";
 
 export const ACTING_SELLER_COOKIE = "acting_seller";
-const TTL_SECONDS = 12 * 60 * 60;
+/** A seller switched by PIN keeps the counter for a shift; an admin only for one sale or two. */
+const SELLER_TTL_SECONDS = 12 * 60 * 60;
+const ADMIN_TTL_SECONDS = 15 * 60;
 
 export interface ActingSeller {
   id: string;
@@ -25,24 +27,29 @@ function sign(payload: string): string {
   return createHmac("sha256", secret()).update(payload).digest("hex");
 }
 
-/** Cookie value `<userId>.<exp>.<hmac>`; returns the user id when valid. */
-export function parseActingSellerCookie(value: string | undefined): string | null {
+/**
+ * Cookie value `<actingUserId>.<sessionUserId>.<exp>.<hmac>`. It only counts
+ * for the session that set it, so a later login on the same browser does
+ * not inherit it. Returns the acting user id when valid.
+ */
+export function parseActingSellerCookie(value: string | undefined, sessionUserId: string): string | null {
   if (!value) return null;
   const parts = value.split(".");
-  if (parts.length !== 3) return null;
-  const [userId, expRaw, sig] = parts;
+  if (parts.length !== 4) return null;
+  const [userId, ownerId, expRaw, sig] = parts;
   const exp = Number(expRaw);
-  if (!userId || !Number.isFinite(exp) || exp * 1000 < Date.now()) return null;
-  const expected = Buffer.from(sign(`${userId}.${exp}`));
+  if (!userId || ownerId !== sessionUserId || !Number.isFinite(exp) || exp * 1000 < Date.now()) return null;
+  const expected = Buffer.from(sign(`${userId}.${ownerId}.${exp}`));
   const given = Buffer.from(sig);
   if (expected.length !== given.length || !timingSafeEqual(expected, given)) return null;
   return userId;
 }
 
 /** Set the HttpOnly signed cookie. Only callable from a server action or route handler. */
-export async function setActingSeller(userId: string): Promise<void> {
-  const exp = Math.floor(Date.now() / 1000) + TTL_SECONDS;
-  const payload = `${userId}.${exp}`;
+export async function setActingSeller(userId: string, sessionUserId: string, role: UserRole): Promise<void> {
+  const ttl = role === "admin" ? ADMIN_TTL_SECONDS : SELLER_TTL_SECONDS;
+  const exp = Math.floor(Date.now() / 1000) + ttl;
+  const payload = `${userId}.${sessionUserId}.${exp}`;
   const store = await cookies();
   store.set({
     name: ACTING_SELLER_COOKIE,
@@ -51,7 +58,7 @@ export async function setActingSeller(userId: string): Promise<void> {
     sameSite: "lax",
     secure: isProd,
     path: "/",
-    maxAge: TTL_SECONDS,
+    maxAge: ttl,
   });
 }
 
@@ -68,7 +75,7 @@ export async function getActingSeller(sessionUser?: SessionUser | null): Promise
   const session = sessionUser ?? (await getSessionUser());
   if (!session) return null;
   const store = await cookies();
-  const actingId = parseActingSellerCookie(store.get(ACTING_SELLER_COOKIE)?.value);
+  const actingId = parseActingSellerCookie(store.get(ACTING_SELLER_COOKIE)?.value, session.id);
   if (actingId && actingId !== session.id) {
     const [user] = await db
       .select({ id: users.id, name: users.name, role: users.role })

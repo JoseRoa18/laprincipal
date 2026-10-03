@@ -1,6 +1,6 @@
 # La Principal 2050 — Progreso de la Fase 1
 
-Actualizado: 2026-10-03. **Estado: Fase 1 completa y publicada** en https://laprincipal.vercel.app (Supabase + Vercel, ver `docs/07-despliegue.md`). Verificada en local: typecheck, lint, 197 pruebas y los scripts de humo.
+Actualizado: 2026-10-03. **Estado: Fase 1 completa y publicada** en https://laprincipal.vercel.app (Supabase + Vercel, ver `docs/07-despliegue.md`). Verificada en local: typecheck, lint, 207 pruebas, build de producción y los scripts de humo.
 
 ## Estado por módulo
 
@@ -71,6 +71,19 @@ Verificación automática: `pnpm typecheck`, `pnpm lint`, `pnpm test`, y `pnpm e
 - Decisión del dueño: el vendedor solo vende. Ve Vender (con cliente y ventas en espera) y Productos (sin costos, proveedores ni movimientos); entra directo a Vender. Ventas, devoluciones, cotizaciones, clientes, caja e inventario pasan a ser del administrador (inventario también de almacén).
 - Después de cobrar, todos van a `/vender/venta/[id]` (cambio, ticket, WhatsApp, nueva venta). El vendedor solo abre, reimprime o reenvía las ventas que hizo ese día (`canOpenSale`, también en el ticket, la nota de entrega PDF y WhatsApp).
 - Permisos: `quote` nuevo (admin); `return_sale` y `cash` pasan a solo admin. Si la caja está cerrada, el vendedor ve "Pídele al administrador que la abra".
+
+## Revisión completa (2026-10-03, noche)
+
+Cuatro revisiones (seguridad, dinero, inventario/catálogo, producción). Aplicado:
+
+- Seguridad: Next.js 16.3.8 (falla crítica en 16.3.4); la sesión se valida contra la base en cada petición (`users.session_version`: desactivar, cambiar rol o contraseña corta las sesiones abiertas; `/salir`); límite de intentos atómico y escalonado para login (por correo e IP) y PIN (por quien escribe y por dueño del PIN), con auditoría `pin.failed` (tabla `auth_throttle`); PIN triviales rechazados al crearlos; aprobación de descuento atada al usuario y al % aprobado (5 min); cambio de vendedor ligado a la sesión, 15 min si es admin y borrado al salir; el vendedor no convierte cotizaciones; encabezados de seguridad.
+- Ventas: un mismo cobro enviado dos veces crea una sola venta (`sales.client_request_id`); errores de red en el cobro sin bloquear el diálogo; si la tasa o los precios cambiaron, el servidor lo dice y la pantalla recarga; vuelto absurdo rechazado; venta en espera cobrable una sola vez; ventas y devoluciones no caen en una caja que se está cerrando; anular solo dentro del plazo y de la caja abierta (si no, Devolver); tolerancia de 1 centavo en el límite de descuento y reparto del descuento global sin líneas negativas; tasas manuales muy distintas piden confirmación; la pantalla de venta recarga caja y tasas al volver a la ventana y tiene "Volver a revisar".
+- Escáner USB: un código desconocido no se pega al siguiente; las teclas del escáner van al buscador aunque el foco esté en un botón; en el celular el teclado no se abre tras cada producto.
+- Catálogo: la importación de Excel lee los números como están guardados (1,125 ya no se vuelve 1125), restaura el cero inicial de UPC numéricos y rechaza productos repetidos (por número de parte o nombre); aplicar una importación dos veces no duplica; Guardar dos veces un producto nuevo no lo duplica; las fotos sin elegir se guardan (mejorada u original).
+- Conteo: la diferencia se calcula contra la existencia al momento de contar cada producto (`system_qty_at_count`), y dos teléfonos no agregan el mismo producto dos veces.
+- Despliegue: las migraciones solo corren en el build de producción (las vistas previas ya no tocan la base real).
+
+Pendiente de esa revisión (no aplicado aún): estado "Comprar ya" calculado en vivo (hoy se actualiza de madrugada), costo promedio con existencia cargada sin costo, códigos internos no reutilizables, rehacer búsqueda al renombrar marca o categoría, búsqueda por varias palabras en cualquier orden, importación más rápida para archivos grandes (hoy conviene hasta ~200 filas por archivo), pantallas de error con "Reintentar" que recargue, cambio en USD con centavos.
 
 ## Próximos pasos
 

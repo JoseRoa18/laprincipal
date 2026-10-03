@@ -93,7 +93,7 @@ describe.skipIf(SKIP)("settings", () => {
 
   it("creates a user with lower-cased email, hashed password and PIN", async () => {
     const email = `${uid("User")}@Example.COM`;
-    const input = createUserSchema.parse({ name: "Vendedora", email, role: "seller", password: "Clave2050*", passwordConfirm: "Clave2050*", pin: "4321" });
+    const input = createUserSchema.parse({ name: "Vendedora", email, role: "seller", password: "Clave2050*", passwordConfirm: "Clave2050*", pin: "2580" });
     const user = await createUser(input, adminId, db);
     createdUsers.push(user.id);
     expect(user.email).toBe(email.toLowerCase());
@@ -103,17 +103,33 @@ describe.skipIf(SKIP)("settings", () => {
     expect(row.passwordHash).not.toContain("Clave2050*");
     expect(await compare("Clave2050*", row.passwordHash)).toBe(true);
     expect(row.pinHash).toBeTruthy();
-    expect(await verifyUserPin(user.id, "4321", db)).toBe(true);
-    expect(await verifyUserPin(user.id, "0000", db)).toBe(false);
+    expect(await verifyUserPin(user.id, "2580", adminId, db)).toBe(true);
+    expect(await verifyUserPin(user.id, "0000", adminId, db)).toBe(false);
 
     await expect(createUser({ ...input, email: email.toUpperCase() }, adminId, db)).rejects.toMatchObject({ code: "CONFLICT" });
     expect(() => createUserSchema.parse({ ...input, passwordConfirm: "otra" })).toThrow();
     expect(() => createUserSchema.parse({ ...input, pin: "12" })).toThrow();
+    // PINs anyone would try first are refused.
+    expect(() => createUserSchema.parse({ ...input, pin: "1234" })).toThrow();
+  });
+
+  it("throttles PIN guesses, parallel ones included, without locking the owner for everyone", async () => {
+    const owner = await createTestUser(db, "admin", "2580");
+    const guesser = await createTestUser(db, "seller", "7391");
+    createdUsers.push(owner.id, guesser.id);
+    const results = await Promise.allSettled(Array.from({ length: 8 }, () => verifyUserPin(owner.id, "1357", guesser.id, db)));
+    // 5 guesses are checked (and fail); the rest are refused as locked.
+    expect(results.filter((r) => r.status === "fulfilled" && r.value === false)).toHaveLength(5);
+    expect(results.filter((r) => r.status === "rejected")).toHaveLength(3);
+    // Locked even with the right PIN for this guesser…
+    await expect(verifyUserPin(owner.id, "2580", guesser.id, db)).rejects.toMatchObject({ code: "FORBIDDEN" });
+    // …while the owner's PIN still works for others.
+    expect(await verifyUserPin(owner.id, "2580", adminId, db)).toBe(true);
   });
 
   it("protects the last admin and the actor's own account", async () => {
     const victim = await createUser(
-      createUserSchema.parse({ name: "Otro admin", email: `${uid("adm")}@test.local`, role: "admin", password: "Clave2050*", passwordConfirm: "Clave2050*", pin: "1111" }),
+      createUserSchema.parse({ name: "Otro admin", email: `${uid("adm")}@test.local`, role: "admin", password: "Clave2050*", passwordConfirm: "Clave2050*", pin: "7391" }),
       adminId,
       db,
     );
