@@ -227,8 +227,18 @@ describe.skipIf(SKIP)("catalog integration", () => {
     await setProductPrices({ productId: p.id, publicPriceUsd: "30", techPriceUsd: null }, { id: base.userId });
     const [priced] = await searchProducts(name, { warehouseId: location.warehouseId });
     expect(D(priced.priceUsd!).toFixed(2)).toBe("30.00");
-    // Once priced, the price cannot be left empty again from the form.
-    await expect(updateProduct(p.id, input, { id: base.userId })).rejects.toMatchObject({ code: "VALIDATION" });
+    // Leaving the price empty on edit takes it back to "Falta precio" (public and technician).
+    await updateProduct(p.id, input, { id: base.userId });
+    const [cleared] = await searchProducts(name, { warehouseId: location.warehouseId });
+    expect(cleared.priceUsd ?? null).toBeNull();
+    const left = await db.select().from(s.priceListItems).where(eq(s.priceListItems.productId, p.id));
+    expect(left).toHaveLength(0);
+    const history = await db.select().from(s.priceHistory).where(eq(s.priceHistory.productId, p.id));
+    expect(history.filter((h) => D(h.newPriceUsd).isZero() && h.oldPriceUsd !== null).length).toBeGreaterThan(0);
+    // Priced again from "Poner precios".
+    await setProductPrices({ productId: p.id, publicPriceUsd: "31", techPriceUsd: null }, { id: base.userId });
+    const [repriced] = await searchProducts(name, { warehouseId: location.warehouseId });
+    expect(D(repriced.priceUsd!).toFixed(2)).toBe("31.00");
   });
 
   it("soft-deletes products without movements and only deactivates those with kardex", async () => {

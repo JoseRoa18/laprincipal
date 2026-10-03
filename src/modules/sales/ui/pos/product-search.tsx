@@ -296,12 +296,12 @@ export function ProductSearch({ priceListId, rateVes, onAdd, handle }: Props) {
   );
 }
 
-/** Scanner output: digits/uppercase with no spaces. Used to prefer the exact lookup. */
 /** A product without a selling price is shown but cannot be sold. */
 function hasPrice(p: PosProduct): boolean {
   return Boolean(p.priceUsd && D(p.priceUsd).gt(0));
 }
 
+/** Scanner output: digits/uppercase with no spaces. Used to prefer the exact lookup. */
 function looksLikeCode(term: string): boolean {
   return /^[A-Za-z0-9-]{6,}$/.test(term.trim()) && !/\s/.test(term.trim());
 }

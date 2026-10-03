@@ -59,10 +59,19 @@ export function ProductForm({ mode, productId, initialValues, options, canViewCo
   const brandId = useWatch({ control, name: "brandId" });
   const isActive = useWatch({ control, name: "isActive" });
   const skipNextTechSync = useRef(false);
+  const lastPublicPrice = useRef(publicPrice);
   // Id for the product being created: a second Guardar after a lost response returns the same product.
   const clientId = useRef<string>(crypto.randomUUID());
 
   useEffect(() => {
+    // Public price erased: no prices at all, so the technician one goes too.
+    const erased = Boolean(lastPublicPrice.current?.trim()) && !publicPrice?.trim();
+    lastPublicPrice.current = publicPrice;
+    if (erased) {
+      setValue("techPriceUsd", "", { shouldValidate: false });
+      setTechEdited(false);
+      return;
+    }
     if (techEdited) return;
     if (skipNextTechSync.current) {
       skipNextTechSync.current = false;
@@ -340,7 +349,13 @@ export function ProductForm({ mode, productId, initialValues, options, canViewCo
             label="Precio público (USD)"
             htmlFor="publicPriceUsd"
             error={err("publicPriceUsd")}
-            hint={publicPrice?.trim() ? undefined : "Si aún no lo tienes, déjalo vacío: queda con \"Falta precio\" y no se vende hasta ponérselo."}
+            hint={
+              publicPrice?.trim()
+                ? undefined
+                : mode === "edit" && initialValues.publicPriceUsd.trim()
+                  ? "Al guardar sin precio, el producto queda con \"Falta precio\" y deja de venderse."
+                  : "Si aún no lo tienes, déjalo vacío: queda con \"Falta precio\" y no se vende hasta ponérselo."
+            }
           >
             <Input id="publicPriceUsd" inputMode="decimal" placeholder="0,00" className={controlClass} {...register("publicPriceUsd")} />
           </FormField>

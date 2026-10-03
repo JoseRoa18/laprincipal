@@ -1,4 +1,4 @@
-import { and, count, eq, ne, sql } from "drizzle-orm";
+import { and, count, eq, inArray, ne, sql } from "drizzle-orm";
 import { db, type Tx } from "@/db/client";
 import {
   brands,
@@ -73,16 +73,6 @@ async function resolveBrandId(tx: Tx, input: Pick<ProductInput, "brandId" | "new
   return created.id;
 }
 
-async function hasPublicPrice(tx: Tx, productId: string): Promise<boolean> {
-  const lists = await getPriceListIds(tx);
-  const [row] = await tx
-    .select({ id: priceListItems.id })
-    .from(priceListItems)
-    .where(and(eq(priceListItems.productId, productId), eq(priceListItems.priceListId, lists.publicId), sql`${priceListItems.priceUsd} > 0`))
-    .limit(1);
-  return Boolean(row);
-}
-
 /**
  * Set the selling prices of a product (the "Poner precios" screen). The
  * technician price is suggested from the public one when left empty.
@@ -117,6 +107,24 @@ async function savePrices(tx: Tx, args: { productId: string; publicPriceUsd: str
       await tx.update(priceListItems).set({ priceUsd: next, updatedBy: args.userId }).where(eq(priceListItems.id, existing.id));
       await tx.insert(priceHistory).values({ productId: args.productId, priceListId: t.listId, oldPriceUsd: existing.priceUsd, newPriceUsd: next, changedBy: args.userId });
     }
+  }
+}
+
+/**
+ * Remove the PUBLIC and TECH prices: the product goes back to "Falta precio"
+ * and cannot be sold until priced again. Accepted quotes keep their quoted
+ * prices. The history records the removal as a change to 0.
+ */
+async function clearPrices(tx: Tx, args: { productId: string; userId: string }) {
+  const lists = await getPriceListIds(tx);
+  const listIds = [lists.publicId, ...(lists.techId ? [lists.techId] : [])];
+  const removed = await tx
+    .delete(priceListItems)
+    .where(and(eq(priceListItems.productId, args.productId), inArray(priceListItems.priceListId, listIds)))
+    .returning({ priceListId: priceListItems.priceListId, priceUsd: priceListItems.priceUsd });
+  for (const r of removed) {
+    if (!D(r.priceUsd).gt(0)) continue;
+    await tx.insert(priceHistory).values({ productId: args.productId, priceListId: r.priceListId, oldPriceUsd: r.priceUsd, newPriceUsd: toMoneyDb(0), changedBy: args.userId });
   }
 }
 
@@ -327,8 +335,9 @@ export async function updateProduct(id: string, input: ProductInput, user: Actor
     if (input.barcode) await registerBarcode(tx, id, input.barcode);
     if (input.publicPriceUsd) {
       await savePrices(tx, { productId: id, publicPriceUsd: input.publicPriceUsd, techPriceUsd: input.techPriceUsd, userId: user.id });
-    } else if (await hasPublicPrice(tx, id)) {
-      throw new AppError("VALIDATION", "Este producto ya tiene precio público: no se puede dejar vacío.", { fields: { publicPriceUsd: "Escribe el precio" } });
+    } else {
+      // Empty price on purpose (e.g. it was wrong): back to "Falta precio".
+      await clearPrices(tx, { productId: id, userId: user.id });
     }
     await upsertStockSettings(tx, { productId: id, warehouseId: location.warehouseId, minStock: input.minStock, maxStock: input.maxStock, userId: user.id });
     await rebuildSearchText(tx, id);

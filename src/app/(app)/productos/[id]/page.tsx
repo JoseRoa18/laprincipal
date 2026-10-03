@@ -380,7 +380,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
                           <Money value={h.oldPriceUsd} />
                         </span>
                       ) : null}{" "}
-                      <Money value={h.newPriceUsd} />
+                      {Number(h.newPriceUsd) > 0 ? <Money value={h.newPriceUsd} /> : <span className="whitespace-nowrap text-amber-700 dark:text-amber-300">Sin precio</span>}
                     </p>
                   </li>
                 ))}
