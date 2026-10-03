@@ -1,6 +1,7 @@
 import { CircleDollarSign, FileUp, FolderTree, Package, Plus, SearchX, Tags } from "lucide-react";
 import Link from "next/link";
 import { EmptyState } from "@/components/app/empty-state";
+import { MobileFilters } from "@/components/app/mobile-filters";
 import { Money } from "@/components/app/money";
 import { PageHeader } from "@/components/app/page-header";
 import { DEFAULT_PAGE_SIZE, Pagination, parsePage } from "@/components/app/pagination";
@@ -103,7 +104,9 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
 
       <div className="space-y-2">
         <SearchInput placeholder="Nombre, número de parte, equivalencia, modelo o código" autoFocus={false} />
-        <ProductFilters categories={categories} brands={brands} filter={filter} exportHref={total > 0 && canManage ? exportHref : null} />
+        <MobileFilters activeCount={[filter.categoryId, filter.brandId, filter.stock !== "all", filter.price !== "all", filter.active !== "1"].filter(Boolean).length}>
+          <ProductFilters categories={categories} brands={brands} filter={filter} exportHref={total > 0 && canManage ? exportHref : null} />
+        </MobileFilters>
       </div>
 
       {rows.length === 0 ? (

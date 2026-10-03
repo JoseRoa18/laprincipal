@@ -1,6 +1,7 @@
 import { FileText, Receipt, ShoppingCart } from "lucide-react";
 import Link from "next/link";
 import { EmptyState } from "@/components/app/empty-state";
+import { MobileFilters } from "@/components/app/mobile-filters";
 import { Money } from "@/components/app/money";
 import { PageHeader } from "@/components/app/page-header";
 import { DEFAULT_PAGE_SIZE, Pagination, parsePage } from "@/components/app/pagination";
@@ -58,7 +59,9 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
           </>
         }
       />
-      <SalesFilters values={{ from, to, status, sellerId, paymentMethodId }} sellers={sellers} methods={methods} />
+      <MobileFilters activeCount={[from !== today || to !== today, status !== "all", sellerId, paymentMethodId].filter(Boolean).length}>
+        <SalesFilters values={{ from, to, status, sellerId, paymentMethodId }} sellers={sellers} methods={methods} />
+      </MobileFilters>
 
       {rows.length === 0 ? (
         <EmptyState

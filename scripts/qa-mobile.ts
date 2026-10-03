@@ -411,8 +411,8 @@ async function loadIds(): Promise<Ids> {
     ids.cashOpen = Boolean(await one("select id from cash_sessions where status = 'open' limit 1"));
     if (!ids.productId) ids.productId = await one("select id from products order by created_at desc limit 1");
     try {
-      const r = await client.query<{ id: string; sku: string; name: string; part_number: string | null; symbol: string; decimals: number; rate: string; price: string | null }>(
-        `select p.id, p.sku, p.name, p.part_number, u.symbol, u.decimals, t.rate,
+      const r = await client.query<{ id: string; sku: string; name: string; symbol: string; decimals: number; rate: string; price: string | null }>(
+        `select p.id, p.sku, p.name, u.symbol, u.decimals, t.rate,
                 (select pli.price_usd from price_list_items pli join price_lists pl on pl.id = pli.price_list_id
                   where pli.product_id = p.id order by pl.is_default desc limit 1) as price
            from products p join units u on u.id = p.unit_id join taxes t on t.id = p.tax_id

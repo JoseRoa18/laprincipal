@@ -102,6 +102,14 @@ Pendiente: cambio en USD con centavos (decisión del dueño).
 - Migración `0008`: los productos con `LP-` toman su número de parte como código cuando es válido y único; los demás números de parte quedan como equivalencias; los productos eliminados liberan su número de parte. La columna `part_number` se borra en la migración siguiente (después de que esta versión esté en producción).
 - El código de barras generado por la app se llama "código de barras propio" (antes "código interno") para no confundirlo con `LP-`.
 - Ficha y edición de producto: barra fija arriba con foto, nombre, código y código de barras al bajar; en la ficha también precio, existencia y Editar.
+- Migración `0009`: borra `products.part_number` (ya sin uso desde `0008`).
+
+## Navegación en el celular (2026-10-03)
+
+- Barra inferior según el rol: sus cuatro secciones más usadas (admin: Inicio, Vender, Productos, Inventario; almacén: Inicio, Productos, Inventario, Compras; vendedor: Vender, Productos) con indicador de la sección activa.
+- "Más" abre un panel desde abajo con el resto de las secciones en cuadros grandes, la cuenta ("Mi cuenta y PIN") y "Cerrar sesión"; "Más" queda marcado cuando la página actual es una de sus secciones.
+- El encabezado muestra el ícono y el nombre de la sección actual (antes estaba vacío en el celular).
+- Productos, Inventario y Ventas pliegan los filtros detrás de un botón "Filtros" con el número de filtros activos; en la computadora se ven siempre.
 
 ## Próximos pasos
 
