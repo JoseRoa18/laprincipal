@@ -18,7 +18,6 @@ export interface LabelProduct {
   id: string;
   sku: string;
   name: string;
-  partNumber: string | null;
   thumbUrl: string | null;
 }
 
@@ -84,7 +83,7 @@ export function LabelsPicker({ initial }: { initial: LabelProduct[] }) {
         <Card>
           <CardHeader>
             <CardTitle>1. Elige los productos</CardTitle>
-            <CardDescription>Busca por nombre, número de parte, SKU o escanea el código.</CardDescription>
+            <CardDescription>Busca por nombre o número de parte, o escanea el código de barras.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="relative">
@@ -102,7 +101,6 @@ export function LabelsPicker({ initial }: { initial: LabelProduct[] }) {
                         <span className="block truncate font-medium">{p.name}</span>
                         <span className="text-muted-foreground block text-xs">
                           {p.sku}
-                          {p.partNumber ? ` · ${p.partNumber}` : ""}
                         </span>
                       </span>
                       <Plus className="text-muted-foreground size-4" />
@@ -132,7 +130,6 @@ export function LabelsPicker({ initial }: { initial: LabelProduct[] }) {
                       <p className="truncate font-medium">{p.name}</p>
                       <p className="text-muted-foreground text-xs">
                         {p.sku}
-                        {p.partNumber ? ` · ${p.partNumber}` : ""}
                       </p>
                     </div>
                     <div className="flex items-center gap-1">

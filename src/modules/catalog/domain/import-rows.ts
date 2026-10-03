@@ -3,13 +3,12 @@ import { D } from "@/lib/money";
 import { isValidBarcodeText, normalizeBarcode } from "./barcodes";
 import type { ProductInput } from "./product-schema";
 import { compactCode, normalizeSearch } from "./search-text";
-import { isValidSku, normalizeSku } from "./sku";
+import { INVALID_CODE_MESSAGE, isValidSku, normalizeSku } from "./sku";
 
 /** Columns of the Excel template, in order. Headers are matched ignoring accents, case and "*". */
 export const IMPORT_COLUMNS = [
-  { key: "sku", header: "SKU", required: false, width: 14, hint: "Opcional. Se genera LP-000001 si está vacío." },
   { key: "name", header: "Nombre*", required: true, width: 40, hint: "Obligatorio." },
-  { key: "partNumber", header: "Número de parte", required: false, width: 18, hint: "Código del fabricante." },
+  { key: "sku", header: "Número de parte", required: false, width: 18, hint: "Código del fabricante. Vacío = se asigna un código interno (LP-000001)." },
   { key: "category", header: "Categoría", required: false, width: 30, hint: "Ruta 'Refrigeración > Compresores' o nombre de la subcategoría." },
   { key: "brand", header: "Marca", required: false, width: 16, hint: "Se crea si no existe." },
   { key: "unit", header: "Unidad", required: false, width: 10, hint: "Símbolo o nombre: u, m, kg. Vacío = Unidad." },
@@ -20,7 +19,7 @@ export const IMPORT_COLUMNS = [
   { key: "minStock", header: "Mínimo", required: false, width: 10, hint: "Stock mínimo." },
   { key: "maxStock", header: "Máximo", required: false, width: 10, hint: "Stock máximo." },
   { key: "location", header: "Ubicación", required: false, width: 12, hint: "Estante, por ejemplo P2-E3." },
-  { key: "barcode", header: "Código de barras", required: false, width: 16, hint: "Código del fabricante. Vacío = se genera uno interno." },
+  { key: "barcode", header: "Código de barras", required: false, width: 16, hint: "Código del fabricante. Vacío = se genera uno propio." },
   { key: "equivalences", header: "Equivalencias", required: false, width: 24, hint: "Códigos separados por coma." },
   { key: "compatibilities", header: "Compatibilidades", required: false, width: 34, hint: "'Tipo Marca Modelo' separados por punto y coma: Nevera Mabe RMS400; Nevera LG GT32" },
   { key: "description", header: "Descripción", required: false, width: 30, hint: "" },
@@ -45,11 +44,11 @@ export interface ImportLookups {
   categories: ImportCategoryLookup[];
   units: Array<{ id: string; name: string; symbol: string }>;
   brands: Array<{ id: string; name: string }>;
-  /** Upper-cased SKUs already in the database (including deleted products). */
+  /** Upper-cased product codes already in the database (including deleted products). */
   existingSkus: Set<string>;
   existingBarcodes: Set<string>;
-  /** Existing (not deleted) products by `compactCode(partNumber)` and by `normalizeSearch(name)` → SKU. */
-  existingPartNumbers: Map<string, string>;
+  /** Existing (not deleted) products by `compactCode(code)` and by `normalizeSearch(name)` → code. */
+  existingCodes: Map<string, string>;
   existingNames: Map<string, string>;
   defaultUnitId: string;
   defaultTaxId: string;
@@ -69,12 +68,18 @@ function headerKey(text: string): string {
 }
 
 const HEADER_ALIASES: Record<string, ImportColumnKey> = {
+  // Older templates had separate "SKU" and "Número de parte" columns: both are the product code now.
+  sku: "sku",
   codigo: "sku",
   "codigo interno": "sku",
+  parte: "sku",
+  "n de parte": "sku",
+  "no de parte": "sku",
+  "nro de parte": "sku",
+  referencia: "sku",
+  ref: "sku",
   nombre: "name",
   producto: "name",
-  "numero de parte": "partNumber",
-  parte: "partNumber",
   categoria: "category",
   marca: "brand",
   unidad: "unit",
@@ -210,9 +215,8 @@ function readNumber(value: string | undefined, label: string, errors: string[], 
 
 /** Validate every row. Rows with errors get `input: null`; valid rows get a ProductInput. */
 export function validateImportRows(rows: RawImportRow[], lookups: ImportLookups): ImportRowResult[] {
-  const seenSkus = new Map<string, number>();
+  const seenCodes = new Map<string, number>();
   const seenBarcodes = new Map<string, number>();
-  const seenPartNumbers = new Map<string, number>();
   const seenNames = new Map<string, number>();
   const brandByName = new Map(lookups.brands.map((b) => [normalizeSearch(b.name), b]));
 
@@ -225,14 +229,20 @@ export function validateImportRows(rows: RawImportRow[], lookups: ImportLookups)
     if (!name) errors.push("Nombre es obligatorio");
     else if (name.length > 200) errors.push("Nombre: máximo 200 caracteres");
 
-    // Uploading the same file again must not duplicate the catalog and its stock.
-    const partKey = compactCode(v.partNumber ?? "");
-    if (partKey) {
-      const existing = lookups.existingPartNumbers.get(partKey);
-      if (existing) errors.push(`Ya existe un producto con el número de parte ${v.partNumber!.trim()} (${existing})`);
-      const prev = seenPartNumbers.get(partKey);
-      if (prev) errors.push(`El número de parte ${v.partNumber!.trim()} está repetido (fila ${prev})`);
-      else seenPartNumbers.set(partKey, row.rowNumber);
+    // Uploading the same file again must not duplicate the catalog and its stock:
+    // codes are compared without separators ("TX 9" = "TX-9" = "tx9").
+    const codeText = (v.sku ?? "").trim();
+    const sku = normalizeSku(codeText);
+    if (sku && !isValidSku(sku)) {
+      errors.push(`Número de parte "${codeText}" inválido: ${INVALID_CODE_MESSAGE.toLowerCase()}`);
+    } else if (sku) {
+      const key = compactCode(sku);
+      const existing = lookups.existingCodes.get(key);
+      if (existing) errors.push(`Ya existe un producto con el número de parte ${existing}`);
+      else if (lookups.existingSkus.has(sku)) errors.push(`El número de parte ${sku} ya existe`);
+      const prev = seenCodes.get(key);
+      if (prev) errors.push(`El número de parte ${sku} está repetido (fila ${prev})`);
+      else seenCodes.set(key, row.rowNumber);
     }
     const nameKey = name ? normalizeSearch(name) : "";
     if (nameKey) {
@@ -241,21 +251,6 @@ export function validateImportRows(rows: RawImportRow[], lookups: ImportLookups)
       const prev = seenNames.get(nameKey);
       if (prev) errors.push(`El nombre "${name}" está repetido (fila ${prev})`);
       else seenNames.set(nameKey, row.rowNumber);
-    }
-
-    let sku: string | null = null;
-    try {
-      sku = normalizeSku(v.sku);
-      if (sku && !isValidSku(sku)) {
-        errors.push(`SKU "${sku}" inválido: solo letras, números, punto, guion y guion bajo`);
-      } else if (sku) {
-        if (lookups.existingSkus.has(sku)) errors.push(`El SKU ${sku} ya existe`);
-        const prev = seenSkus.get(sku);
-        if (prev) errors.push(`El SKU ${sku} está repetido (fila ${prev})`);
-        else seenSkus.set(sku, row.rowNumber);
-      }
-    } catch {
-      errors.push("SKU inválido");
     }
 
     let categoryId: string | null = null;
@@ -317,7 +312,6 @@ export function validateImportRows(rows: RawImportRow[], lookups: ImportLookups)
         : {
             name,
             sku,
-            partNumber: (v.partNumber ?? "").trim() || null,
             description: (v.description ?? "").trim() || null,
             categoryId,
             brandId,

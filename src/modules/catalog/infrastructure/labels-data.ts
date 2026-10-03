@@ -7,7 +7,6 @@ import { getPriceListIds } from "./catalog-options";
 export interface LabelData {
   productId: string;
   name: string;
-  partNumber: string | null;
   sku: string;
   barcode: string | null;
   barcodeType: BarcodeType | null;
@@ -20,7 +19,7 @@ export async function getLabelData(ids: string[], dbx: DbOrTx = db): Promise<Lab
   if (unique.length === 0) return [];
   const lists = await getPriceListIds(dbx);
   const rows = await dbx
-    .select({ id: products.id, name: products.name, partNumber: products.partNumber, sku: products.sku })
+    .select({ id: products.id, name: products.name, sku: products.sku })
     .from(products)
     .where(inArray(products.id, unique));
   const codes = await dbx
@@ -42,7 +41,6 @@ export async function getLabelData(ids: string[], dbx: DbOrTx = db): Promise<Lab
       return {
         productId: r.id,
         name: r.name,
-        partNumber: r.partNumber,
         sku: r.sku,
         barcode: code?.code ?? null,
         barcodeType: code?.type ?? null,

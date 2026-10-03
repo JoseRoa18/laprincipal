@@ -54,7 +54,6 @@ export interface StockRow {
   productId: string;
   sku: string;
   name: string;
-  partNumber: string | null;
   locationCode: string | null;
   categoryId: string | null;
   categoryName: string | null;
@@ -109,7 +108,6 @@ function buildWhere(f: StockFilters): SQL | undefined {
       or(
         and(...searchPatterns(q).map((w) => ilike(products.searchText, w))),
         ilike(products.sku, `%${q}%`),
-        ilike(products.partNumber, `%${q}%`),
         ilike(products.locationCode, `%${q}%`),
       ),
     );
@@ -145,7 +143,6 @@ export async function listStock(opts: StockListOptions = {}): Promise<{ rows: St
       productId: products.id,
       sku: products.sku,
       name: products.name,
-      partNumber: products.partNumber,
       locationCode: products.locationCode,
       categoryId: products.categoryId,
       categoryName: categories.name,
@@ -203,7 +200,6 @@ export async function listStock(opts: StockListOptions = {}): Promise<{ rows: St
         productId: r.productId,
         sku: r.sku,
         name: r.name,
-        partNumber: r.partNumber,
         locationCode: r.locationCode,
         categoryId: r.categoryId,
         categoryName: r.categoryName,

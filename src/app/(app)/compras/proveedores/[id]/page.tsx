@@ -144,7 +144,7 @@ export default async function SupplierDetailPage({ params }: { params: Promise<{
                     <Link href={`/productos/${p.productId}`} className="font-medium hover:underline">
                       {p.productName}
                     </Link>
-                    <span className="text-muted-foreground block text-xs">{[p.partNumber, p.sku].filter(Boolean).join(" · ")}</span>
+                    <span className="text-muted-foreground block text-xs">{[p.sku].filter(Boolean).join(" · ")}</span>
                   </TableCell>
                   <TableCell className="text-muted-foreground hidden md:table-cell">{p.supplierCode ?? "—"}</TableCell>
                   <TableCell className="hidden text-right tabular-nums md:table-cell">{p.packSize > 1 ? `× ${p.packSize}` : "—"}</TableCell>

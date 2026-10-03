@@ -107,7 +107,7 @@ export async function registerInternalBarcode(tx: Tx, productId: string, opts: {
 /** Recompute products.search_text from the current name, codes, brand, category, equivalences and compatibilities. */
 export async function rebuildSearchText(dbx: DbOrTx, productId: string): Promise<string> {
   const [p] = await dbx
-    .select({ name: products.name, sku: products.sku, partNumber: products.partNumber, brandName: brands.name, categoryName: categories.name })
+    .select({ name: products.name, sku: products.sku, brandName: brands.name, categoryName: categories.name })
     .from(products)
     .leftJoin(brands, eq(brands.id, products.brandId))
     .leftJoin(categories, eq(categories.id, products.categoryId))
@@ -122,7 +122,6 @@ export async function rebuildSearchText(dbx: DbOrTx, productId: string): Promise
   const text = buildSearchText({
     name: p.name,
     sku: p.sku,
-    partNumber: p.partNumber,
     brandName: p.brandName,
     categoryName: p.categoryName,
     equivalenceCodes: eqs.map((e) => e.code),

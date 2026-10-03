@@ -11,7 +11,6 @@ export interface SuggestionItem {
   productId: string;
   sku: string;
   name: string;
-  partNumber: string | null;
   locationCode: string | null;
   unitSymbol: string;
   unitDecimals: number;
@@ -103,7 +102,6 @@ export async function getPurchaseSuggestions(dbx: DbOrTx = db): Promise<Suggesti
       productId: r.productId,
       sku: r.sku,
       name: r.name,
-      partNumber: r.partNumber,
       locationCode: r.locationCode,
       unitSymbol: r.unitSymbol,
       unitDecimals: r.unitDecimals,

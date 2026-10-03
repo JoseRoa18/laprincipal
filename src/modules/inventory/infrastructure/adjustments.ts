@@ -54,7 +54,6 @@ export interface AdjustmentItemRow {
   productId: string;
   productName: string;
   sku: string;
-  partNumber: string | null;
   unitSymbol: string;
   unitDecimals: number;
   quantityDelta: string;
@@ -112,7 +111,6 @@ export async function getAdjustment(id: string, dbx: DbOrTx = db): Promise<Adjus
       productId: inventoryAdjustmentItems.productId,
       productName: products.name,
       sku: products.sku,
-      partNumber: products.partNumber,
       unitSymbol: units.symbol,
       unitDecimals: units.decimals,
       quantityDelta: inventoryAdjustmentItems.quantityDelta,

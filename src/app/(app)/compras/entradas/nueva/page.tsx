@@ -50,7 +50,6 @@ export default async function NewReceiptPage({ searchParams }: { searchParams: P
         productId: p.id,
         name: p.name,
         sku: p.sku,
-        partNumber: p.partNumber,
         unitSymbol: p.unitSymbol,
         unitDecimals: p.unitDecimals,
         currentStock: p.stockPhysical,

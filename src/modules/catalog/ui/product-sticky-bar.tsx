@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { cn } from "cn";
+import { codeLabel } from "../domain/sku";
 import { ProductThumb } from "./product-thumb";
 
 /**
- * Compact product identity (photo, name, SKU and code) pinned under the app
- * header once the page title scrolls away, so a long form never loses which
- * product it is editing. Takes no space: it overlays the content while shown.
+ * Compact product identity (photo, name, part number and barcode) pinned under
+ * the app header once the page title scrolls away, so a long page never loses
+ * which product it is about. Takes no space: it overlays the content while shown.
  */
 export function ProductStickyBar({
   watchId,
@@ -15,6 +16,8 @@ export function ProductStickyBar({
   sku,
   barcode,
   thumbUrl,
+  fullWidth = false,
+  children,
 }: {
   /** Id of the page title block: the bar shows while that block is hidden. */
   watchId: string;
@@ -22,6 +25,10 @@ export function ProductStickyBar({
   sku: string;
   barcode: string | null;
   thumbUrl: string | null;
+  /** The page uses the whole width (no centered max-w-5xl column). */
+  fullWidth?: boolean;
+  /** Right side: price, stock, actions. */
+  children?: React.ReactNode;
 }) {
   const [visible, setVisible] = useState(false);
 
@@ -43,15 +50,16 @@ export function ProductStickyBar({
           visible ? "translate-y-0 opacity-100" : "pointer-events-none -translate-y-1 opacity-0",
         )}
       >
-        <div className="mx-auto flex max-w-5xl items-center gap-3">
+        <div className={cn("flex items-center gap-3", !fullWidth && "mx-auto max-w-5xl")}>
           <ProductThumb url={thumbUrl} alt="" size={40} />
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-medium">{name}</p>
             <p className="text-muted-foreground truncate text-xs tabular-nums">
-              {sku}
-              {barcode ? ` · código ${barcode}` : ""}
+              {codeLabel(sku)} <span className="text-foreground font-medium">{sku}</span>
+              {barcode ? ` · Cód. barras ${barcode}` : ""}
             </p>
           </div>
+          {children ? <div className="flex shrink-0 items-center gap-2">{children}</div> : null}
         </div>
       </div>
     </div>

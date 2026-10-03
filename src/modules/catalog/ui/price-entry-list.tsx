@@ -15,7 +15,6 @@ export interface PriceEntryItem {
   id: string;
   name: string;
   sku: string;
-  partNumber: string | null;
   brandName: string | null;
   costUsd: string;
   /** Cost plus the default margin, or null without a cost. */
@@ -66,7 +65,7 @@ function PriceRow({ item, index, marginPct, techMarkdownPct }: { item: PriceEntr
           {item.name}
         </Link>
         <p className="text-muted-foreground text-xs">
-          {[item.partNumber, item.sku, item.brandName].filter(Boolean).join(" · ")} · Costo <Money value={item.costUsd} />
+          {[item.sku, item.brandName].filter(Boolean).join(" · ")} · Costo <Money value={item.costUsd} />
           {item.suggestedUsd ? ` · sugerido ${formatMoney(item.suggestedUsd, "USD")} (${marginPct} % sobre costo)` : ""}
         </p>
       </div>

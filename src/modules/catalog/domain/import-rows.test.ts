@@ -16,9 +16,12 @@ const lookups: ImportLookups = {
     { id: "m", name: "Metro", symbol: "m" },
   ],
   brands: [{ id: "b1", name: "Embraco" }],
-  existingSkus: new Set(["LP-000001"]),
+  existingSkus: new Set(["LP-000001", "EMB-999"]),
   existingBarcodes: new Set(["7591234567890"]),
-  existingPartNumbers: new Map([["emb999", "LP-000001"]]),
+  existingCodes: new Map([
+    ["lp000001", "LP-000001"],
+    ["emb999", "EMB-999"],
+  ]),
   existingNames: new Map([["relay universal", "LP-000002"]]),
   defaultUnitId: "u",
   defaultTaxId: "tax",
@@ -28,7 +31,9 @@ describe("matchHeader", () => {
   it("matches template headers ignoring accents, case and asterisks", () => {
     expect(matchHeader("Nombre*")).toBe("name");
     expect(matchHeader("nombre")).toBe("name");
-    expect(matchHeader("NÚMERO DE PARTE")).toBe("partNumber");
+    expect(matchHeader("NÚMERO DE PARTE")).toBe("sku");
+    // Templates from before part number and code were merged.
+    expect(matchHeader("SKU")).toBe("sku");
     expect(matchHeader("Precio publico USD")).toBe("publicPrice");
     expect(matchHeader("Garantía días")).toBe("warrantyDays");
     expect(matchHeader("Columna rara")).toBeNull();
@@ -70,7 +75,7 @@ describe("validateImportRows", () => {
           rowNumber: 2,
           values: {
             name: "Compresor 1/3 HP",
-            partNumber: "EMB-123",
+            sku: "emb 123",
             category: "Refrigeración > Compresores",
             brand: "embraco",
             unit: "u",
@@ -92,7 +97,7 @@ describe("validateImportRows", () => {
     expect(row.errors).toEqual([]);
     expect(row.input).toMatchObject({
       name: "Compresor 1/3 HP",
-      sku: null,
+      sku: "EMB-123",
       categoryId: "ref-comp",
       brandId: "b1",
       unitId: "u",
@@ -128,7 +133,7 @@ describe("validateImportRows", () => {
         expect.stringContaining('unidad "caja"'),
       ]),
     );
-    expect(rows[1].errors).toEqual(expect.arrayContaining(["El SKU LP-000001 ya existe", expect.stringContaining("ya está registrado")]));
+    expect(rows[1].errors).toEqual(expect.arrayContaining(["Ya existe un producto con el número de parte LP-000001", expect.stringContaining("ya está registrado")]));
     expect(rows[1].warnings).toEqual([expect.stringContaining("Se creará la marca")]);
     expect(rows[2].errors).toEqual([]);
     expect(rows[2].input?.sku).toBe("NEW-1");
@@ -142,13 +147,13 @@ describe("validateImportRows", () => {
 describe("duplicate products", () => {
   it("refuses rows that repeat an existing product or an earlier row", () => {
     const rows = [
-      { rowNumber: 2, values: { name: "Compresor nuevo", partNumber: "EMB-999", publicPrice: "10" } },
+      { rowNumber: 2, values: { name: "Compresor nuevo", sku: "emb999", publicPrice: "10" } },
       { rowNumber: 3, values: { name: "Relay Universal", publicPrice: "5" } },
-      { rowNumber: 4, values: { name: "Termostato", partNumber: "TX-9", publicPrice: "7" } },
-      { rowNumber: 5, values: { name: "termostato", partNumber: "tx 9", publicPrice: "7" } },
+      { rowNumber: 4, values: { name: "Termostato", sku: "TX-9", publicPrice: "7" } },
+      { rowNumber: 5, values: { name: "termostato", sku: "tx 9", publicPrice: "7" } },
     ];
     const [byPart, byName, first, repeated] = validateImportRows(rows, lookups);
-    expect(byPart.errors.join()).toContain("LP-000001");
+    expect(byPart.errors.join()).toContain("EMB-999");
     expect(byName.errors.join()).toContain("LP-000002");
     expect(first.errors).toEqual([]);
     expect(repeated.errors.join()).toContain("fila 4");

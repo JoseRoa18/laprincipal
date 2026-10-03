@@ -44,7 +44,6 @@ export default async function AdjustmentDetailPage({ params }: { params: Promise
                 productId: it.productId,
                 name: it.productName,
                 sku: it.sku,
-                partNumber: it.partNumber,
                 unitSymbol: it.unitSymbol,
                 unitDecimals: it.unitDecimals,
                 currentStock: it.currentStock,
@@ -97,7 +96,7 @@ export default async function AdjustmentDetailPage({ params }: { params: Promise
                   <Link href={`/productos/${it.productId}`} className="font-medium hover:underline">
                     {it.productName}
                   </Link>
-                  <span className="text-muted-foreground block text-xs">{[it.partNumber, it.sku].filter(Boolean).join(" · ")}</span>
+                  <span className="text-muted-foreground block text-xs">{[it.sku].filter(Boolean).join(" · ")}</span>
                 </TableCell>
                 <TableCell className={cn("text-right font-medium tabular-nums", delta < 0 ? "text-destructive" : "text-emerald-700 dark:text-emerald-400")}>
                   {delta > 0 ? "+" : ""}

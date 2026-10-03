@@ -67,7 +67,7 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
       />
 
       <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-        <SearchInput placeholder="Nombre, número de parte, SKU o ubicación" className="sm:w-80" />
+        <SearchInput placeholder="Nombre, número de parte o ubicación" className="sm:w-80" />
         <UrlSelect param="status" placeholder="Todos los estados" options={STOCK_STATUSES.map((s) => ({ value: s, label: STOCK_STATUS_LABEL[s] }))} />
         <UrlSelect param="category" placeholder="Todas las categorías" options={categories.map((c) => ({ value: c.id, label: c.label }))} />
         <UrlToggle param="stock" label="Solo con existencia" />

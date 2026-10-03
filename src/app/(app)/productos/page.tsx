@@ -153,7 +153,6 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
                   <div className="min-w-0 flex-1 space-y-1">
                     <p className="truncate font-medium leading-tight">{p.name}</p>
                     <p className="text-muted-foreground truncate text-xs">
-                      {p.partNumber ? `${p.partNumber} · ` : ""}
                       {p.sku}
                       {p.brandName ? ` · ${p.brandName}` : ""}
                     </p>
@@ -216,7 +215,6 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
                           {p.name}
                         </Link>
                         <p className="text-muted-foreground text-xs">
-                          {p.partNumber ? `${p.partNumber} · ` : ""}
                           {p.sku}
                           {p.brandName ? ` · ${p.brandName}` : ""}
                           {!p.isActive ? " · Inactivo" : ""}

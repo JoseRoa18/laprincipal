@@ -29,7 +29,7 @@ function AlertTable({ rows, canBuy, emptyText, showLastSale }: { rows: StockRow[
                   <Link href={`/productos/${r.productId}`} className="tap-target flex min-w-0 items-center font-medium">
                     <span className="truncate">{r.name}</span>
                   </Link>
-                  <p className="text-muted-foreground truncate text-xs">{[r.partNumber, r.sku, r.locationCode].filter(Boolean).join(" · ")}</p>
+                  <p className="text-muted-foreground truncate text-xs">{[r.sku, r.locationCode].filter(Boolean).join(" · ")}</p>
                 </div>
                 <StockStatusBadge status={r.status} className="shrink-0" />
               </div>
@@ -78,7 +78,7 @@ function AlertTable({ rows, canBuy, emptyText, showLastSale }: { rows: StockRow[
                 <Link href={`/productos/${r.productId}`} className="block truncate font-medium hover:underline">
                   {r.name}
                 </Link>
-                <span className="text-muted-foreground block truncate text-xs">{[r.partNumber, r.sku, r.locationCode].filter(Boolean).join(" · ")}</span>
+                <span className="text-muted-foreground block truncate text-xs">{[r.sku, r.locationCode].filter(Boolean).join(" · ")}</span>
               </TableCell>
               <TableCell className={cn("text-right font-medium tabular-nums", stock <= 0 && "text-destructive")}>
                 {formatQty(r.quantity, r.unitDecimals)} {r.unitSymbol}

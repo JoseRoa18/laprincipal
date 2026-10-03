@@ -55,7 +55,7 @@ export async function getMarginReport(range: DateRange, opts: ScopeOptions = {})
       .select({
         id: saleItems.productId,
         name: products.name,
-        detail: products.partNumber,
+        detail: products.sku,
         units: sumOf(netQty),
         revenue: sumOf(netLineBase),
         cost: sumOf(netLineCost),
@@ -64,7 +64,7 @@ export async function getMarginReport(range: DateRange, opts: ScopeOptions = {})
       .innerJoin(sales, eq(sales.id, saleItems.saleId))
       .innerJoin(products, eq(products.id, saleItems.productId))
       .where(inRange)
-      .groupBy(saleItems.productId, products.name, products.partNumber)
+      .groupBy(saleItems.productId, products.name, products.sku)
       .orderBy(desc(sql`sum(${netLineBase}) - sum(${netLineCost})`), asc(products.name)),
     dbx
       .select({

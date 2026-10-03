@@ -57,6 +57,13 @@
       "when": 1791061274507,
       "tag": "0007_catalog_hardening",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1791063642628,
+      "tag": "0008_merge_part_number_into_code",
+      "breakpoints": true
     }
   ]
 }

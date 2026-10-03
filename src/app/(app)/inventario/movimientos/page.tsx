@@ -143,7 +143,7 @@ export default async function MovementsPage({ searchParams }: { searchParams: Pr
                       <Link href={`/inventario/movimientos?product=${m.productId}`} className="tap-target flex min-w-0 items-center hover:underline">
                         <span className="truncate">{m.productName}</span>
                       </Link>
-                      <span className="text-muted-foreground block truncate text-xs">{[m.partNumber, m.productSku].filter(Boolean).join(" · ")}</span>
+                      <span className="text-muted-foreground block truncate text-xs">{[m.productSku].filter(Boolean).join(" · ")}</span>
                     </TableCell>
                   )}
                   <TableCell>

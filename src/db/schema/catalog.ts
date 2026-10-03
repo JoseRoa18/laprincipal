@@ -60,8 +60,11 @@ export const products = pgTable(
   "products",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    /**
+     * The product's code: the manufacturer part number, or an internal
+     * LP-000001 when it has none. Shown as "Número de parte" / "Código interno".
+     */
     sku: text("sku").notNull().unique(),
-    partNumber: text("part_number"),
     name: text("name").notNull(),
     description: text("description"),
     categoryId: uuid("category_id").references(() => categories.id),
@@ -79,7 +82,7 @@ export const products = pgTable(
     costLastUsd: money("cost_last_usd"),
     attributes: jsonb("attributes").notNull().default({}),
     /**
-     * Lower-cased, accent-stripped concatenation of name, part number,
+     * Lower-cased, accent-stripped concatenation of name, code,
      * equivalences and compatibilities. Maintained by the application.
      */
     searchText: text("search_text").notNull().default(""),
@@ -88,7 +91,6 @@ export const products = pgTable(
     ...timestamps(),
   },
   (t) => [
-    index("products_part_number_idx").on(t.partNumber),
     index("products_category_idx").on(t.categoryId),
     index("products_search_trgm_idx").using("gin", t.searchText.op("gin_trgm_ops")),
   ],

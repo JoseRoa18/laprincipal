@@ -38,7 +38,7 @@ export function isValidUpc(code: string): boolean {
 /** Build the internal barcode for a sequence number (1 → 2000000000015). */
 export function generateInternalBarcode(sequence: number): string {
   if (!Number.isInteger(sequence) || sequence < 1 || sequence > MAX_INTERNAL_SEQUENCE) {
-    throw new Error("La secuencia del código interno está fuera de rango");
+    throw new Error("La secuencia del código de barras propio está fuera de rango");
   }
   const body = `${INTERNAL_BARCODE_PREFIX}${String(sequence).padStart(INTERNAL_SEQUENCE_DIGITS, "0")}`;
   return `${body}${ean13CheckDigit(body)}`;

@@ -30,7 +30,7 @@ export async function generateInternalBarcodeFor(productId: string, user: ActorU
   return db.transaction(async (tx) => {
     await assertProduct(tx, productId);
     const row = await registerInternalBarcode(tx, productId);
-    if (row.existed) throw new AppError("CONFLICT", `Este producto ya tiene el código interno ${row.code}.`);
+    if (row.existed) throw new AppError("CONFLICT", `Este producto ya tiene el código de barras propio ${row.code}.`);
     await rebuildSearchText(tx, productId);
     await writeAudit(tx, { userId: user.id, action: "barcode.generate", entityType: "product", entityId: productId, after: row });
     return row;

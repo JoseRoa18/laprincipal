@@ -60,7 +60,7 @@ export function StockTable({ rows, showCosts, canEdit }: { rows: StockRow[]; sho
                       <span className="min-w-0">
                         <span className="block truncate font-medium">{r.name}</span>
                         <span className="text-muted-foreground block truncate text-xs">
-                          {[r.partNumber, r.sku, r.categoryName].filter(Boolean).join(" · ")}
+                          {[r.sku, r.categoryName].filter(Boolean).join(" · ")}
                         </span>
                       </span>
                     </Link>
@@ -114,7 +114,7 @@ export function StockTable({ rows, showCosts, canEdit }: { rows: StockRow[]; sho
                   <Link href={`/productos/${r.productId}`} className="tap-target flex min-w-0 items-center font-medium">
                     <span className="truncate">{r.name}</span>
                   </Link>
-                  <p className="text-muted-foreground truncate text-xs">{[r.partNumber, r.sku, r.locationCode].filter(Boolean).join(" · ")}</p>
+                  <p className="text-muted-foreground truncate text-xs">{[r.sku, r.locationCode].filter(Boolean).join(" · ")}</p>
                   <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
                     <span>
                       <span className="text-muted-foreground text-xs">Disponible </span>

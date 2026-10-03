@@ -3,6 +3,7 @@ import { PageHeader } from "@/components/app/page-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { can, requireRole } from "@/lib/auth-guards";
 import { isAiPhotoEnabled } from "@/modules/catalog/application/photo-ai";
+import { codeLabel } from "@/modules/catalog/domain/sku";
 import { getProductFormOptions } from "@/modules/catalog/infrastructure/catalog-options";
 import { getProductDetail, getProductFormData } from "@/modules/catalog/infrastructure/product-detail";
 import { ProductForm } from "@/modules/catalog/ui/product-form";
@@ -27,7 +28,7 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
       <ProductStickyBar watchId="product-edit-title" name={data.name} sku={data.sku} barcode={data.primaryBarcode} thumbUrl={detail.images[0]?.thumbUrl ?? null} />
       <div className="mx-auto max-w-5xl space-y-4">
         <div id="product-edit-title">
-          <PageHeader back={{ href: `/productos/${id}`, label: "Volver al producto" }} title={`Editar: ${data.name}`} description={`${data.sku}${data.primaryBarcode ? ` · código ${data.primaryBarcode}` : ""}`} />
+          <PageHeader back={{ href: `/productos/${id}`, label: "Volver al producto" }} title={`Editar: ${data.name}`} description={`${codeLabel(data.sku)} ${data.sku}${data.primaryBarcode ? ` · Cód. barras ${data.primaryBarcode}` : ""}`} />
         </div>
         <Card>
           <CardHeader>

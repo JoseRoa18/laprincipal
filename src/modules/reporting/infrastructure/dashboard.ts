@@ -27,7 +27,7 @@ export interface DashboardData {
   soon: number;
   inventoryValue: string;
   cash: { open: true; number: string | null; openedBy: string; openedAt: Date } | { open: false };
-  topProducts: Array<{ productId: string; name: string; partNumber: string | null; units: string; revenue: string }>;
+  topProducts: Array<{ productId: string; name: string; sku: string; units: string; revenue: string }>;
   /** Last 14 business days, oldest first, zeros filled. */
   byDay: Array<{ day: string; total: string; count: number }>;
   statsComputedAt: Date | null;
@@ -118,7 +118,7 @@ export async function getDashboardData(opts: DashboardOptions = {}): Promise<Das
       .select({
         productId: saleItems.productId,
         name: products.name,
-        partNumber: products.partNumber,
+        sku: products.sku,
         units: sumOf(netQty),
         revenue: sumOf(sql`(case when ${saleItems.quantity} = 0 then 0 else ${saleItems.lineTotalUsd} * ${netQty} / ${saleItems.quantity} end)`),
       })
@@ -126,7 +126,7 @@ export async function getDashboardData(opts: DashboardOptions = {}): Promise<Das
       .innerJoin(sales, eq(sales.id, saleItems.saleId))
       .innerJoin(products, eq(products.id, saleItems.productId))
       .where(and(soldFilter, between(weekStart, today)))
-      .groupBy(saleItems.productId, products.name, products.partNumber)
+      .groupBy(saleItems.productId, products.name, products.sku)
       .orderBy(desc(sumOf(netQty)))
       .limit(5),
     dbx
@@ -157,7 +157,7 @@ export async function getDashboardData(opts: DashboardOptions = {}): Promise<Das
     cash: cashSession
       ? { open: true, number: cashSession.number, openedBy, openedAt: cashSession.openedAt }
       : { open: false },
-    topProducts: topRows.map((r) => ({ productId: r.productId, name: r.name, partNumber: r.partNumber, units: r.units, revenue: r.revenue })),
+    topProducts: topRows.map((r) => ({ productId: r.productId, name: r.name, sku: r.sku, units: r.units, revenue: r.revenue })),
     byDay: eachDay(chartStart, today).map((day) => {
       const r = dayMap.get(day);
       return { day, total: r?.total ?? "0", count: r?.count ?? 0 };

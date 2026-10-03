@@ -52,7 +52,7 @@ async function main() {
   const sku = `SMK-${stamp}`;
   const [product] = await db
     .insert(s.products)
-    .values({ sku, name: `Repuesto de humo ${stamp}`, partNumber: `SMOKE-${stamp}`, unitId: unit.id, taxId: tax.id, costAvgUsd: "7.0000", searchText: `repuesto de humo ${stamp.toLowerCase()} smoke-${stamp.toLowerCase()} ${sku.toLowerCase()}` })
+    .values({ sku, name: `Repuesto de humo ${stamp}`, unitId: unit.id, taxId: tax.id, costAvgUsd: "7.0000", searchText: `repuesto de humo ${stamp.toLowerCase()} smoke-${stamp.toLowerCase()} ${sku.toLowerCase()}` })
     .returning();
   await db.insert(s.priceListItems).values({ priceListId: list.id, productId: product.id, priceUsd: "11.6000" });
   await db.transaction((tx) => applyMovement(tx, { productId: product.id, warehouseId: location.warehouseId, type: "initial", quantity: "10", unitCostUsd: "7", userId: admin.id, notes: "smoke-sales" }));

@@ -93,7 +93,6 @@ export interface QuoteDetail {
     id: string;
     productId: string;
     sku: string;
-    partNumber: string | null;
     description: string;
     quantity: string;
     unitPriceUsd: string;
@@ -125,7 +124,6 @@ export async function getQuoteDetail(id: string, dbx: DbOrTx = db): Promise<Quot
       id: quoteItems.id,
       productId: quoteItems.productId,
       sku: products.sku,
-      partNumber: products.partNumber,
       description: quoteItems.description,
       quantity: quoteItems.quantity,
       unitPriceUsd: quoteItems.unitPriceUsd,

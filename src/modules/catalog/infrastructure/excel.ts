@@ -32,7 +32,7 @@ export async function buildImportTemplate(lists: { categoryPaths: string[]; unit
   }
   // Codes must stay text: Excel would turn barcodes into scientific notation, drop
   // leading zeros, or read part numbers like 3-4 as dates.
-  for (const key of ["barcode", "sku", "partNumber", "equivalences", "location", "compatibilities"] satisfies ImportColumnKey[]) ws.getColumn(key).numFmt = "@";
+  for (const key of ["barcode", "sku", "equivalences", "location", "compatibilities"] satisfies ImportColumnKey[]) ws.getColumn(key).numFmt = "@";
 
   const help = wb.addWorksheet("Instrucciones");
   help.columns = [
@@ -148,7 +148,8 @@ export async function parseImportWorkbook(buffer: Buffer): Promise<ParsedWorkboo
       const value = row.getCell(colNumber).value;
       const text = NUMERIC_KEYS.has(key) ? numericCellToString(value) : key === "barcode" ? barcodeCellToString(value) : cellToString(value);
       if (text) hasData = true;
-      values[key] = text;
+      // Two columns can map to the same key (old "SKU" + "Número de parte"): an empty one never hides a filled one.
+      if (text || values[key] === undefined) values[key] = text;
     }
     if (hasData) rows.push({ rowNumber, values });
   });
@@ -164,9 +165,8 @@ export async function buildProductsWorkbook(rows: ProductExportRow[], opts: { in
   wb.creator = "La Principal 2050";
   const ws = wb.addWorksheet("Productos", { views: [{ state: "frozen", ySplit: 1 }] });
   const columns: Array<{ header: string; key: string; width: number }> = [
-    { header: "SKU", key: "sku", width: 14 },
     { header: "Nombre", key: "name", width: 40 },
-    { header: "Número de parte", key: "partNumber", width: 18 },
+    { header: "Número de parte", key: "sku", width: 18 },
     { header: "Categoría", key: "category", width: 30 },
     { header: "Marca", key: "brand", width: 16 },
     { header: "Unidad", key: "unit", width: 10 },
@@ -194,7 +194,6 @@ export async function buildProductsWorkbook(rows: ProductExportRow[], opts: { in
     ws.addRow({
       sku: r.sku,
       name: r.name,
-      partNumber: r.partNumber ?? "",
       category: r.categoryPath ?? "",
       brand: r.brandName ?? "",
       unit: r.unitSymbol,

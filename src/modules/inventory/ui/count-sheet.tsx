@@ -79,7 +79,7 @@ export function CountSheet({
   const visible = useMemo(() => {
     const term = normalizeSearch(filter);
     if (!term) return items;
-    return items.filter((i) => normalizeSearch(`${i.productName} ${i.sku} ${i.partNumber ?? ""} ${i.locationCode ?? ""}`).includes(term));
+    return items.filter((i) => normalizeSearch(`${i.productName} ${i.sku} ${i.locationCode ?? ""}`).includes(term));
   }, [items, filter]);
 
   const patch = useCallback((itemId: string, changes: Partial<LocalItem>) => {
@@ -212,7 +212,7 @@ export function CountSheet({
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-medium">{item.productName}</p>
                     <p className="text-muted-foreground truncate text-xs">
-                      {[item.partNumber, item.sku].filter(Boolean).join(" · ")}
+                      {[item.sku].filter(Boolean).join(" · ")}
                       {item.locationCode ? ` · ${item.locationCode}` : ""}
                     </p>
                     {item.expectedQty !== null ? (
@@ -292,7 +292,7 @@ export function CountSheet({
                           <button type="button" className="text-left font-medium hover:underline" onClick={() => open && focusItem(i.id)}>
                             {i.productName}
                           </button>
-                          <span className="text-muted-foreground block text-xs">{[i.partNumber, i.sku, i.locationCode].filter(Boolean).join(" · ")}</span>
+                          <span className="text-muted-foreground block text-xs">{[i.sku, i.locationCode].filter(Boolean).join(" · ")}</span>
                         </TableCell>
                         <TableCell className="text-right tabular-nums">{formatQty(i.expectedQty ?? 0, i.unitDecimals)}</TableCell>
                         <TableCell className="text-right tabular-nums">{formatQty(i.countedQty ?? 0, i.unitDecimals)}</TableCell>

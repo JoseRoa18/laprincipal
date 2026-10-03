@@ -30,7 +30,6 @@ export interface ProductListRow {
   id: string;
   sku: string;
   name: string;
-  partNumber: string | null;
   categoryName: string | null;
   categoryPath: string | null;
   brandName: string | null;
@@ -124,7 +123,6 @@ function listSubquery(dbx: DbOrTx, warehouseId: string, conds: SQL[]) {
       id: products.id,
       sku: products.sku,
       name: products.name,
-      partNumber: products.partNumber,
       description: products.description,
       warrantyDays: products.warrantyDays,
       locationCode: products.locationCode,
@@ -204,7 +202,6 @@ export async function listProducts(
       id: r.id,
       sku: r.sku,
       name: r.name,
-      partNumber: r.partNumber,
       categoryName: r.categoryName,
       categoryPath: r.categoryName ? (r.parentCategoryName ? `${r.parentCategoryName} > ${r.categoryName}` : r.categoryName) : null,
       brandName: r.brandName,
@@ -268,7 +265,6 @@ export async function listProductsForExport(filter: ProductListFilter, opts: { w
     id: r.id,
     sku: r.sku,
     name: r.name,
-    partNumber: r.partNumber,
     description: r.description,
     warrantyDays: r.warrantyDays,
     categoryName: r.categoryName,

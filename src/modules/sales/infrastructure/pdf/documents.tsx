@@ -5,6 +5,7 @@ import type { CompanySettings, PrintingSettings } from "@/modules/settings/infra
 import { formatDateOnly } from "../../application/labels";
 import type { QuoteDetail } from "../quotes-queries";
 import type { SaleDetail } from "../sales-queries";
+import { isInternalCode } from "@/modules/catalog/domain/sku";
 
 /**
  * A4 documents rendered on the server with @react-pdf/renderer. Plain
@@ -56,7 +57,7 @@ function Header({ company, title, number }: { company: CompanySettings; title: s
 function LinesTable({
   items,
 }: {
-  items: { id: string; description: string; partNumber: string | null; quantity: string; unitDecimals: number; unitSymbol: string; unitPriceUsd: string; discountUsd?: string; lineTotalUsd: string }[];
+  items: { id: string; description: string; sku: string; quantity: string; unitDecimals: number; unitSymbol: string; unitPriceUsd: string; discountUsd?: string; lineTotalUsd: string }[];
 }) {
   return (
     <View style={styles.table}>
@@ -74,7 +75,7 @@ function LinesTable({
           </Text>
           <View style={styles.cDesc}>
             <Text>{item.description}</Text>
-            {item.partNumber ? <Text style={styles.muted}>N.º de parte {item.partNumber}</Text> : null}
+            {isInternalCode(item.sku) ? null : <Text style={styles.muted}>N.º de parte {item.sku}</Text>}
           </View>
           <Text style={styles.cPrice}>{formatMoney(item.unitPriceUsd, "USD")}</Text>
           <Text style={styles.cDisc}>{item.discountUsd && D(item.discountUsd).gt(0) ? `-${formatMoney(item.discountUsd, "USD")}` : ""}</Text>

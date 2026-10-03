@@ -16,7 +16,7 @@ export default async function LabelsPage({ searchParams }: { searchParams: Promi
   if (add.length > 0) {
     const location = await getDefaultLocation();
     const rows = await getProductsForSale(add, { warehouseId: location.warehouseId });
-    initial = rows.map((r) => ({ id: r.id, sku: r.sku, name: r.name, partNumber: r.partNumber, thumbUrl: r.thumbUrl }));
+    initial = rows.map((r) => ({ id: r.id, sku: r.sku, name: r.name, thumbUrl: r.thumbUrl }));
   }
   return (
     <div className="space-y-4">

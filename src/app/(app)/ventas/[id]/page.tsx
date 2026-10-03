@@ -82,7 +82,7 @@ export default async function SaleDetailPage({ params }: { params: Promise<{ id:
                         {item.description}
                       </Link>
                       <p className="text-muted-foreground text-xs">
-                        {[item.partNumber, item.sku].filter(Boolean).join(" · ")}
+                        {[item.sku].filter(Boolean).join(" · ")}
                         {D(item.returnedQty).gt(0) ? ` · devuelto ${formatQty(item.returnedQty, item.unitDecimals)}` : ""}
                       </p>
                     </TableCell>

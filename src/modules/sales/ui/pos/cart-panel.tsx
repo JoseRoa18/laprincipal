@@ -89,7 +89,8 @@ export function CartPanel({ config, totals, onCustomerChange, onCheckout, onHold
                       <span className="block truncate font-medium leading-tight">{line.name}</span>
                       <span className="text-muted-foreground block truncate text-xs">
                         {formatMoney(line.unitPriceUsd, "USD")} × {formatQty(line.quantity, line.unitDecimals)} {line.unitSymbol}
-                        {line.partNumber ? ` · ${line.partNumber}` : ""}
+                        {" · "}
+                        {line.sku}
                       </span>
                       {hasDiscount && computed ? (
                         <span className="text-emerald-700 block text-xs dark:text-emerald-400">

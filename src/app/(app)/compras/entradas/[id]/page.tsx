@@ -70,7 +70,6 @@ export default async function ReceiptDetailPage({ params }: { params: Promise<{ 
               productId: it.productId,
               name: it.productName,
               sku: it.sku,
-              partNumber: it.partNumber,
               unitSymbol: it.unitSymbol,
               unitDecimals: it.unitDecimals,
               currentStock: "0",
@@ -134,7 +133,7 @@ export default async function ReceiptDetailPage({ params }: { params: Promise<{ 
                 <Link href={`/productos/${it.productId}`} className="font-medium hover:underline">
                   {it.productName}
                 </Link>
-                <span className="text-muted-foreground block text-xs">{[it.partNumber, it.sku].filter(Boolean).join(" · ")}</span>
+                <span className="text-muted-foreground block text-xs">{[it.sku].filter(Boolean).join(" · ")}</span>
               </TableCell>
               <TableCell className="text-right tabular-nums">
                 {formatQty(it.quantity, it.unitDecimals)} {it.unitSymbol}

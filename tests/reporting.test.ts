@@ -64,7 +64,7 @@ describe.skipIf(skip)("reporting: product stats, dashboard and reports", () => {
     const [register] = await db.insert(s.cashRegisters).values({ branchId: branch.id, name: uid("Caja"), isActive: false }).returning();
     const [productA] = await db
       .insert(s.products)
-      .values({ sku: uid("SKU"), name: "Compresor prueba A", partNumber: "PN-A", unitId: unit.id, taxId: tax.id, costAvgUsd: "4.0000", categoryId: category.id })
+      .values({ sku: uid("SKU"), name: "Compresor prueba A", unitId: unit.id, taxId: tax.id, costAvgUsd: "4.0000", categoryId: category.id })
       .returning();
     const [productB] = await db
       .insert(s.products)

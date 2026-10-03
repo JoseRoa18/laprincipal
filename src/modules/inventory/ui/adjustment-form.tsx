@@ -25,7 +25,6 @@ export interface AdjustmentLineState {
   productId: string;
   name: string;
   sku: string;
-  partNumber: string | null;
   unitSymbol: string;
   unitDecimals: number;
   currentStock: string;
@@ -82,7 +81,6 @@ export function AdjustmentForm({ reasons, initial, showCosts }: { reasons: Reaso
         productId: p.id,
         name: p.name,
         sku: p.sku,
-        partNumber: p.partNumber,
         unitSymbol: p.unitSymbol,
         unitDecimals: p.unitDecimals,
         currentStock: p.stockPhysical,
@@ -198,7 +196,7 @@ export function AdjustmentForm({ reasons, initial, showCosts }: { reasons: Reaso
                     <div className="min-w-0">
                       <p className="truncate font-medium">{line.name}</p>
                       <p className="text-muted-foreground truncate text-xs">
-                        {[line.partNumber, line.sku].filter(Boolean).join(" · ")} · Existencia actual {formatQty(line.currentStock, line.unitDecimals)} {line.unitSymbol}
+                        {[line.sku].filter(Boolean).join(" · ")} · Existencia actual {formatQty(line.currentStock, line.unitDecimals)} {line.unitSymbol}
                       </p>
                     </div>
                     <Button type="button" variant="ghost" size="icon-sm" aria-label="Quitar producto" onClick={() => setLines((prev) => prev.filter((l) => l.key !== line.key))}>

@@ -148,7 +148,7 @@ export default async function VelocityReportPage({ searchParams }: { searchParam
                             {r.name}
                           </Link>
                           <div className="text-muted-foreground text-xs">
-                            {r.partNumber ?? r.sku} · {r.category}
+                            {r.sku} · {r.category}
                           </div>
                         </TableCell>
                         <TableCell className="text-right tabular-nums">{formatQty(r.available, r.unitDecimals)}</TableCell>

@@ -32,7 +32,6 @@ export default async function PricingPage({ searchParams }: { searchParams: Prom
     id: r.id,
     name: r.name,
     sku: r.sku,
-    partNumber: r.partNumber,
     brandName: r.brandName,
     costUsd: r.costAvgUsd,
     // Suggested public price: cost plus the default margin of Configuración → Políticas.

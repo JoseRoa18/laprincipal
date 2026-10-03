@@ -36,7 +36,7 @@ export interface AdjustmentMovementRow {
   type: MovementType;
   productId: string;
   productName: string;
-  partNumber: string | null;
+  sku: string;
   unitSymbol: string;
   unitDecimals: number;
   /** Signed quantity. */
@@ -109,11 +109,11 @@ export async function getAdjustmentsReport(range: DateRange, opts: ScopeOptions 
         .orderBy(asc(netOrder)),
     () =>
       dbx
-        .select({ id: inventoryMovements.productId, name: products.name, detail: products.partNumber, ...groupColumns })
+        .select({ id: inventoryMovements.productId, name: products.name, detail: products.sku, ...groupColumns })
         .from(inventoryMovements)
         .innerJoin(products, eq(products.id, inventoryMovements.productId))
         .where(inRange)
-        .groupBy(inventoryMovements.productId, products.name, products.partNumber)
+        .groupBy(inventoryMovements.productId, products.name, products.sku)
         .orderBy(asc(netOrder), asc(products.name)),
     () =>
       dbx
@@ -123,7 +123,7 @@ export async function getAdjustmentsReport(range: DateRange, opts: ScopeOptions 
           type: inventoryMovements.type,
           productId: inventoryMovements.productId,
           productName: products.name,
-          partNumber: products.partNumber,
+          sku: products.sku,
           unitSymbol: units.symbol,
           unitDecimals: units.decimals,
           quantity: inventoryMovements.quantity,
@@ -174,7 +174,7 @@ export async function getAdjustmentsReport(range: DateRange, opts: ScopeOptions 
       type: m.type,
       productId: m.productId,
       productName: m.productName,
-      partNumber: m.partNumber,
+      sku: m.sku,
       unitSymbol: m.unitSymbol,
       unitDecimals: m.unitDecimals,
       quantity: m.quantity,

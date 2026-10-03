@@ -47,7 +47,7 @@ export function BarcodeManager({ productId, barcodes, canEdit }: { productId: st
         toast.error(res.error.message);
         return;
       }
-      toast.success(`Código interno ${res.data.code} generado`);
+      toast.success(`Código de barras ${res.data.code} generado`);
       router.refresh();
     });
   }
@@ -135,7 +135,7 @@ export function BarcodeManager({ productId, barcodes, canEdit }: { productId: st
           </form>
           {!hasInternal ? (
             <Button type="button" variant="outline" size="lg" className="h-11 md:h-10" disabled={pending} onClick={generate}>
-              <Wand2 /> Generar código interno
+              <Wand2 /> Generar código de barras
             </Button>
           ) : null}
         </div>

@@ -318,7 +318,6 @@ interface SeedProduct {
   id: string;
   sku: string;
   name: string;
-  partNumber: string | null;
   unitSymbol: string;
   unitDecimals: number;
   taxRate: string;
@@ -356,7 +355,6 @@ function seedCart(storageKey: string, product: SeedProduct | undefined) {
       productId: product.id,
       sku: product.sku,
       name: product.name,
-      partNumber: product.partNumber,
       unitSymbol: product.unitSymbol,
       unitDecimals: product.unitDecimals,
       taxRate: product.taxRate,
@@ -422,7 +420,7 @@ async function loadIds(): Promise<Ids> {
       );
       const row = r.rows[0];
       if (row) {
-        ids.cartProduct = { id: row.id, sku: row.sku, name: row.name, partNumber: row.part_number, unitSymbol: row.symbol, unitDecimals: row.decimals, taxRate: row.rate, priceUsd: row.price ?? "12.5" };
+        ids.cartProduct = { id: row.id, sku: row.sku, name: row.name, unitSymbol: row.symbol, unitDecimals: row.decimals, taxRate: row.rate, priceUsd: row.price ?? "12.5" };
       }
     } catch {
       /* the POS scenarios fall back to the search box */

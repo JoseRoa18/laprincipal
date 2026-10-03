@@ -64,7 +64,6 @@ function productInput(base: Base, overrides: Partial<ProductInput> = {}): Produc
   return {
     name: `Compresor prueba ${uid("p")}`,
     sku: null,
-    partNumber: uid("EMB").toUpperCase(),
     description: null,
     categoryId: base.categoryId,
     brandId: null,
@@ -152,7 +151,7 @@ describe.skipIf(SKIP)("catalog integration", () => {
     expect(D(product.costAvgUsd).toFixed(2)).toBe("10.00");
     expect(D(product.costLastUsd).toFixed(2)).toBe("10.00");
     expect(product.brandId).not.toBeNull();
-    expect(product.searchText).toContain(input.partNumber!.toLowerCase());
+    expect(product.searchText).toContain(result.sku.toLowerCase());
     expect(product.searchText).toContain(input.equivalences[0].code.toLowerCase());
     expect(product.searchText).toContain("nevera mabe");
 
@@ -161,9 +160,9 @@ describe.skipIf(SKIP)("catalog integration", () => {
     expect(D(settings.maxStock).toFixed(0)).toBe("10");
     expect(D(settings.reorderPoint).toFixed(0)).toBe("1");
 
-    // searchProducts finds it by part number, equivalence code and barcode.
+    // searchProducts finds it by code, equivalence code and barcode.
     const opts = { warehouseId: base.warehouseId, dbx: db };
-    const byPart = await searchProducts(input.partNumber!, opts);
+    const byPart = await searchProducts(result.sku, opts);
     expect(byPart.map((p) => p.id)).toContain(result.id);
     const byEquivalence = await searchProducts(input.equivalences[0].code, opts);
     expect(byEquivalence.map((p) => p.id)).toContain(result.id);
@@ -256,6 +255,29 @@ describe.skipIf(SKIP)("catalog integration", () => {
     expect(r2).toMatchObject({ deleted: true, deactivated: false });
     const [p2] = await db.select().from(s.products).where(eq(s.products.id, noStock.id));
     expect(p2.deletedAt).not.toBeNull();
+  });
+
+  it("uses the part number as the product code: unique, kept on an empty edit, freed on delete", async () => {
+    const code = uid("WR57X").toUpperCase();
+    const input = productInput(base, { sku: code });
+    const first = await createProduct(input, { id: base.userId });
+    created.push(first.id);
+    expect(first.sku).toBe(code);
+    await expect(createProduct(productInput(base, { sku: code }), { id: base.userId })).rejects.toMatchObject({
+      code: "CONFLICT",
+      message: expect.stringContaining(input.name),
+    });
+
+    // Leaving the field empty on edit keeps the code.
+    await updateProduct(first.id, { ...input, sku: null }, { id: base.userId });
+    const [kept] = await db.select().from(s.products).where(eq(s.products.id, first.id));
+    expect(kept.sku).toBe(code);
+
+    // Deleted (no movements): the part number can be used again.
+    await deleteProduct(first.id, { id: base.userId });
+    const again = await createProduct(productInput(base, { sku: code }), { id: base.userId });
+    created.push(again.id);
+    expect(again.sku).toBe(code);
   });
 
   it("imports an Excel file and undoes it with compensating movements", async () => {

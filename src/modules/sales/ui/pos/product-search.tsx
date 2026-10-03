@@ -260,7 +260,7 @@ export function ProductSearch({ priceListId, rateVes, onAdd, handle }: Props) {
                     <span className="min-w-0 flex-1">
                       <span className="block truncate font-medium">{p.name}</span>
                       <span className="text-muted-foreground block truncate text-xs">
-                        {[p.partNumber, p.sku, p.locationCode].filter(Boolean).join(" · ")}
+                        {[p.sku, p.locationCode].filter(Boolean).join(" · ")}
                       </span>
                       <span className={cn("block text-xs", out ? "text-destructive font-medium" : "text-muted-foreground")}>
                         {out ? "Agotado" : `Disponible: ${formatQty(stock, p.unitDecimals)} ${p.unitSymbol}`}

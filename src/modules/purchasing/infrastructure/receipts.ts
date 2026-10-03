@@ -61,7 +61,6 @@ export interface ReceiptItemRow {
   productId: string;
   productName: string;
   sku: string;
-  partNumber: string | null;
   unitSymbol: string;
   unitDecimals: number;
   quantity: string;
@@ -136,7 +135,6 @@ export async function getReceipt(id: string, dbx: DbOrTx = db): Promise<ReceiptD
       productId: purchaseReceiptItems.productId,
       productName: products.name,
       sku: products.sku,
-      partNumber: products.partNumber,
       unitSymbol: units.symbol,
       unitDecimals: units.decimals,
       quantity: purchaseReceiptItems.quantity,

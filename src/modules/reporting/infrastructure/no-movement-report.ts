@@ -9,7 +9,6 @@ export interface NoMovementRow {
   productId: string;
   sku: string;
   name: string;
-  partNumber: string | null;
   category: string;
   unitDecimals: number;
   quantity: string;
@@ -72,7 +71,6 @@ export async function getNoMovementReport(opts: NoMovementOptions): Promise<NoMo
       productId: products.id,
       sku: products.sku,
       name: products.name,
-      partNumber: products.partNumber,
       category: categoryLabel,
       unitDecimals: units.decimals,
       quantity: stockLevels.quantity,
@@ -112,7 +110,6 @@ export async function getNoMovementReport(opts: NoMovementOptions): Promise<NoMo
         productId: r.productId,
         sku: r.sku,
         name: r.name,
-        partNumber: r.partNumber,
         category: r.category,
         unitDecimals: r.unitDecimals,
         quantity: r.quantity,

@@ -55,7 +55,6 @@ export interface SupplierProductRow {
   productId: string;
   productName: string;
   sku: string;
-  partNumber: string | null;
   unitSymbol: string;
   unitDecimals: number;
   supplierCode: string | null;
@@ -76,7 +75,6 @@ export async function listSupplierProducts(supplierId: string, dbx: DbOrTx = db)
       productId: products.id,
       productName: products.name,
       sku: products.sku,
-      partNumber: products.partNumber,
       unitSymbol: units.symbol,
       unitDecimals: units.decimals,
       supplierCode: productSuppliers.supplierCode,

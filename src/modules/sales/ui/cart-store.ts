@@ -64,7 +64,6 @@ function lineFromProduct(p: PosProduct, quantity: string): CartLineData {
     productId: p.id,
     sku: p.sku,
     name: p.name,
-    partNumber: p.partNumber,
     unitSymbol: p.unitSymbol,
     unitDecimals: p.unitDecimals,
     taxRate: p.taxRate,

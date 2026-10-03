@@ -20,7 +20,7 @@ export interface SalesReport {
   totals: SalesTotals;
   previousTotals: SalesTotals;
   byDay: Array<{ day: string; total: string; count: number }>;
-  byProduct: Array<{ productId: string; sku: string; name: string; partNumber: string | null; units: string; revenue: string; share: number }>;
+  byProduct: Array<{ productId: string; sku: string; name: string; units: string; revenue: string; share: number }>;
   byCategory: Array<{ categoryId: string | null; name: string; units: string; revenue: string; share: number }>;
   bySeller: Array<{ sellerId: string; name: string; count: number; total: string; share: number }>;
   byMethod: Array<{ methodId: string; name: string; currencyCode: string; amount: string; amountUsd: string; count: number; share: number }>;
@@ -83,7 +83,6 @@ export async function getSalesReport(range: DateRange, opts: ScopeOptions = {}):
           productId: saleItems.productId,
           sku: products.sku,
           name: products.name,
-          partNumber: products.partNumber,
           units: sumOf(netQty),
           revenue: sumOf(netLineTotal),
         })
@@ -91,7 +90,7 @@ export async function getSalesReport(range: DateRange, opts: ScopeOptions = {}):
         .innerJoin(sales, eq(sales.id, saleItems.saleId))
         .innerJoin(products, eq(products.id, saleItems.productId))
         .where(inRange)
-        .groupBy(saleItems.productId, products.sku, products.name, products.partNumber)
+        .groupBy(saleItems.productId, products.sku, products.name)
         .orderBy(desc(sumOf(netLineTotal)), asc(products.name)),
       dbx
         .select({ categoryId: products.categoryId, name: categoryLabel, units: sumOf(netQty), revenue: sumOf(netLineTotal) })

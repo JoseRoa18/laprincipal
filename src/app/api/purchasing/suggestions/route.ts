@@ -17,7 +17,6 @@ const bodySchema = z.object({
 
 interface OrderLine {
   sku: string;
-  partNumber: string | null;
   name: string;
   supplierCode: string | null;
   unit: string;
@@ -33,18 +32,18 @@ async function buildWorkbook(supplierName: string, currency: string | null, line
   ws.addRow([`Pedido a ${supplierName}`]).font = { bold: true, size: 14 };
   ws.addRow([`Fecha: ${businessDate()}${currency ? ` · Moneda del proveedor: ${currency}` : ""}`]);
   ws.addRow([]);
-  const header = ws.addRow(["SKU", "Número de parte", "Producto", "Código proveedor", "Unidad", "Existencia", "Cantidad a pedir", "Costo est. USD", "Total est. USD"]);
+  const header = ws.addRow(["N.º de parte", "Producto", "Código proveedor", "Unidad", "Existencia", "Cantidad a pedir", "Costo est. USD", "Total est. USD"]);
   header.font = { bold: true };
   header.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFEEEEEE" } };
   let total = D(0);
   for (const l of lines) {
     const lineTotal = D(l.quantity).mul(D(l.unitCostUsd));
     total = total.plus(lineTotal);
-    ws.addRow([l.sku, l.partNumber ?? "", l.name, l.supplierCode ?? "", l.unit, Number(l.stock), Number(l.quantity), Number(l.unitCostUsd), lineTotal.toNumber()]);
+    ws.addRow([l.sku, l.name, l.supplierCode ?? "", l.unit, Number(l.stock), Number(l.quantity), Number(l.unitCostUsd), lineTotal.toNumber()]);
   }
-  const totalRow = ws.addRow(["", "", "", "", "", "", "", "Total", total.toNumber()]);
+  const totalRow = ws.addRow(["", "", "", "", "", "", "Total", total.toNumber()]);
   totalRow.font = { bold: true };
-  ws.columns = [{ width: 14 }, { width: 18 }, { width: 44 }, { width: 16 }, { width: 8 }, { width: 12 }, { width: 16 }, { width: 14 }, { width: 14 }];
+  ws.columns = [{ width: 18 }, { width: 44 }, { width: 16 }, { width: 8 }, { width: 12 }, { width: 16 }, { width: 14 }, { width: 14 }];
   ws.getColumn(8).numFmt = "#,##0.00";
   ws.getColumn(9).numFmt = "#,##0.00";
   return toBytes(await wb.xlsx.writeBuffer());
@@ -91,7 +90,6 @@ export async function POST(req: NextRequest) {
     .select({
       id: products.id,
       sku: products.sku,
-      partNumber: products.partNumber,
       name: products.name,
       unit: units.symbol,
       stock: stockLevels.quantity,
@@ -126,7 +124,6 @@ export async function POST(req: NextRequest) {
       const cost = link?.lastCostUsd && D(link.lastCostUsd).gt(0) ? link.lastCostUsd : p.costAvgUsd;
       return {
         sku: p.sku,
-        partNumber: p.partNumber,
         name: p.name,
         supplierCode: link?.supplierCode ?? null,
         unit: p.unit,
@@ -155,7 +152,7 @@ export async function GET(req: NextRequest) {
     const bytes = await buildWorkbook(
       g.supplierName,
       g.currencyCode,
-      g.items.map((i) => ({ sku: i.sku, partNumber: i.partNumber, name: i.name, supplierCode: i.supplierCode, unit: i.unitSymbol, stock: i.stock, quantity: i.suggestedQty, unitCostUsd: i.unitCostUsd })),
+      g.items.map((i) => ({ sku: i.sku, name: i.name, supplierCode: i.supplierCode, unit: i.unitSymbol, stock: i.stock, quantity: i.suggestedQty, unitCostUsd: i.unitCostUsd })),
     );
     return xlsxResponse(bytes, `pedido-${slug(g.supplierName) || "proveedor"}-${businessDate()}.xlsx`);
   }
@@ -163,12 +160,12 @@ export async function GET(req: NextRequest) {
   const wb = new ExcelJS.Workbook();
   for (const g of selected) {
     const ws = wb.addWorksheet(g.supplierName.slice(0, 28) || "Proveedor");
-    const header = ws.addRow(["SKU", "Número de parte", "Producto", "Código proveedor", "Unidad", "Existencia", "Cantidad sugerida", "Costo est. USD", "Total est. USD"]);
+    const header = ws.addRow(["N.º de parte", "Producto", "Código proveedor", "Unidad", "Existencia", "Cantidad sugerida", "Costo est. USD", "Total est. USD"]);
     header.font = { bold: true };
     for (const i of g.items) {
-      ws.addRow([i.sku, i.partNumber ?? "", i.name, i.supplierCode ?? "", i.unitSymbol, Number(i.stock), Number(i.suggestedQty), Number(i.unitCostUsd), D(i.suggestedQty).mul(D(i.unitCostUsd)).toNumber()]);
+      ws.addRow([i.sku, i.name, i.supplierCode ?? "", i.unitSymbol, Number(i.stock), Number(i.suggestedQty), Number(i.unitCostUsd), D(i.suggestedQty).mul(D(i.unitCostUsd)).toNumber()]);
     }
-    ws.columns = [{ width: 14 }, { width: 18 }, { width: 44 }, { width: 16 }, { width: 8 }, { width: 12 }, { width: 16 }, { width: 14 }, { width: 14 }];
+    ws.columns = [{ width: 18 }, { width: 44 }, { width: 16 }, { width: 8 }, { width: 12 }, { width: 16 }, { width: 14 }, { width: 14 }];
   }
   return xlsxResponse(toBytes(await wb.xlsx.writeBuffer()), `que-comprar-${businessDate()}.xlsx`);
 }

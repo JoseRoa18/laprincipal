@@ -151,7 +151,6 @@ export interface CartLineData {
   productId: string;
   sku: string;
   name: string;
-  partNumber: string | null;
   unitSymbol: string;
   unitDecimals: number;
   taxRate: string;

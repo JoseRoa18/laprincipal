@@ -83,7 +83,6 @@ async function productRows(dbx: Db) {
         id: products.id,
         sku: products.sku,
         name: products.name,
-        partNumber: products.partNumber,
         category: categories.name,
         brand: brands.name,
         unit: units.name,
@@ -117,7 +116,6 @@ async function productRows(dbx: Db) {
   return items.map((p) => ({
     sku: p.sku,
     name: p.name,
-    partNumber: p.partNumber,
     category: p.category,
     brand: p.brand,
     unit: p.unit,
@@ -132,9 +130,8 @@ async function productRows(dbx: Db) {
 }
 
 const PRODUCT_COLUMNS: Column[] = [
-  { header: "SKU", key: "sku", width: 14 },
   { header: "Nombre", key: "name", width: 40 },
-  { header: "Número de parte", key: "partNumber", width: 20 },
+  { header: "Número de parte", key: "sku", width: 20 },
   { header: "Categoría", key: "category", width: 22 },
   { header: "Marca", key: "brand", width: 16 },
   { header: "Unidad", key: "unit", width: 12 },

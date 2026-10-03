@@ -40,7 +40,7 @@ async function buildLookups(dbx: DbOrTx): Promise<ImportLookups> {
     () => getProductFormOptions(dbx),
     () => listCategoryOptions(dbx, { includeInactive: false }),
     () => listBrands(dbx, { includeInactive: true }),
-    () => dbx.select({ sku: products.sku, name: products.name, partNumber: products.partNumber, deletedAt: products.deletedAt }).from(products),
+    () => dbx.select({ sku: products.sku, name: products.name, deletedAt: products.deletedAt }).from(products),
     () => dbx.select({ code: productBarcodes.code }).from(productBarcodes),
   ]);
   const live = skus.filter((p) => !p.deletedAt);
@@ -50,7 +50,7 @@ async function buildLookups(dbx: DbOrTx): Promise<ImportLookups> {
     brands: brands.map((b) => ({ id: b.id, name: b.name })),
     existingSkus: new Set(skus.map((s) => s.sku.toUpperCase())),
     existingBarcodes: new Set(codes.map((c) => c.code)),
-    existingPartNumbers: new Map(live.filter((p) => p.partNumber && compactCode(p.partNumber)).map((p) => [compactCode(p.partNumber!), p.sku])),
+    existingCodes: new Map(live.filter((p) => compactCode(p.sku)).map((p) => [compactCode(p.sku), p.sku])),
     existingNames: new Map(live.map((p) => [normalizeSearch(p.name), p.sku])),
     defaultUnitId: options.defaultUnitId,
     defaultTaxId: options.defaultTaxId,

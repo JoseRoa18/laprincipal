@@ -19,7 +19,6 @@ export interface VelocityRow {
   productId: string;
   sku: string;
   name: string;
-  partNumber: string | null;
   category: string;
   unitDecimals: number;
   available: string;
@@ -77,7 +76,6 @@ export async function getVelocityReport(filters: VelocityFilters = {}): Promise<
         productId: products.id,
         sku: products.sku,
         name: products.name,
-        partNumber: products.partNumber,
         category: categoryLabel,
         unitDecimals: units.decimals,
         available: availableExpr,

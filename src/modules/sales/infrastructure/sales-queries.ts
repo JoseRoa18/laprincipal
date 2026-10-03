@@ -152,7 +152,6 @@ export interface SaleDetailItem {
   id: string;
   productId: string;
   sku: string;
-  partNumber: string | null;
   description: string;
   quantity: string;
   unitPriceUsd: string;
@@ -222,7 +221,6 @@ export async function getSaleDetail(id: string, dbx: DbOrTx = db): Promise<SaleD
       id: saleItems.id,
       productId: saleItems.productId,
       sku: products.sku,
-      partNumber: products.partNumber,
       description: saleItems.description,
       quantity: saleItems.quantity,
       unitPriceUsd: saleItems.unitPriceUsd,
@@ -396,7 +394,6 @@ export async function toCartLines(
       productId: p.id,
       sku: p.sku,
       name: p.name,
-      partNumber: p.partNumber,
       unitSymbol: p.unitSymbol,
       unitDecimals: p.unitDecimals,
       taxRate: p.taxRate,

@@ -2,7 +2,7 @@ import { z } from "zod";
 import { parseLocalizedNumber } from "@/lib/format";
 import { D } from "@/lib/money";
 import { isValidBarcodeText, normalizeBarcode } from "./barcodes";
-import { isValidSku, normalizeSku } from "./sku";
+import { INVALID_CODE_MESSAGE, isValidSku, normalizeSku } from "./sku";
 
 /** Option value used by the brand select to reveal the "new brand" input. */
 export const NEW_BRAND_OPTION = "__new__";
@@ -47,12 +47,12 @@ export const compatibilitySchema = z
 export const productFormSchema = z
   .object({
     name: z.string().trim().min(2, "Escribe el nombre del producto").max(200, "Máximo 200 caracteres"),
+    /** Part number; empty = internal LP-000001 (create) or keep the current code (edit). */
     sku: z
       .string()
       .trim()
       .max(40, "Máximo 40 caracteres")
-      .refine((v) => v === "" || isValidSku(normalizeSku(v) ?? ""), "Solo letras, números, punto, guion y guion bajo"),
-    partNumber: z.string().trim().max(80, "Máximo 80 caracteres"),
+      .refine((v) => v === "" || isValidSku(normalizeSku(v) ?? ""), INVALID_CODE_MESSAGE),
     description: z.string().trim().max(2000, "Máximo 2000 caracteres"),
     categoryId: z.string(),
     brandId: z.string(),
@@ -110,7 +110,6 @@ export function emptyProductForm(defaults: { unitId: string; taxId: string }): P
   return {
     name: "",
     sku: "",
-    partNumber: "",
     description: "",
     categoryId: "",
     brandId: "",
@@ -136,9 +135,8 @@ export function emptyProductForm(defaults: { unitId: string; taxId: string }): P
 /** Normalized, typed input consumed by the application layer (create/update/import). */
 export interface ProductInput {
   name: string;
-  /** Custom SKU or null to auto-generate. */
+  /** Part number, or null to assign an internal LP-000001 (create) / keep the current code (edit). */
   sku: string | null;
-  partNumber: string | null;
   description: string | null;
   categoryId: string | null;
   brandId: string | null;
@@ -172,7 +170,6 @@ export function toProductInput(values: ProductFormValues): ProductInput {
   return {
     name: values.name.trim(),
     sku: normalizeSku(values.sku),
-    partNumber: orNull(values.partNumber),
     description: orNull(values.description),
     categoryId: orNull(values.categoryId),
     brandId: wantsNewBrand ? null : orNull(values.brandId),

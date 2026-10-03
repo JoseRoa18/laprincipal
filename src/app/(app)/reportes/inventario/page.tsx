@@ -150,7 +150,7 @@ export default async function InventoryReportPage({ searchParams }: { searchPara
                         <Link href={`/productos/${r.productId}`} className="font-medium hover:underline">
                           {r.name}
                         </Link>
-                        <div className="text-muted-foreground text-xs">{r.partNumber ?? r.sku}</div>
+                        <div className="text-muted-foreground text-xs">{r.sku}</div>
                       </TableCell>
                       <TableCell className="hidden whitespace-normal md:table-cell">{r.category}</TableCell>
                       <TableCell className="text-right tabular-nums">{formatQty(r.quantity, r.unitDecimals)}</TableCell>

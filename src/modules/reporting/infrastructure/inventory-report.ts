@@ -9,7 +9,6 @@ export interface InventoryRow {
   productId: string;
   sku: string;
   name: string;
-  partNumber: string | null;
   category: string;
   unitDecimals: number;
   quantity: string;
@@ -55,7 +54,6 @@ export async function getInventoryValuation(opts: InventoryOptions = {}): Promis
       productId: products.id,
       sku: products.sku,
       name: products.name,
-      partNumber: products.partNumber,
       category: categoryLabel,
       unitDecimals: units.decimals,
       quantity: stockLevels.quantity,

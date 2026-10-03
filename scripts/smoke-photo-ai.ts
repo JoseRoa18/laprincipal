@@ -51,8 +51,7 @@ async function main() {
   const created = await createProduct(
     {
       name: `Foto de humo ${stamp}`,
-      sku: null,
-      partNumber: `SMKPH-${stamp}`.toUpperCase(),
+      sku: `SMKPH-${stamp}`.toUpperCase(),
       description: "Creado por scripts/smoke-photo-ai.ts",
       categoryId: options.categories[0]?.id ?? null,
       brandId: null,

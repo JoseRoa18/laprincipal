@@ -60,7 +60,7 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
                       <Link href={`/productos/${item.productId}`} className="font-medium hover:underline">
                         {item.description}
                       </Link>
-                      <p className="text-muted-foreground text-xs">{[item.partNumber, item.sku].filter(Boolean).join(" · ")}</p>
+                      <p className="text-muted-foreground text-xs">{[item.sku].filter(Boolean).join(" · ")}</p>
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
                       {formatQty(item.quantity, item.unitDecimals)} {item.unitSymbol}

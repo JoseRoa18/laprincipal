@@ -30,8 +30,7 @@ async function main() {
   const created = await createProduct(
     {
       name: `Producto de humo ${stamp}`,
-      sku: null,
-      partNumber: `SMOKE-${stamp}`.toUpperCase(),
+      sku: `SMOKE-${stamp}`.toUpperCase(),
       description: "Creado por scripts/smoke-catalog.ts",
       categoryId: options.categories[0]?.id ?? null,
       brandId: null,

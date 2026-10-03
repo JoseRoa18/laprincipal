@@ -1,6 +1,7 @@
 import { Document, Image, Page, StyleSheet, Text, View, renderToBuffer } from "@react-pdf/renderer";
 import { formatMoney } from "@/lib/format";
 import { LABEL_FORMATS, mmToPt, truncateLabel, type LabelFormat } from "../domain/labels";
+import { isInternalCode } from "../domain/sku";
 import { barcodePng } from "./barcode-image";
 import type { LabelData } from "./labels-data";
 
@@ -30,7 +31,7 @@ function LabelCell({ label, png, showPrice, width, height, left, top }: LabelCel
     <View style={[styles.cell, { width, height, left, top }]}>
       <Text style={styles.name}>{truncateLabel(label.name, 44)}</Text>
       <View style={styles.row}>
-        <Text style={styles.meta}>{label.partNumber ? `Ref. ${truncateLabel(label.partNumber, 18)}` : label.sku}</Text>
+        <Text style={styles.meta}>{isInternalCode(label.sku) ? label.sku : `Ref. ${truncateLabel(label.sku, 18)}`}</Text>
         {showPrice && label.priceUsd ? <Text style={styles.price}>{formatMoney(label.priceUsd, "USD")}</Text> : null}
       </View>
       {png ? (

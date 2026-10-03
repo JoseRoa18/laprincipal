@@ -100,7 +100,7 @@ erDiagram
 
 **taxes** — `id, name, rate` (0.16), `is_default, is_active`. IVA 16 % y Exento 0 %.
 
-**products** — `id, sku unique, part_number, name, description, category_id, brand_id, unit_id, tax_id, warranty_days, location_code, cost_avg_usd, cost_last_usd, attributes jsonb, is_active, deleted_at`. Índices: `sku`, `part_number`, trigram sobre `name` y `part_number` con `unaccent`.
+**products** — `id, sku unique, name, description, category_id, brand_id, unit_id, tax_id, warranty_days, location_code, cost_avg_usd, cost_last_usd, attributes jsonb, search_text, is_active, deleted_at`. `sku` es el código del producto: el número de parte del fabricante o, si no tiene, un código interno `LP-000001` (en pantalla: "N.º de parte" o "Código interno"). Al eliminar un producto sin movimientos su número de parte queda libre (`sku~xxxxxxxx`); los `LP-` nunca se reutilizan. Índices: `sku` único y trigram sobre `search_text`. La antigua columna `part_number` se unió a `sku` en la migración `0008` (los números de parte que no podían ser el código pasaron a equivalencias).
 
 **product_equivalences** — `id, product_id, code, brand, notes`. Otros códigos con los que se conoce el mismo repuesto. Única `(product_id, code)`; índice trigram sobre `code`.
 

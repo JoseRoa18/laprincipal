@@ -54,7 +54,6 @@ export interface MovementRow {
   productId: string;
   productName: string;
   productSku: string;
-  partNumber: string | null;
   unitSymbol: string;
   unitDecimals: number;
 }
@@ -103,7 +102,6 @@ export async function listMovements(
       productId: products.id,
       productName: products.name,
       productSku: products.sku,
-      partNumber: products.partNumber,
       unitSymbol: units.symbol,
       unitDecimals: units.decimals,
     })

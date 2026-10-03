@@ -73,7 +73,7 @@ export default async function SaleDonePage({
                 <TableRow key={item.id}>
                   <TableCell className="pl-4 whitespace-normal">
                     <div className="font-medium">{item.description}</div>
-                    <div className="text-muted-foreground text-xs">{[item.partNumber, item.sku].filter(Boolean).join(" · ")}</div>
+                    <div className="text-muted-foreground text-xs">{[item.sku].filter(Boolean).join(" · ")}</div>
                   </TableCell>
                   <TableCell className="text-right tabular-nums">
                     {formatQty(item.quantity, item.unitDecimals)} {item.unitSymbol}

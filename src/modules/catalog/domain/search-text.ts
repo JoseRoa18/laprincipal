@@ -33,8 +33,8 @@ export function compactCode(text: string): string {
 
 export interface SearchTextInput {
   name: string;
+  /** Product code: part number or internal LP-000001. */
   sku: string;
-  partNumber?: string | null;
   brandName?: string | null;
   categoryName?: string | null;
   equivalenceCodes?: Array<string | null | undefined>;
@@ -58,7 +58,6 @@ export function buildSearchText(input: SearchTextInput): string {
 
   push(input.name);
   pushCode(input.sku);
-  pushCode(input.partNumber);
   push(input.brandName);
   push(input.categoryName);
   for (const code of input.equivalenceCodes ?? []) pushCode(code);

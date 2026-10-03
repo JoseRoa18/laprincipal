@@ -47,7 +47,6 @@ export interface ProductDetail {
   id: string;
   sku: string;
   name: string;
-  partNumber: string | null;
   description: string | null;
   warrantyDays: number;
   locationCode: string | null;
@@ -195,7 +194,6 @@ export async function getProductDetail(id: string, warehouseId: string, dbx: DbO
     id: p.product.id,
     sku: p.product.sku,
     name: p.product.name,
-    partNumber: p.product.partNumber,
     description: p.product.description,
     warrantyDays: p.product.warrantyDays,
     locationCode: p.product.locationCode,
@@ -328,7 +326,6 @@ export async function getProductFormData(id: string, warehouseId: string, dbx: D
     values: {
       name: detail.name,
       sku: detail.sku,
-      partNumber: detail.partNumber ?? "",
       description: detail.description ?? "",
       categoryId: detail.category?.id ?? "",
       brandId: detail.brand?.id ?? "",

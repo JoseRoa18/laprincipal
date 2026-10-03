@@ -260,6 +260,6 @@ export async function searchProductsAction(q: string) {
     if (!term) return [];
     const location = await getDefaultLocation();
     const rows = await searchProducts(term, { warehouseId: location.warehouseId, limit: 15, includeInactive: true });
-    return rows.map((r) => ({ id: r.id, sku: r.sku, name: r.name, partNumber: r.partNumber, priceUsd: r.priceUsd, thumbUrl: r.thumbUrl, isActive: r.isActive }));
+    return rows.map((r) => ({ id: r.id, sku: r.sku, name: r.name, priceUsd: r.priceUsd, thumbUrl: r.thumbUrl, isActive: r.isActive }));
   });
 }

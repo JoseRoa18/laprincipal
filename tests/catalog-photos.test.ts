@@ -46,7 +46,6 @@ function productInput(base: Base): ProductInput {
   return {
     name: `Foto prueba ${uid("p")}`,
     sku: null,
-    partNumber: uid("PH").toUpperCase(),
     description: null,
     categoryId: null,
     brandId: null,

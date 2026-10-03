@@ -4,13 +4,13 @@ import { priceListItems, priceLists, productBarcodes, productImages, products, s
 import { getStorage } from "@/lib/storage";
 import { D } from "@/lib/money";
 import { normalizeSearch, searchPatterns } from "../domain/search-text";
+import { normalizeSku } from "../domain/sku";
 
 /** Product data needed by the POS, quotes and purchases. Shared contract. */
 export interface ProductForSale {
   id: string;
   sku: string;
   name: string;
-  partNumber: string | null;
   unitSymbol: string;
   unitDecimals: number;
   /** 0.16 for IVA 16 % */
@@ -54,7 +54,6 @@ async function hydrate(dbx: DbOrTx, ids: string[], opts: LookupOptions): Promise
       id: products.id,
       sku: products.sku,
       name: products.name,
-      partNumber: products.partNumber,
       locationCode: products.locationCode,
       costAvgUsd: products.costAvgUsd,
       isActive: products.isActive,
@@ -100,7 +99,6 @@ async function hydrate(dbx: DbOrTx, ids: string[], opts: LookupOptions): Promise
         id: r.id,
         sku: r.sku,
         name: r.name,
-        partNumber: r.partNumber,
         unitSymbol: r.unitSymbol,
         unitDecimals: r.unitDecimals,
         taxRate: r.taxRate,
@@ -117,7 +115,7 @@ async function hydrate(dbx: DbOrTx, ids: string[], opts: LookupOptions): Promise
     });
 }
 
-/** Exact barcode or SKU match first; otherwise trigram search on search_text. */
+/** Exact barcode or product code match first; otherwise word search on search_text. */
 export async function searchProducts(q: string, opts: LookupOptions & { limit?: number; includeInactive?: boolean }): Promise<ProductForSale[]> {
   const dbx = opts.dbx ?? db;
   const limit = opts.limit ?? 20;
@@ -130,7 +128,7 @@ export async function searchProducts(q: string, opts: LookupOptions & { limit?: 
     .select({ id: products.id })
     .from(products)
     .leftJoin(productBarcodes, eq(productBarcodes.productId, products.id))
-    .where(and(activeFilter, or(eq(productBarcodes.code, term), eq(products.sku, term.toUpperCase()))))
+    .where(and(activeFilter, or(eq(productBarcodes.code, term), eq(products.sku, normalizeSku(term) ?? term))))
     .limit(limit);
 
   let ids = [...new Set(exact.map((r) => r.id))];
@@ -165,12 +163,12 @@ export async function findProductByBarcode(code: string, opts: LookupOptions): P
   return p ?? null;
 }
 
-/** Exact barcode, then exact SKU or part number (scanner or typed code). */
+/** Exact barcode, then exact part number / internal code (scanner or typed code). */
 export async function findProductByCode(code: string, opts: LookupOptions): Promise<ProductForSale | null> {
   const term = code.trim();
   if (!term) return null;
   const byBarcode = await findProductByBarcode(term, opts);
   if (byBarcode) return byBarcode;
   const [first] = await searchProducts(term, { ...opts, limit: 1 });
-  return first && (first.sku === term.toUpperCase() || first.partNumber === term) ? first : null;
+  return first && first.sku === normalizeSku(term) ? first : null;
 }

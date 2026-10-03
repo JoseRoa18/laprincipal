@@ -15,7 +15,7 @@ import { cn } from "cn";
  */
 export function ProductPicker({
   onSelect,
-  placeholder = "Buscar por nombre, número de parte, código o SKU",
+  placeholder = "Buscar por nombre, número de parte o código de barras",
   autoFocus,
   showCost = false,
   className,
@@ -145,7 +145,7 @@ export function ProductPicker({
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-medium">{p.name}</span>
                     <span className="text-muted-foreground block truncate text-xs">
-                      {[p.partNumber, p.sku, p.locationCode].filter(Boolean).join(" · ")}
+                      {[p.sku, p.locationCode].filter(Boolean).join(" · ")}
                     </span>
                   </span>
                   <span className="shrink-0 text-right text-xs tabular-nums">

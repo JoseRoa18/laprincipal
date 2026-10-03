@@ -28,7 +28,6 @@ export interface ReceiptLineState {
   productId: string;
   name: string;
   sku: string;
-  partNumber: string | null;
   unitSymbol: string;
   unitDecimals: number;
   currentStock: string;
@@ -152,7 +151,6 @@ export function ReceiptForm({
         productId: p.id,
         name: p.name,
         sku: p.sku,
-        partNumber: p.partNumber,
         unitSymbol: p.unitSymbol,
         unitDecimals: p.unitDecimals,
         currentStock: p.stockPhysical,
@@ -288,7 +286,7 @@ export function ReceiptForm({
                     <div className="min-w-0">
                       <p className="truncate font-medium">{line.name}</p>
                       <p className="text-muted-foreground truncate text-xs">
-                        {[line.partNumber, line.sku].filter(Boolean).join(" · ")} · Existencia {formatQty(line.currentStock, line.unitDecimals)} {line.unitSymbol} · Costo prom. {formatMoney(line.costAvgUsd, "USD")}
+                        {[line.sku].filter(Boolean).join(" · ")} · Existencia {formatQty(line.currentStock, line.unitDecimals)} {line.unitSymbol} · Costo prom. {formatMoney(line.costAvgUsd, "USD")}
                       </p>
                     </div>
                     <Button type="button" variant="ghost" size="icon-sm" aria-label="Quitar producto" onClick={() => setLines((prev) => prev.filter((l) => l.key !== line.key))}>

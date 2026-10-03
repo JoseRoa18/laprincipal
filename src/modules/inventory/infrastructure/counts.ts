@@ -60,7 +60,6 @@ export interface CountItemRow {
   productId: string;
   productName: string;
   sku: string;
-  partNumber: string | null;
   locationCode: string | null;
   unitSymbol: string;
   unitDecimals: number;
@@ -160,7 +159,6 @@ async function selectCountItems(dbx: DbOrTx, where: SQL, expectedHidden: boolean
       productId: stockCountItems.productId,
       productName: products.name,
       sku: products.sku,
-      partNumber: products.partNumber,
       locationCode: products.locationCode,
       unitSymbol: units.symbol,
       unitDecimals: units.decimals,

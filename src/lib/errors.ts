@@ -41,7 +41,7 @@ export function toActionError(err: unknown): ActionResult<never> {
     return { ok: false, error: { code: err.code, message: err.message, details: err.details } };
   }
   if (isUniqueViolation(err)) {
-    return { ok: false, error: { code: "CONFLICT", message: "Ya existe un registro con esos datos (por ejemplo, un código o SKU repetido). Revisa y vuelve a intentar." } };
+    return { ok: false, error: { code: "CONFLICT", message: "Ya existe un registro con esos datos (por ejemplo, un número de parte o código repetido). Revisa y vuelve a intentar." } };
   }
   console.error(err);
   return {

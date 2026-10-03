@@ -237,7 +237,7 @@ function PreviewStep({ preview, pending, onApply, onBack }: { preview: ImportPre
             <TableRow>
               <TableHead className="w-14">Fila</TableHead>
               <TableHead>Nombre</TableHead>
-              <TableHead>SKU</TableHead>
+              <TableHead>N.º de parte</TableHead>
               <TableHead className="hidden md:table-cell">Categoría</TableHead>
               <TableHead className="hidden md:table-cell">Marca</TableHead>
               <TableHead className="text-right">Precio</TableHead>
@@ -250,7 +250,7 @@ function PreviewStep({ preview, pending, onApply, onBack }: { preview: ImportPre
               <TableRow key={r.rowNumber} className={r.errors.length > 0 ? "bg-destructive/5" : undefined}>
                 <TableCell className="tabular-nums">{r.rowNumber}</TableCell>
                 <TableCell className="max-w-64 truncate">{r.values.name || <span className="text-muted-foreground">—</span>}</TableCell>
-                <TableCell className="font-mono text-xs">{r.values.sku || <span className="text-muted-foreground">auto</span>}</TableCell>
+                <TableCell className="font-mono text-xs">{r.values.sku || <span className="text-muted-foreground">código interno</span>}</TableCell>
                 <TableCell className="hidden max-w-48 truncate md:table-cell">{r.values.category || "—"}</TableCell>
                 <TableCell className="hidden md:table-cell">{r.values.brand || "—"}</TableCell>
                 <TableCell className="text-right tabular-nums">{r.values.publicPrice || "—"}</TableCell>

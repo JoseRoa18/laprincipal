@@ -183,8 +183,17 @@ export function ProductForm({ mode, productId, initialValues, options, canViewCo
           <FormField label="Nombre" htmlFor="name" required error={err("name")} className="md:col-span-2">
             <Input id="name" autoFocus={mode === "create"} placeholder="Ej.: Compresor Embraco 1/3 HP R134a" className={controlClass} {...register("name")} />
           </FormField>
-          <FormField label="Número de parte" htmlFor="partNumber" error={err("partNumber")} hint="Código del fabricante, tal como viene en la pieza">
-            <Input id="partNumber" placeholder="Ej.: FFI12HBX" className={controlClass} {...register("partNumber")} />
+          <FormField
+            label="Número de parte"
+            htmlFor="sku"
+            error={err("sku")}
+            hint={
+              mode === "create"
+                ? "El del fabricante, tal como viene en la pieza. Si no tiene, déjalo vacío: se le asigna un código interno (LP-000001)."
+                : "Cambiarlo afecta etiquetas ya impresas"
+            }
+          >
+            <Input id="sku" placeholder={mode === "create" ? "Ej.: FFI12HBX" : undefined} autoCapitalize="characters" className={`${controlClass} uppercase placeholder:normal-case`} {...register("sku")} />
           </FormField>
           <FormField label="Categoría" htmlFor="categoryId" error={err("categoryId")}>
             <NativeSelect id="categoryId" className={selectWrapperClass} {...register("categoryId")}>
@@ -239,9 +248,6 @@ export function ProductForm({ mode, productId, initialValues, options, canViewCo
             <>
               <FormField label="Descripción" htmlFor="description" error={err("description")} className="md:col-span-2">
                 <Textarea id="description" rows={3} placeholder="Detalles útiles para el mostrador" {...register("description")} />
-              </FormField>
-              <FormField label="SKU (código interno)" htmlFor="sku" error={err("sku")} hint={mode === "create" ? "Déjalo vacío para generar LP-000001, LP-000002..." : "Cambiarlo afecta etiquetas ya impresas"}>
-                <Input id="sku" placeholder="Automático" className={`${controlClass} uppercase`} {...register("sku")} />
               </FormField>
               <FormField label="Garantía (días)" htmlFor="warrantyDays" error={err("warrantyDays")}>
                 <Input id="warrantyDays" inputMode="numeric" placeholder="0" className={controlClass} {...register("warrantyDays")} />
@@ -426,7 +432,7 @@ export function ProductForm({ mode, productId, initialValues, options, canViewCo
           </FormField>
           {mode === "create" ? (
             <>
-              <FormField label="Código de barras del fabricante" htmlFor="barcode" error={err("barcode")} hint="Escanea o escribe el código. Si no trae, se genera uno interno." className="md:col-span-2">
+              <FormField label="Código de barras del fabricante" htmlFor="barcode" error={err("barcode")} hint="Escanea o escribe el código. Si no trae, se genera uno propio." className="md:col-span-2">
                 <Input id="barcode" placeholder="Escanea aquí" autoComplete="off" className={controlClass} {...register("barcode")} />
               </FormField>
               <div className="flex items-center gap-3 self-end pb-2 md:col-span-2">
@@ -436,7 +442,7 @@ export function ProductForm({ mode, productId, initialValues, options, canViewCo
                   render={({ field }) => <Checkbox id="generateInternalBarcode" checked={field.value} onCheckedChange={(checked) => field.onChange(checked === true)} />}
                 />
                 <label htmlFor="generateInternalBarcode" className="text-sm">
-                  Generar código interno si el campo queda vacío
+                  Generar un código de barras propio si el campo queda vacío
                 </label>
               </div>
             </>

@@ -138,7 +138,7 @@ export function salesSheets(report: SalesReport): Sheet[] {
     {
       name: "Por producto",
       notes,
-      columns: [text("SKU", "sku", 14), text("Producto", "name", 40), text("N.º de parte", "partNumber", 18), qty("Unidades", "units"), money("Ingresos USD", "revenue"), pct("% del total", "share")],
+      columns: [text("N.º de parte", "sku", 18), text("Producto", "name", 40), qty("Unidades", "units"), money("Ingresos USD", "revenue"), pct("% del total", "share")],
       rows: report.byProduct,
     },
     {
@@ -196,9 +196,8 @@ export function inventorySheets(v: InventoryValuation, rates: RateSet): Sheet[] 
       name: "Por producto",
       notes,
       columns: [
-        text("SKU", "sku", 14),
+        text("N.º de parte", "sku", 18),
         text("Producto", "name", 40),
-        text("N.º de parte", "partNumber", 18),
         text("Categoría", "category", 24),
         qty("Existencia", "quantity"),
         money("Costo prom. USD", "costAvg"),
@@ -215,9 +214,8 @@ export function velocitySheets(rows: VelocityRow[], computedAt: Date | null): Sh
       name: "Velocidad y reposición",
       notes: ["Velocidad de venta, cobertura y sugerencia de compra", computedAt ? `Calculado el ${formatDateTime(computedAt)}` : "Sin cálculo todavía"],
       columns: [
-        text("SKU", "sku", 14),
+        text("N.º de parte", "sku", 18),
         text("Producto", "name", 40),
-        text("N.º de parte", "partNumber", 18),
         text("Categoría", "category", 24),
         qty("Disponible", "available"),
         { header: "Velocidad/día", key: "velocity", kind: "qty", width: 14 },
@@ -266,9 +264,8 @@ export function noMovementSheets(report: NoMovementReport): Sheet[] {
       name: "Sin movimiento",
       notes: [`Productos con existencia y sin ventas en ${report.days} días`, `Generado el ${formatDateTime(new Date())}`],
       columns: [
-        text("SKU", "sku", 14),
+        text("N.º de parte", "sku", 18),
         text("Producto", "name", 40),
-        text("N.º de parte", "partNumber", 18),
         text("Categoría", "category", 24),
         qty("Existencia", "quantity"),
         money("Costo prom. USD", "costAvg"),
@@ -315,7 +312,7 @@ export function adjustmentsSheets(report: AdjustmentsReport): Sheet[] {
       columns: [
         text("Fecha", "date", 16),
         text("Producto", "productName", 36),
-        text("N.º de parte", "partNumber", 16),
+        text("N.º de parte", "sku", 16),
         text("Tipo", "typeLabel", 18),
         text("Motivo", "reasonName", 18),
         qty("Cantidad", "quantity"),

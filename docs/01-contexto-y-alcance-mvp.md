@@ -63,7 +63,7 @@
 - Auditoría de precios, ajustes, anulaciones, devoluciones, tasas y usuarios.
 
 ### 4.2 Productos
-- Campos: código interno (SKU autogenerado), número de parte, referencias equivalentes, nombre, descripción, categoría en árbol, marca, compatibilidad (tipo de aparato, marca y modelo), unidad, impuesto, ubicación en estante, garantía en días, proveedores, estado.
+- Campos: número de parte (es el código del producto; si la pieza no trae, la app asigna un código interno LP-000001), referencias equivalentes, nombre, descripción, categoría en árbol, marca, compatibilidad (tipo de aparato, marca y modelo), unidad, impuesto, ubicación en estante, garantía en días, proveedores, estado.
 - Fotos: cámara del celular o archivo; recorte automático a fondo blanco en el navegador; vista previa lado a lado; aceptar, conservar original o repetir; varias fotos por producto.
 - Códigos de barras: se leen los del fabricante; se generan internos (Code 128) para los que no traen; etiquetas en rollo o en hoja A4.
 - Precios en USD: lista Público y lista Técnico; margen sugerido desde el costo; historial de cambios.

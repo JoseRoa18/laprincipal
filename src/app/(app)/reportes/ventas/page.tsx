@@ -162,7 +162,7 @@ export default async function SalesReportPage({ searchParams }: { searchParams: 
                         <TableRow key={r.productId}>
                           <TableCell className="whitespace-normal">
                             <div className="font-medium">{r.name}</div>
-                            <div className="text-muted-foreground text-xs">{r.partNumber ?? r.sku}</div>
+                            <div className="text-muted-foreground text-xs">{r.sku}</div>
                           </TableCell>
                           <TableCell className="text-right tabular-nums">{formatQty(r.units, 3)}</TableCell>
                           <TableCell className="text-right">

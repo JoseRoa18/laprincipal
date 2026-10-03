@@ -119,7 +119,7 @@ export function SuggestionsTable({ groups }: { groups: SuggestionGroup[] }) {
                           <span className="truncate">{i.name}</span>
                         </Link>
                         <p className="text-muted-foreground truncate text-xs">
-                          {[i.partNumber, i.sku, i.supplierCode ? `Cód. prov. ${i.supplierCode}` : null].filter(Boolean).join(" · ")}
+                          {[i.sku, i.supplierCode ? `Cód. prov. ${i.supplierCode}` : null].filter(Boolean).join(" · ")}
                         </p>
                       </div>
                       <StockStatusBadge status={i.status} className="shrink-0" />
@@ -186,7 +186,7 @@ export function SuggestionsTable({ groups }: { groups: SuggestionGroup[] }) {
                           {i.name}
                         </Link>
                         <span className="text-muted-foreground block truncate text-xs">
-                          {[i.partNumber, i.sku, i.supplierCode ? `Cód. prov. ${i.supplierCode}` : null].filter(Boolean).join(" · ")}
+                          {[i.sku, i.supplierCode ? `Cód. prov. ${i.supplierCode}` : null].filter(Boolean).join(" · ")}
                         </span>
                       </TableCell>
                       <TableCell>

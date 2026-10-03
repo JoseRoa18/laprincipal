@@ -96,6 +96,13 @@ Cuatro revisiones (seguridad, dinero, inventario/catálogo, producción). Aplica
 
 Pendiente: cambio en USD con centavos (decisión del dueño).
 
+## Un solo código por producto y barras fijas (2026-10-03)
+
+- SKU y número de parte eran lo mismo para el negocio: ahora hay un solo campo "Número de parte" (columna `sku`), visible en Datos básicos. Vacío al crear = código interno `LP-000001`; vacío al editar = se mantiene. Único, con mensaje que nombra el otro producto; admite `/`. En listas, tickets, etiquetas ("Ref."), reportes y Excel aparece una sola columna. La importación acepta plantillas viejas (columna "SKU" o "Número de parte") y compara códigos sin separadores para no duplicar.
+- Migración `0008`: los productos con `LP-` toman su número de parte como código cuando es válido y único; los demás números de parte quedan como equivalencias; los productos eliminados liberan su número de parte. La columna `part_number` se borra en la migración siguiente (después de que esta versión esté en producción).
+- El código de barras generado por la app se llama "código de barras propio" (antes "código interno") para no confundirlo con `LP-`.
+- Ficha y edición de producto: barra fija arriba con foto, nombre, código y código de barras al bajar; en la ficha también precio, existencia y Editar.
+
 ## Próximos pasos
 
 1. Subir estos cambios a `main`: Vercel aplica la migración `0003` al construir.

@@ -22,7 +22,7 @@ import { applyMovement, lockStock } from "@/modules/inventory/application/stock"
 import { getSetting } from "@/modules/settings/infrastructure/settings";
 import { suggestTechPrice } from "../domain/pricing";
 import type { ProductInput } from "../domain/product-schema";
-import { isValidSku } from "../domain/sku";
+import { INVALID_CODE_MESSAGE, isInternalCode, isValidSku } from "../domain/sku";
 import { getInitialStockReasonId, getPriceListIds } from "../infrastructure/catalog-options";
 import {
   loadProductSnapshot,
@@ -169,9 +169,26 @@ async function replaceCompatibilities(tx: Tx, productId: string, list: ProductIn
   if (values.length) await tx.insert(productCompatibilities).values(values);
 }
 
+/** The code (part number or LP-) must be valid and not used by another product. */
+async function assertCodeAvailable(tx: Tx, sku: string, exceptId?: string) {
+  if (!isValidSku(sku)) {
+    throw new AppError("VALIDATION", `Número de parte inválido. ${INVALID_CODE_MESSAGE}.`, { fields: { sku: INVALID_CODE_MESSAGE } });
+  }
+  const [dup] = await tx
+    .select({ name: products.name })
+    .from(products)
+    .where(exceptId ? and(eq(products.sku, sku), ne(products.id, exceptId)) : eq(products.sku, sku))
+    .limit(1);
+  if (dup) {
+    throw new AppError("CONFLICT", `Ya existe otro producto con el número de parte ${sku}: "${dup.name}". Si son piezas distintas, agrégale una letra (por ejemplo ${sku}-B).`, {
+      fields: { sku: "Ya lo tiene otro producto" },
+    });
+  }
+}
+
 /**
  * Create a product inside an existing transaction (used by the form and by the Excel import).
- * The caller must hold `lockCatalogSequences` when the SKU or barcode is auto-generated.
+ * The caller must hold `lockCatalogSequences` when the code or barcode is auto-generated.
  */
 export async function createProductInTx(
   tx: Tx,
@@ -183,11 +200,7 @@ export async function createProductInTx(
 ): Promise<CreateProductResult> {
   await assertReferences(tx, input);
   const sku = input.sku ?? (await nextSku(tx));
-  if (!isValidSku(sku)) {
-    throw new AppError("VALIDATION", "El SKU solo puede tener letras, números, punto, guion y guion bajo.", { fields: { sku: "SKU inválido" } });
-  }
-  const [dup] = await tx.select({ id: products.id }).from(products).where(eq(products.sku, sku));
-  if (dup) throw new AppError("CONFLICT", `El SKU ${sku} ya existe.`, { fields: { sku: "Ya existe" } });
+  await assertCodeAvailable(tx, sku);
 
   const brandId = await resolveBrandId(tx, input, user.id);
   const cost = input.costUsd ? D(input.costUsd) : null;
@@ -198,7 +211,6 @@ export async function createProductInTx(
       ...(opts.id ? { id: opts.id } : {}),
       sku,
       name: input.name,
-      partNumber: input.partNumber,
       description: input.description,
       categoryId: input.categoryId,
       brandId,
@@ -285,17 +297,9 @@ export async function updateProduct(id: string, input: ProductInput, user: Actor
     if (!before || before.deletedAt) throw notFound("El producto");
     await assertReferences(tx, input);
 
+    // Left empty on edit: the product keeps its current code.
     const sku = input.sku ?? before.sku;
-    if (!isValidSku(sku)) {
-      throw new AppError("VALIDATION", "El SKU solo puede tener letras, números, punto, guion y guion bajo.", { fields: { sku: "SKU inválido" } });
-    }
-    if (sku !== before.sku) {
-      const [dup] = await tx
-        .select({ id: products.id })
-        .from(products)
-        .where(and(eq(products.sku, sku), ne(products.id, id)));
-      if (dup) throw new AppError("CONFLICT", `El SKU ${sku} ya existe.`, { fields: { sku: "Ya existe" } });
-    }
+    if (sku !== before.sku) await assertCodeAvailable(tx, sku, id);
 
     const brandId = await resolveBrandId(tx, input, user.id);
     const cost = input.costUsd ? D(input.costUsd) : null;
@@ -316,7 +320,6 @@ export async function updateProduct(id: string, input: ProductInput, user: Actor
       .set({
         sku,
         name: input.name,
-        partNumber: input.partNumber,
         description: input.description,
         categoryId: input.categoryId,
         brandId,
@@ -385,7 +388,9 @@ export async function deleteProduct(id: string, user: ActorUser): Promise<Delete
       await writeAudit(tx, { userId: user.id, action: "product.deactivate", entityType: "product", entityId: id, before: { isActive: before.isActive }, after: { isActive: false } });
       return { deleted: false, deactivated: true, movements: n };
     }
-    await tx.update(products).set({ deletedAt: new Date(), isActive: false }).where(eq(products.id, id));
+    // A part number is freed so a new product can use it; internal LP- codes stay so the sequence never re-issues them.
+    const freedSku = isInternalCode(before.sku) ? before.sku : `${before.sku}~${id.slice(0, 8)}`;
+    await tx.update(products).set({ deletedAt: new Date(), isActive: false, sku: freedSku }).where(eq(products.id, id));
     // Free manufacturer codes for reuse; internal codes stay so the sequence never re-issues a printed label.
     await tx.delete(productBarcodes).where(and(eq(productBarcodes.productId, id), ne(productBarcodes.type, "INTERNAL")));
     await writeAudit(tx, { userId: user.id, action: "product.delete", entityType: "product", entityId: id, before });
