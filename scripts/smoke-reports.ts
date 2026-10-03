@@ -25,11 +25,15 @@ async function main() {
   check(cron.status === cronExpected, `anon GET /api/cron/stats -> ${cron.status}`, `expected ${cronExpected}`);
   if (process.env.CRON_SECRET) {
     const withSecret = await fetch(`${base}/api/cron/stats`, { headers: { authorization: `Bearer ${process.env.CRON_SECRET}` } });
-    const json = (await withSecret.json().catch(() => ({}))) as { ok?: boolean; products?: number };
-    check(withSecret.status === 200 && json.ok === true, `GET /api/cron/stats with secret -> ${withSecret.status}`, `products=${json.products ?? "?"}`);
+    const json = (await withSecret.json().catch(() => ({}))) as { ok?: boolean; products?: number; expiredQuotes?: number };
+    check(
+      withSecret.status === 200 && json.ok === true && typeof json.expiredQuotes === "number",
+      `GET /api/cron/stats with secret -> ${withSecret.status}`,
+      `products=${json.products ?? "?"} expiredQuotes=${json.expiredQuotes ?? "?"}`,
+    );
   } else {
-    const json = (await cron.json().catch(() => ({}))) as { ok?: boolean; products?: number };
-    check(json.ok === true, "cron response body", `products=${json.products ?? "?"}`);
+    const json = (await cron.json().catch(() => ({}))) as { ok?: boolean; products?: number; expiredQuotes?: number };
+    check(json.ok === true && typeof json.expiredQuotes === "number", "cron response body", `products=${json.products ?? "?"} expiredQuotes=${json.expiredQuotes ?? "?"}`);
   }
 
   const s = await createSession({ base });
@@ -45,12 +49,19 @@ async function main() {
   await s.expectOk("/reportes/margen", "Margen bruto");
   await s.expectOk("/reportes/sin-movimiento", "sin movimiento");
   await s.expectOk("/reportes/sin-movimiento?days=30", "30 días");
+  await s.expectOk("/reportes/ajustes", "Ajustes y mermas");
+  await s.expectOk("/reportes/ajustes?preset=last_30", "Últimos 30 días");
 
-  for (const report of ["sales", "inventory", "velocity", "margin", "no_movement"]) {
+  for (const report of ["sales", "inventory", "velocity", "margin", "no_movement", "adjustments"]) {
     const res = await s.get(`/api/reports/export?report=${report}`);
     const type = res.headers.get("content-type") ?? "";
     const size = (await res.arrayBuffer()).byteLength;
     check(res.status === 200 && type.includes("spreadsheetml") && size > 1000, `GET /api/reports/export?report=${report} -> ${res.status}`, `${type.split(";")[0]} ${size} bytes`);
+
+    const pdf = await s.get(`/api/reports/export?report=${report}&format=pdf`);
+    const pdfType = pdf.headers.get("content-type") ?? "";
+    const head = new TextDecoder().decode((await pdf.arrayBuffer()).slice(0, 4));
+    check(pdf.status === 200 && pdfType.includes("application/pdf") && head === "%PDF", `GET /api/reports/export?report=${report}&format=pdf -> ${pdf.status}`, pdfType.split(";")[0]);
   }
   const bad = await s.get("/api/reports/export?report=nope");
   check(bad.status === 400, `GET /api/reports/export?report=nope -> ${bad.status}`, "expected 400");

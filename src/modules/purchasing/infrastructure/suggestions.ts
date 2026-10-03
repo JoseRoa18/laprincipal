@@ -1,6 +1,7 @@
 import Decimal from "decimal.js";
 import { and, asc, desc, eq, inArray, isNull } from "drizzle-orm";
 import { db, type DbOrTx } from "@/db/client";
+import { allQueries } from "@/db/parallel";
 import { productSuppliers, suppliers } from "@/db/schema";
 import { D, sum } from "@/lib/money";
 import { listStock, type StockRow } from "@/modules/inventory/infrastructure/stock-query";
@@ -54,9 +55,9 @@ export function suggestedQuantity(row: Pick<StockRow, "hasStats" | "suggestedQty
 
 /** Products to buy (status "Comprar ya" or "Pronto") grouped by their preferred supplier. */
 export async function getPurchaseSuggestions(dbx: DbOrTx = db): Promise<SuggestionGroup[]> {
-  const [buyNow, soon] = await Promise.all([
-    listStock({ dbx, status: "buy_now", pageSize: 1000 }),
-    listStock({ dbx, status: "soon", pageSize: 1000 }),
+  const [buyNow, soon] = await allQueries(dbx, [
+    () => listStock({ dbx, status: "buy_now", pageSize: 1000 }),
+    () => listStock({ dbx, status: "soon", pageSize: 1000 }),
   ]);
   const rows = [...buyNow.rows, ...soon.rows];
   if (rows.length === 0) return [];

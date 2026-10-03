@@ -1,5 +1,6 @@
 import { asc, count, eq, isNull, sql } from "drizzle-orm";
 import { db, type DbOrTx } from "@/db/client";
+import { allQueries } from "@/db/parallel";
 import { adjustmentReasons, brands, categories, priceLists, products, taxes, units } from "@/db/schema";
 import { getSetting } from "@/modules/settings/infrastructure/settings";
 
@@ -152,12 +153,12 @@ export interface ProductFormOptions {
 
 /** Everything the product form needs to render its selects. */
 export async function getProductFormOptions(dbx: DbOrTx = db): Promise<ProductFormOptions> {
-  const [cats, brandRows, unitRows, taxRows, policies] = await Promise.all([
-    listCategoryOptions(dbx),
-    listBrands(dbx),
-    listUnits(dbx),
-    listTaxes(dbx),
-    getSetting("policies", dbx),
+  const [cats, brandRows, unitRows, taxRows, policies] = await allQueries(dbx, [
+    () => listCategoryOptions(dbx),
+    () => listBrands(dbx),
+    () => listUnits(dbx),
+    () => listTaxes(dbx),
+    () => getSetting("policies", dbx),
   ]);
   const defaultUnit = unitRows.find((u) => u.name.toLowerCase() === "unidad") ?? unitRows[0];
   const defaultTax = taxRows.find((t) => t.isDefault) ?? taxRows[0];

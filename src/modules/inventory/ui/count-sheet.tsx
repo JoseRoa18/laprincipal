@@ -1,11 +1,17 @@
 "use client";
 
-import { Check, CircleAlert, Search } from "lucide-react";
+import { Check, CircleAlert, EyeOff, Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { findProductByBarcodeAction } from "@/app/(app)/inventario/actions";
-import { addCountItemAction, applyCountAction, cancelCountAction, recordCountItemAction } from "@/app/(app)/inventario/conteos/actions";
+import {
+  addCountItemAction,
+  applyCountAction,
+  cancelCountAction,
+  findCountProductAction,
+  recordCountItemAction,
+  revealCountAction,
+} from "@/app/(app)/inventario/conteos/actions";
 import { ConfirmButton } from "@/components/app/confirm-button";
 import { Money } from "@/components/app/money";
 import { Input } from "@/components/ui/input";
@@ -37,18 +43,22 @@ function toDraft(v: string | null, decimals: number) {
   return Number.isInteger(n) ? String(n) : n.toFixed(decimals);
 }
 
-/** Mobile-first counting screen with search, camera scan and a differences tab. */
+/**
+ * Mobile-first counting screen with search, camera scan and a differences tab.
+ * In a blind count the server sends no expected quantities until someone ends
+ * the counting phase with "Terminar y ver diferencias".
+ */
 export function CountSheet({
   countId,
   status,
-  blind,
+  expectedHidden,
   items: initialItems,
   canApply,
   showCosts,
 }: {
   countId: string;
   status: CountStatus;
-  blind: boolean;
+  expectedHidden: boolean;
   items: CountItemRow[];
   canApply: boolean;
   showCosts: boolean;
@@ -111,7 +121,12 @@ export function CountSheet({
 
   const onCode = useCallback(
     async (code: string) => {
-      const product = await findProductByBarcodeAction(code);
+      const found = await findCountProductAction(code);
+      if (!found.ok) {
+        toast.error(found.error.message);
+        return;
+      }
+      const product = found.data;
       if (!product) {
         toast.error(`No se encontró ningún producto con el código ${code}.`);
         return;
@@ -130,24 +145,7 @@ export function CountSheet({
               toast.error(result.error.message);
               return;
             }
-            const item: LocalItem = {
-              id: result.data.itemId,
-              productId: product.id,
-              productName: product.name,
-              sku: product.sku,
-              partNumber: product.partNumber,
-              locationCode: product.locationCode,
-              unitSymbol: product.unitSymbol,
-              unitDecimals: product.unitDecimals,
-              expectedQty: result.data.expectedQty,
-              countedQty: null,
-              difference: null,
-              costAvgUsd: product.costAvgUsd,
-              countedAt: null,
-              currentStock: product.stockPhysical,
-              draft: "",
-              save: "idle",
-            };
+            const item: LocalItem = { ...result.data, draft: toDraft(result.data.countedQty, result.data.unitDecimals), save: "idle" };
             setItems((prev) => (prev.some((i) => i.id === item.id) ? prev : [...prev, item]));
             focusItem(item.id);
           },
@@ -217,7 +215,7 @@ export function CountSheet({
                       {[item.partNumber, item.sku].filter(Boolean).join(" · ")}
                       {item.locationCode ? ` · ${item.locationCode}` : ""}
                     </p>
-                    {!blind || !open ? (
+                    {item.expectedQty !== null ? (
                       <p className="text-muted-foreground text-xs tabular-nums">
                         Esperado {formatQty(item.expectedQty, item.unitDecimals)} {item.unitSymbol}
                       </p>
@@ -261,7 +259,12 @@ export function CountSheet({
         </TabsContent>
 
         <TabsContent value="diff" className="space-y-3">
-          {counted === 0 ? (
+          {expectedHidden ? (
+            <div className="text-muted-foreground flex flex-col items-center gap-2 rounded-xl border border-dashed px-4 py-8 text-center text-sm">
+              <EyeOff className="size-5" />
+              <p>Conteo ciego: las cantidades del sistema y las diferencias se ven al terminar de contar.</p>
+            </div>
+          ) : counted === 0 ? (
             <p className="text-muted-foreground rounded-xl border border-dashed px-4 py-8 text-center text-sm">Todavía no hay productos contados.</p>
           ) : diffs.length === 0 ? (
             <p className="rounded-xl border border-dashed px-4 py-8 text-center text-sm">
@@ -291,7 +294,7 @@ export function CountSheet({
                           </button>
                           <span className="text-muted-foreground block text-xs">{[i.partNumber, i.sku, i.locationCode].filter(Boolean).join(" · ")}</span>
                         </TableCell>
-                        <TableCell className="text-right tabular-nums">{formatQty(i.expectedQty, i.unitDecimals)}</TableCell>
+                        <TableCell className="text-right tabular-nums">{formatQty(i.expectedQty ?? 0, i.unitDecimals)}</TableCell>
                         <TableCell className="text-right tabular-nums">{formatQty(i.countedQty ?? 0, i.unitDecimals)}</TableCell>
                         <TableCell className={cn("text-right font-semibold tabular-nums", d < 0 ? "text-destructive" : "text-emerald-700 dark:text-emerald-400")}>
                           {d > 0 ? "+" : ""}
@@ -341,23 +344,39 @@ export function CountSheet({
           >
             Cancelar conteo
           </ConfirmButton>
-          <ConfirmButton
-            title="¿Aplicar los ajustes del conteo?"
-            description={
-              diffs.length === 0
-                ? "No hay diferencias: el conteo se cerrará sin mover existencias."
-                : `Se crearán ${diffs.length} ${diffs.length === 1 ? "ajuste" : "ajustes"} por conteo con el motivo "Error de conteo". Los productos sin contar no cambian.`
-            }
-            confirmLabel="Aplicar ajustes"
-            size="lg"
-            className="h-11"
-            disabled={counted === 0}
-            action={() => applyCountAction(countId)}
-            successMessage="Conteo aplicado"
-            onSuccess={() => router.refresh()}
-          >
-            Aplicar ajustes
-          </ConfirmButton>
+          {expectedHidden ? (
+            <ConfirmButton
+              title="¿Terminar de contar?"
+              description="Se mostrarán las cantidades del sistema y las diferencias. Podrás recontar lo que no cuadre antes de aplicar. Queda registrado quién terminó y cuándo."
+              confirmLabel="Ver diferencias"
+              size="lg"
+              className="h-11"
+              disabled={counted === 0}
+              action={() => revealCountAction(countId)}
+              successMessage="Diferencias visibles"
+              onSuccess={() => router.refresh()}
+            >
+              Terminar y ver diferencias
+            </ConfirmButton>
+          ) : (
+            <ConfirmButton
+              title="¿Aplicar los ajustes del conteo?"
+              description={
+                diffs.length === 0
+                  ? "No hay diferencias: el conteo se cerrará sin mover existencias."
+                  : `Se crearán ${diffs.length} ${diffs.length === 1 ? "ajuste" : "ajustes"} por conteo con el motivo "Error de conteo". Los productos sin contar no cambian.`
+              }
+              confirmLabel="Aplicar ajustes"
+              size="lg"
+              className="h-11"
+              disabled={counted === 0}
+              action={() => applyCountAction(countId)}
+              successMessage="Conteo aplicado"
+              onSuccess={() => router.refresh()}
+            >
+              Aplicar ajustes
+            </ConfirmButton>
+          )}
         </div>
       ) : null}
     </div>

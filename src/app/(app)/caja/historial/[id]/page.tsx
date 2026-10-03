@@ -1,6 +1,6 @@
 import { LockOpen } from "lucide-react";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { reopenCashSessionAction } from "@/app/(app)/caja/actions";
 import { ConfirmButton } from "@/components/app/confirm-button";
 import { PageHeader } from "@/components/app/page-header";
@@ -21,8 +21,10 @@ export default async function CashSessionPage({ params }: { params: Promise<{ id
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const detail = await getCashSessionDetail(id);
   if (!detail) notFound();
-  const company = await getCompanySettings();
   const isAdmin = user.role === "admin";
+  // Blind count: the live expected cash of an open session is for admins only.
+  if (detail.status === "open" && !isAdmin) redirect("/caja");
+  const company = await getCompanySettings();
 
   let data: ReportData;
   if (detail.status === "closed" && detail.closingSummary) {
@@ -43,6 +45,7 @@ export default async function CashSessionPage({ params }: { params: Promise<{ id
       references: cs.references,
       movements: detail.movements,
       reconciled: cs.counts?.reconciled ?? {},
+      countAttempts: cs.counts?.attempts,
     };
   } else {
     const live = await getSessionSummary(id);

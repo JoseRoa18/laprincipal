@@ -123,21 +123,36 @@ export default async function CashPage() {
             </p>
           </CardContent>
         </Card>
-        {summary.balances.map((b) => (
-          <Card size="sm" key={b.currencyCode}>
-            <CardHeader>
-              <CardTitle className="text-muted-foreground text-xs font-medium">Efectivo esperado {b.currencyCode}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-semibold tabular-nums">
-                <Money value={b.expected} currency={b.currencyCode} />
-              </p>
-              <p className="text-muted-foreground text-xs">
-                Fondo <Money value={b.opening} currency={b.currencyCode} /> · ventas <Money value={b.salesCash} currency={b.currencyCode} />
-              </p>
-            </CardContent>
-          </Card>
-        ))}
+        {summary.balances.map((b) =>
+          isAdmin ? (
+            <Card size="sm" key={b.currencyCode}>
+              <CardHeader>
+                <CardTitle className="text-muted-foreground text-xs font-medium">Efectivo esperado {b.currencyCode}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-semibold tabular-nums">
+                  <Money value={b.expected} currency={b.currencyCode} />
+                </p>
+                <p className="text-muted-foreground text-xs">
+                  Fondo <Money value={b.opening} currency={b.currencyCode} /> · ventas <Money value={b.salesCash} currency={b.currencyCode} />
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            // Blind count: sellers see the expected cash only after counting at close.
+            <Card size="sm" key={b.currencyCode}>
+              <CardHeader>
+                <CardTitle className="text-muted-foreground text-xs font-medium">Fondo inicial {b.currencyCode}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-semibold tabular-nums">
+                  <Money value={b.opening} currency={b.currencyCode} />
+                </p>
+                <p className="text-muted-foreground text-xs">El efectivo esperado se ve al cerrar, después de contar.</p>
+              </CardContent>
+            </Card>
+          ),
+        )}
       </div>
 
       <section className="space-y-3">

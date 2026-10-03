@@ -19,7 +19,9 @@ export default async function CountDetailPage({ params }: { params: Promise<{ id
   const title = count.number ? `Conteo ${count.number}` : "Conteo en curso";
   const description =
     count.status === "open"
-      ? `${countFilterLabel(count.filter, count.categoryName)} · iniciado por ${count.startedByName} el ${formatDateTime(count.startedAt)}${count.blind ? " · ciego" : ""}`
+      ? `${countFilterLabel(count.filter, count.categoryName)} · iniciado por ${count.startedByName} el ${formatDateTime(count.startedAt)}${
+          count.blind ? (count.revealedAt ? ` · ciego, diferencias visibles desde ${formatDateTime(count.revealedAt)}` : " · ciego") : ""
+        }`
       : count.status === "applied"
         ? `${countFilterLabel(count.filter, count.categoryName)} · aplicado por ${count.appliedByName ?? count.startedByName} el ${formatDateTime(count.appliedAt)}`
         : `${countFilterLabel(count.filter, count.categoryName)} · cancelado`;
@@ -40,10 +42,10 @@ export default async function CountDetailPage({ params }: { params: Promise<{ id
       />
       {count.notes ? <p className="text-muted-foreground text-sm">{count.notes}</p> : null}
       <CountSheet
-        key={`${count.id}-${count.status}`}
+        key={`${count.id}-${count.status}-${count.expectedHidden}`}
         countId={count.id}
         status={count.status}
-        blind={count.blind}
+        expectedHidden={count.expectedHidden}
         items={count.items}
         canApply={can(user.role, "count_stock")}
         showCosts={can(user.role, "view_costs")}

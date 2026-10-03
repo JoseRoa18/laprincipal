@@ -36,16 +36,16 @@ Fecha: 2026-09-08. Principio rector: cada pantalla se entiende sin manual. Lo av
 | 16 | `/inventario` | Existencias | Stock, disponible, mínimo, máximo, cobertura y semáforo; filtros; valorización total. | Todos |
 | 17 | `/inventario/movimientos` | Kardex | Movimientos por producto, tipo, fecha y usuario, con enlace al documento. | Todos |
 | 18 | `/inventario/ajustes/nuevo` | Ajuste | Motivo obligatorio, productos y cantidades, aplicar. | Admin, Almacén |
-| 19 | `/inventario/conteos` y `/inventario/conteos/[id]` | Conteo físico | Crear conteo por categoría o ubicación; contar desde el celular con cámara; ver diferencias; aplicar ajustes. | Admin, Almacén |
+| 19 | `/inventario/conteos` y `/inventario/conteos/[id]` | Conteo físico | Crear conteo por categoría o ubicación; contar desde el celular con cámara; en modo ciego el servidor no envía lo esperado hasta "Terminar y ver diferencias"; recontar; aplicar ajustes. | Admin, Almacén |
 | 20 | `/inventario/alertas` | Alertas | Stock bajo, agotado, sin movimiento, exceso; acción "agregar a compra". | Todos |
-| 21 | `/compras/proveedores` y `/compras/proveedores/[id]` | Proveedores | Ficha, productos que surte, historial de costos. | Admin, Almacén |
+| 21 | `/compras/proveedores` y `/compras/proveedores/[id]` | Proveedores | Ficha, productos que surte con código y empaque editables, historial de costos. | Admin, Almacén |
 | 22 | `/compras/entradas` y `/compras/entradas/nueva` | Entradas por compra | Documento del proveedor, moneda y tasa, productos, costos, gastos adicionales; aplicar. | Admin, Almacén |
 | 23 | `/compras/que-comprar` | Qué comprar | Sugerencia agrupada por proveedor con cantidades editables; exportar a Excel. | Admin, Almacén |
 | 24 | `/clientes` y `/clientes/[id]` | Clientes | Lista, ficha simple, historial. Alta rápida desde el POS. | Vendedor, Admin |
-| 25 | `/caja` | Caja | Abrir con fondo USD y COP; sesión actual con totales por método; ingresos y retiros. | Vendedor, Admin |
-| 26 | `/caja/cerrar` | Cierre de caja | Conteo ciego por moneda, referencias electrónicas, diferencias con justificación, reporte imprimible. | Vendedor, Admin |
+| 25 | `/caja` | Caja | Abrir con fondo USD y COP; sesión actual con totales por método; ingresos y retiros. El efectivo esperado solo lo ve el administrador. | Vendedor, Admin |
+| 26 | `/caja/cerrar` | Cierre de caja | Conteo ciego por moneda: "Registrar conteo" guarda lo contado en el servidor y solo entonces muestra esperado y diferencia; "Volver a contar" queda anotado. Referencias electrónicas, justificación, reporte imprimible. | Vendedor, Admin |
 | 27 | `/caja/historial` | Historial de cajas | Sesiones anteriores y sus cierres. | Admin |
-| 28 | `/reportes` | Reportes | Ventas, inventario valorizado, velocidad y ABC, margen, sin movimiento, qué comprar; filtros; gráficos; exportar. | Admin |
+| 28 | `/reportes` | Reportes | Ventas, inventario valorizado, velocidad y ABC, margen, sin movimiento, ajustes y mermas (`/reportes/ajustes`), qué comprar; filtros; gráficos; exportar a Excel y PDF. | Admin |
 | 29 | `/configuracion` | Configuración | Empresa, tasas de cambio, impuestos, métodos de pago, motivos, unidades, series, impresión, usuarios y PIN, políticas, respaldos. | Admin |
 | 30 | `/imprimir/ticket/[id]` | Ticket | Vista de impresión 58/80 mm con montos en USD y Bs. | Vendedor, Admin |
 
@@ -73,7 +73,7 @@ Fecha: 2026-09-08. Principio rector: cada pantalla se entiende sin manual. Lo av
 3. Cuando llega la mercancía: Compras → Nueva entrada, con el documento del proveedor. Stock y costo se actualizan.
 
 **Cerrar el día:**
-1. Caja → Cerrar. Contar efectivo USD y COP sin ver el esperado.
+1. Caja → Cerrar. Contar efectivo USD y COP sin ver el esperado y "Registrar conteo"; entonces aparecen esperado y diferencia.
 2. Revisar referencias de Pago Móvil, Punto de venta, Zelle y Binance.
 3. Justificar diferencias si las hay. Imprimir cierre.
 

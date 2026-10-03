@@ -75,8 +75,7 @@ Nota de limpieza: el kardex es de solo inserción, así que la prueba de integra
 
 ## 4. Pendientes conocidos
 
-- Exportación a **PDF** (alcance 4.8) no incluida; solo Excel.
-- Reporte de **ajustes y mermas** y **kardex** (4.8) no están en `/reportes`: el kardex vive en `/inventario/movimientos` (paquete B).
+- Resuelto (2026-10-03): exportación a **PDF** de todos los reportes (`format=pdf`, `report-pdf.tsx`, desde las mismas hojas del Excel) y reporte de **ajustes y mermas** en `/reportes/ajustes` (`adjustments-report.ts`). El kardex sigue en `/inventario/movimientos`.
 - La comparación "ventas del mes" usa el mismo número de días del mes pasado (1 → día actual), no el mes completo.
 - El gráfico se validó por SSR y prueba de humo; conviene una revisión visual en escritorio y celular (modo claro y oscuro) cuando haya ventas reales.
 - Con catálogos muy grandes (miles de productos) el recálculo hace una pasada en memoria por producto; hoy tarda milisegundos, pero si crece conviene vigilar `durationMs` en el cron.

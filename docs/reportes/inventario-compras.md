@@ -63,8 +63,8 @@ Fecha: 2026-09-08. Alcance: existencias, kardex, ajustes, conteos físicos, aler
 
 ## 4. Pendientes conocidos
 
-- `product_suppliers.supplier_code` y `pack_size` no se editan desde la interfaz (solo se muestran); se llenan por importación o SQL.
-- La anulación de una entrada no revierte el último costo en `product_suppliers` (sí en `products.cost_last_usd`).
+- Resuelto (2026-10-03): `product_suppliers.supplier_code` y `pack_size` se editan desde la ficha del proveedor y la del producto (`SupplierLinkDialog`, `updateProductSupplier`); anular una entrada devuelve el último costo del proveedor a su entrada aplicada anterior o lo deja vacío.
+- Resuelto (2026-10-03): conteo ciego en el servidor con `stock_counts.revealed_at`; ver `docs/05-progreso.md`.
 - En los conteos, la diferencia se calcula contra la existencia congelada al crear el conteo; si hubo ventas entre el conteo y la aplicación, el ajuste aplica esa diferencia sobre el stock actual (comportamiento estándar, documentado en el botón).
 - Las alertas listan hasta 500 productos por pestaña y "Qué comprar" hasta 1 000 por estado.
 - El escáner de cámara depende de HTTPS o `localhost` (requisito del navegador); en la PC funciona el escáner USB como teclado en cualquier buscador.

@@ -1,6 +1,6 @@
 # La Principal 2050 — Progreso de la Fase 1
 
-Actualizado: 2026-09-08. **Estado: Fase 1 completa en local y verificada** (typecheck, lint, 133 pruebas, 6 scripts de humo). Pendiente: publicar en Supabase y Vercel.
+Actualizado: 2026-10-03. **Estado: Fase 1 completa y publicada** en https://laprincipal.vercel.app (Supabase + Vercel, ver `docs/07-despliegue.md`). Verificada en local: typecheck, lint, 188 pruebas y los scripts de humo.
 
 ## Estado por módulo
 
@@ -11,7 +11,7 @@ Actualizado: 2026-09-08. **Estado: Fase 1 completa en local y verificada** (type
 | Inventario (existencias, kardex, ajustes, conteos, alertas) y Compras (proveedores, entradas, qué comprar) | Listo | `docs/reportes/inventario-compras.md` |
 | Ventas (POS multi-moneda, ticket, devoluciones, anulación, cotizaciones, cambio de vendedor por PIN) | Listo | `docs/reportes/ventas.md` |
 | Caja (apertura/cierre por moneda), Clientes, Configuración (empresa, tasas, impuestos, métodos, motivos, unidades, series, impresión, políticas, usuarios, mi cuenta, respaldos) | Listo | `docs/reportes/caja-clientes-configuracion.md` |
-| Reportes y estadísticas (velocidad, ABC, reorden, cron diario, inicio con datos reales) | Listo | `docs/reportes/reportes.md` |
+| Reportes y estadísticas (velocidad, ABC, reorden, ajustes y mermas, Excel y PDF, cron diario, inicio con datos reales) | Listo | `docs/reportes/reportes.md` |
 
 ## Cómo probar
 
@@ -35,12 +35,11 @@ Verificación automática: `pnpm typecheck`, `pnpm lint`, `pnpm test`, y `pnpm e
 
 ## Pendientes conocidos (no bloquean el uso)
 
-- Fotos: el recorte en el navegador no está cubierto por pruebas automáticas; probar en el celular real (la primera vez descarga un modelo de unos 40 MB).
-- Cotizaciones vencen al abrir la lista, no por tarea programada. Devoluciones repetidas de una misma línea pueden diferir en centavos por prorrateo.
-- Conteo ciego oculta el esperado en el navegador, no en el servidor.
-- Anulación de entrada por compra no revierte el último costo en `product_suppliers`.
+- Probar en el local con equipos reales: recorte de fotos en el celular (la primera vez descarga un modelo de unos 40 MB), ticket y cierre en la impresora térmica, escáner USB y cámara en el conteo. "Estilo catálogo con IA" (Gemini) sigue sin probarse con una clave real.
+- Devoluciones repetidas de una misma línea pueden diferir en centavos por prorrateo.
+- Conteo ciego: el servidor ya no envía lo esperado a la pantalla de conteo ni al cierre de caja, pero quien tiene acceso a Inventario ve existencias en otras pantallas. El valor del ciego es que el primer conteo queda registrado antes de ver el esperado.
+- PDF de reportes: hasta 2.000 filas por hoja (el Excel tiene todas); códigos muy largos sin espacios pueden montarse sobre la columna vecina en el reporte de velocidad.
 - Sugerencias de esquema para una futura migración: secuencias para SKU y códigos internos; índices únicos parciales en `product_barcodes` (INTERNAL) y `product_images` (primaria); `purchase_receipts.applied_by`; `import_jobs.file_path` opcional.
-- `src/modules/reporting/domain/abc.ts` duplica `abcClassify` (ya corregido en la compartida); unificar.
 
 ## Mejoras posteriores (2026-09-08, tarde)
 
@@ -49,7 +48,22 @@ Verificación automática: `pnpm typecheck`, `pnpm lint`, `pnpm test`, y `pnpm e
 - Fotos: acabado de estudio automático (niveles, balance de blancos, bordes sin halo, encuadre uniforme, sombra suave) y modo opcional "Estilo catálogo con IA" (Gemini, activo solo con `GEMINI_API_KEY`). Informe: `docs/reportes/fotos-catalogo.md`.
 - Revisión móvil completa con Playwright (`scripts/qa-mobile.ts`): 60 rutas × celular y tablet más 52 diálogos, sin desbordes ni objetivos táctiles pequeños. Informe: `docs/reportes/qa-movil.md`.
 
+## Mejoras posteriores (2026-10-03)
+
+- Cantidades decimales: `0.125` ya no se lee como 125 (un grupo de miles nunca empieza en 0). Pruebas en `src/lib/format.test.ts`.
+- Una sola clasificación ABC (`abcClassify` en `inventory/domain/velocity.ts`).
+- Consultas en paralelo con `allQueries` (`src/db/parallel.ts`): en paralelo sobre el pool y en serie dentro de una transacción. Quita el aviso de pg ("client is already executing a query") que en pg 9 sería un error.
+- Conteo ciego de caja en el servidor: "Registrar conteo" guarda lo contado y el esperado del momento; el cierre usa ese conteo y pide recontar si hubo ventas o movimientos después. "Volver a contar" queda en auditoría (`cash_session.count`) y el reporte de cierre muestra "Conteo repetido". El vendedor ya no ve el efectivo esperado en `/caja` ni el reporte en vivo.
+- Conteo ciego de inventario en el servidor: columna `stock_counts.revealed_at` (migración `0003_count_revealed_at`); mientras el conteo está abierto y sin revelar, ni la página ni las acciones envían esperado ni diferencias. "Terminar y ver diferencias" lo revela (auditoría `count.reveal`). El escáner del conteo usa `findCountProductAction`, que no devuelve existencia ni costo.
+- Anular una entrada por compra devuelve el último costo del proveedor a su entrada aplicada anterior, o lo deja vacío.
+- La tarea diaria (`/api/cron/stats`) vence las cotizaciones atrasadas y libera sus reservas antes de recalcular estadísticas.
+- Código del proveedor y unidades por empaque editables desde la ficha del proveedor y la del producto.
+- Reporte "Ajustes y mermas" (`/reportes/ajustes`): pérdidas, sobrantes y neto por motivo, por producto y por movimiento, con enlace al ajuste o conteo.
+- Exportación a PDF de todos los reportes (`format=pdf` en `/api/reports/export`), generada desde las mismas hojas del Excel.
+
 ## Próximos pasos
 
-1. Publicar: repositorio privado en GitHub, proyecto en Supabase y en Vercel según `docs/07-despliegue.md` (requiere autorización y cuentas del dueño).
-2. Fase 2: números de serie y garantías, promociones simples, notificaciones, modo offline básico, impresión ESC/POS directa, crédito a técnicos.
+1. Subir estos cambios a `main`: Vercel aplica la migración `0003` al construir.
+2. Probar en el local con los equipos reales (ver pendientes) y hacer un día de prueba completo en producción.
+3. Revisar el plan de Vercel: el plan Hobby es solo para uso personal no comercial; para el negocio corresponde Pro.
+4. Fase 2: números de serie y garantías, promociones simples, notificaciones, modo offline básico, impresión ESC/POS directa, crédito a técnicos, tasa BCV automática.

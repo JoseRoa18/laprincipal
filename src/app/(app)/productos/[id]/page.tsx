@@ -21,6 +21,7 @@ import { ProductStatusActions } from "@/modules/catalog/ui/product-status-action
 import { getDefaultLocation } from "@/modules/core/application/context";
 import { displayAmounts } from "@/modules/currency/domain/conversion";
 import { getRatesSnapshot } from "@/modules/currency/infrastructure/rates";
+import { SupplierLinkDialog } from "@/modules/purchasing/ui/supplier-link-dialog";
 
 // "Estilo catálogo con IA" (server action of this page) can take 10–20 s: allow up to 60 s on Vercel.
 export const maxDuration = 60;
@@ -257,21 +258,27 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
             ) : (
               <ul className="divide-y">
                 {product.suppliers.map((s) => (
-                  <li key={s.supplierId} className="py-2 text-sm">
-                    <p className="font-medium">
-                      {s.name} {s.isPreferred ? <Badge variant="secondary">Preferido</Badge> : null}
-                    </p>
-                    <p className="text-muted-foreground text-xs">
-                      {s.supplierCode ? `Código ${s.supplierCode} · ` : ""}
-                      {showCosts && s.lastCostUsd ? (
-                        <>
-                          Último costo <Money value={s.lastCostUsd} />
-                          {" · "}
-                        </>
-                      ) : null}
-                      {s.lastPurchaseAt ? `Última compra ${formatDate(s.lastPurchaseAt)} · ` : ""}
-                      Entrega {s.leadTimeDays} días
-                    </p>
+                  <li key={s.supplierId} className="flex items-start gap-2 py-2 text-sm">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium">
+                        {s.name} {s.isPreferred ? <Badge variant="secondary">Preferido</Badge> : null}
+                      </p>
+                      <p className="text-muted-foreground text-xs">
+                        {s.supplierCode ? `Código ${s.supplierCode} · ` : ""}
+                        {s.packSize > 1 ? `Empaque de ${s.packSize} · ` : ""}
+                        {showCosts && s.lastCostUsd ? (
+                          <>
+                            Último costo <Money value={s.lastCostUsd} />
+                            {" · "}
+                          </>
+                        ) : null}
+                        {s.lastPurchaseAt ? `Última compra ${formatDate(s.lastPurchaseAt)} · ` : ""}
+                        Entrega {s.leadTimeDays} días
+                      </p>
+                    </div>
+                    {canManage ? (
+                      <SupplierLinkDialog productId={product.id} supplierId={s.supplierId} title={s.name} supplierCode={s.supplierCode} packSize={s.packSize} />
+                    ) : null}
                   </li>
                 ))}
               </ul>

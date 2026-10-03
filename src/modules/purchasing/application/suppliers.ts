@@ -4,7 +4,7 @@ import { currencies, productSuppliers, suppliers } from "@/db/schema";
 import { AppError, notFound } from "@/lib/errors";
 import { writeAudit } from "@/modules/core/application/audit";
 import { inTransaction } from "@/modules/inventory/application/transaction";
-import type { SupplierInput } from "./schemas";
+import type { ProductSupplierInput, SupplierInput } from "./schemas";
 
 export interface Actor {
   id: string;
@@ -75,5 +75,21 @@ export async function setPreferredSupplier(productId: string, supplierId: string
       before: link,
       after: { ...link, isPreferred: preferred },
     });
+  });
+}
+
+/** Edit the supplier's own code and pack size for a product (the pack size rounds "Qué comprar"). */
+export async function updateProductSupplier(input: ProductSupplierInput, actor: Actor, dbx: DbOrTx = db) {
+  return inTransaction(dbx, async (tx) => {
+    const where = and(eq(productSuppliers.productId, input.productId), eq(productSuppliers.supplierId, input.supplierId));
+    const [link] = await tx.select().from(productSuppliers).where(where).limit(1).for("update");
+    if (!link) throw notFound("La relación producto-proveedor");
+    const [row] = await tx
+      .update(productSuppliers)
+      .set({ supplierCode: input.supplierCode?.trim() || null, packSize: input.packSize, updatedAt: new Date() })
+      .where(where)
+      .returning();
+    await writeAudit(tx, { userId: actor.id, action: "product_supplier.update", entityType: "product", entityId: input.productId, before: link, after: row });
+    return row;
   });
 }

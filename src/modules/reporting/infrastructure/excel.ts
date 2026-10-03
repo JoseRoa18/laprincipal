@@ -3,7 +3,9 @@ import { formatDateTime } from "@/lib/format";
 import { STOCK_STATUS_LABEL } from "@/components/app/stock-status-badge";
 import type { RateSet } from "@/modules/currency/domain/conversion";
 import { fromUsd } from "@/modules/currency/domain/conversion";
+import { MOVEMENT_TYPE_LABEL } from "@/modules/inventory/infrastructure/labels";
 import { describeRange, formatDay } from "../domain/date-range";
+import type { AdjustmentsReport } from "./adjustments-report";
 import type { InventoryValuation } from "./inventory-report";
 import type { MarginReport } from "./margin-report";
 import type { NoMovementReport } from "./no-movement-report";
@@ -280,6 +282,49 @@ export function noMovementSheets(report: NoMovementReport): Sheet[] {
         lastSale: r.lastSaleAt ? formatDateTime(r.lastSaleAt) : "Nunca",
         lastInbound: r.lastInboundAt ? formatDateTime(r.lastInboundAt) : "",
       })),
+    },
+  ];
+}
+
+export function adjustmentsSheets(report: AdjustmentsReport): Sheet[] {
+  const notes = ["Ajustes y mermas (valorizados al costo de cada movimiento)", describeRange(report.range)];
+  const cols = [
+    int("Movimientos", "movements"),
+    qty("Unidades salida", "unitsOut"),
+    qty("Unidades entrada", "unitsIn"),
+    money("Pérdida USD", "valueOut"),
+    money("Sobrante USD", "valueIn"),
+    money("Neto USD", "net"),
+  ];
+  return [
+    {
+      name: "Por motivo",
+      notes,
+      columns: [text("Motivo", "name", 28), ...cols],
+      rows: [...report.byReason, report.totals],
+    },
+    {
+      name: "Por producto",
+      notes,
+      columns: [text("Producto", "name", 40), text("N.º de parte", "detail", 18), ...cols],
+      rows: [...report.byProduct, { ...report.totals, detail: "" }],
+    },
+    {
+      name: "Movimientos",
+      notes,
+      columns: [
+        text("Fecha", "date", 16),
+        text("Producto", "productName", 36),
+        text("N.º de parte", "partNumber", 16),
+        text("Tipo", "typeLabel", 18),
+        text("Motivo", "reasonName", 18),
+        qty("Cantidad", "quantity"),
+        money("Valor USD", "value"),
+        text("Documento", "documentNumber", 12),
+        text("Usuario", "userName", 18),
+        text("Nota", "notes", 30),
+      ],
+      rows: report.movements.map((m) => ({ ...m, date: formatDateTime(m.createdAt), typeLabel: MOVEMENT_TYPE_LABEL[m.type] })),
     },
   ];
 }

@@ -13,6 +13,7 @@ import { formatDate, formatQty } from "@/lib/format";
 import { RECEIPT_STATUS_LABEL, currencyLabel } from "@/modules/purchasing/infrastructure/labels";
 import { getSupplier, listSupplierProducts, listSupplierReceipts } from "@/modules/purchasing/infrastructure/suppliers";
 import { PreferredToggle } from "@/modules/purchasing/ui/preferred-toggle";
+import { SupplierLinkDialog } from "@/modules/purchasing/ui/supplier-link-dialog";
 
 export const metadata = { title: "Proveedor" };
 
@@ -122,10 +123,14 @@ export default async function SupplierDetailPage({ params }: { params: Promise<{
                 <TableHead className="w-10">Pref.</TableHead>
                 <TableHead>Producto</TableHead>
                 <TableHead className="hidden md:table-cell">Cód. proveedor</TableHead>
+                <TableHead className="hidden text-right md:table-cell">Empaque</TableHead>
                 <TableHead className="text-right">Existencia</TableHead>
                 <TableHead className="hidden text-right md:table-cell">Último costo</TableHead>
                 <TableHead className="text-right">Último costo USD</TableHead>
                 <TableHead className="hidden md:table-cell">Última compra</TableHead>
+                <TableHead className="w-10">
+                  <span className="sr-only">Editar</span>
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -141,12 +146,16 @@ export default async function SupplierDetailPage({ params }: { params: Promise<{
                     <span className="text-muted-foreground block text-xs">{[p.partNumber, p.sku].filter(Boolean).join(" · ")}</span>
                   </TableCell>
                   <TableCell className="text-muted-foreground hidden md:table-cell">{p.supplierCode ?? "—"}</TableCell>
+                  <TableCell className="hidden text-right tabular-nums md:table-cell">{p.packSize > 1 ? `× ${p.packSize}` : "—"}</TableCell>
                   <TableCell className="text-right tabular-nums">
                     {formatQty(p.stock, p.unitDecimals)} {p.unitSymbol}
                   </TableCell>
                   <TableCell className="hidden text-right md:table-cell">{p.lastCostAmount ? <Money value={p.lastCostAmount} currency={p.lastCostCurrency ?? "USD"} /> : "—"}</TableCell>
                   <TableCell className="text-right">{p.lastCostUsd ? <Money value={p.lastCostUsd} currency="USD" /> : "—"}</TableCell>
                   <TableCell className="text-muted-foreground hidden md:table-cell">{p.lastPurchaseAt ? formatDate(p.lastPurchaseAt) : "—"}</TableCell>
+                  <TableCell>
+                    <SupplierLinkDialog productId={p.productId} supplierId={id} title={p.productName} supplierCode={p.supplierCode} packSize={p.packSize} />
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>

@@ -3,11 +3,11 @@ import { describe, expect, it } from "vitest";
 import * as s from "@/db/schema";
 import { AppError } from "@/lib/errors";
 import { applyAdjustment, cancelAdjustment, saveAdjustmentDraft } from "@/modules/inventory/application/adjustments";
-import { addCountItem, applyCount, createCount, recordCountItem } from "@/modules/inventory/application/counts";
+import { addCountItem, applyCount, createCount, recordCountItem, revealCount } from "@/modules/inventory/application/counts";
 import { applyMovements } from "@/modules/inventory/application/stock";
 import { upsertStockSettings } from "@/modules/inventory/application/stock-settings";
 import { getAlerts } from "@/modules/inventory/infrastructure/alerts";
-import { getCount } from "@/modules/inventory/infrastructure/counts";
+import { getCount, getCountItem } from "@/modules/inventory/infrastructure/counts";
 import { listMovements } from "@/modules/inventory/infrastructure/movements";
 import { listStock } from "@/modules/inventory/infrastructure/stock-query";
 import { withFixtures } from "./inventory-fixtures";
@@ -106,13 +106,24 @@ describe.skipIf(skip)("stock counts", () => {
       expect(created.itemCount).toBe(3);
       const detail = (await getCount(created.id, f.tx))!;
       expect(detail.status).toBe("open");
-      expect(detail.items.map((i) => i.expectedQty).sort()).toEqual(["1.000", "5.000", "8.000"]);
+      // Blind: the server sends no expected quantities while counting.
+      expect(detail.expectedHidden).toBe(true);
+      expect(detail.items.map((i) => i.expectedQty)).toEqual([null, null, null]);
 
       const itemA = detail.items.find((i) => i.productId === a.id)!;
       const itemB = detail.items.find((i) => i.productId === b.id)!;
       await recordCountItem({ countId: created.id, itemId: itemA.id, countedQty: "5" }, actor, f.tx); // no difference
-      await recordCountItem({ countId: created.id, itemId: itemB.id, countedQty: "10" }, actor, f.tx); // +2
+      const recorded = await recordCountItem({ countId: created.id, itemId: itemB.id, countedQty: "10" }, actor, f.tx); // +2
+      expect(recorded.expectedHidden).toBe(true);
+      expect((await getCountItem(created.id, itemB.id, f.tx))?.difference).toBeNull();
       // C is not counted.
+
+      await revealCount(created.id, actor, f.tx);
+      const revealed = (await getCount(created.id, f.tx))!;
+      expect(revealed.expectedHidden).toBe(false);
+      expect(revealed.revealedAt).not.toBeNull();
+      expect(revealed.items.map((i) => i.expectedQty).sort()).toEqual(["1.000", "5.000", "8.000"]);
+      expect(revealed.differences).toBe(1);
 
       const applied = await applyCount(created.id, actor, f.tx);
       expect(applied.number).toMatch(/^I-\d{6}$/);

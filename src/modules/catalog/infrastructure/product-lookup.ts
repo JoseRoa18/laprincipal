@@ -163,3 +163,13 @@ export async function findProductByBarcode(code: string, opts: LookupOptions): P
   const [p] = await hydrate(dbx, [row.productId], opts);
   return p ?? null;
 }
+
+/** Exact barcode, then exact SKU or part number (scanner or typed code). */
+export async function findProductByCode(code: string, opts: LookupOptions): Promise<ProductForSale | null> {
+  const term = code.trim();
+  if (!term) return null;
+  const byBarcode = await findProductByBarcode(term, opts);
+  if (byBarcode) return byBarcode;
+  const [first] = await searchProducts(term, { ...opts, limit: 1 });
+  return first && (first.sku === term.toUpperCase() || first.partNumber === term) ? first : null;
+}

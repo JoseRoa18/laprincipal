@@ -140,6 +140,8 @@ export interface ClosingSummary {
     denominations: Record<string, Record<string, number>>;
     /** payment method id -> reconciled checkbox at close. */
     reconciled: Record<string, boolean>;
+    /** Blind counts registered before closing (more than 1 means a recount). */
+    attempts?: number;
   };
   /** Electronic payments with their references, for reconciliation. */
   references: ClosingReference[];

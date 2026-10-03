@@ -16,6 +16,7 @@ import { writeAudit } from "@/modules/core/application/audit";
 import { getDefaultLocation } from "@/modules/core/application/context";
 import { nextDocumentNumber } from "@/modules/core/application/numbering";
 import { getSetting } from "@/modules/settings/infrastructure/settings";
+import { hidesExpected } from "../domain/count-visibility";
 import { applyMovements, type MovementInput } from "./stock";
 import type { CountAddItemInput, CountCreateInput, CountItemInput } from "./schemas";
 import { inTransaction } from "./transaction";
@@ -81,9 +82,12 @@ async function loadOpenCount(tx: DbOrTx, countId: string, forUpdate = false) {
   return count;
 }
 
-/** Record (or clear) the counted quantity of one item. */
+/**
+ * Record (or clear) the counted quantity of one item. `expectedHidden` tells
+ * the caller not to send the difference back while a blind count is running.
+ */
 export async function recordCountItem(input: CountItemInput, actor: Actor, dbx: DbOrTx = db) {
-  await loadOpenCount(dbx, input.countId);
+  const count = await loadOpenCount(dbx, input.countId);
   const [item] = await dbx
     .select()
     .from(stockCountItems)
@@ -102,7 +106,17 @@ export async function recordCountItem(input: CountItemInput, actor: Actor, dbx: 
     })
     .where(eq(stockCountItems.id, item.id))
     .returning();
-  return updated;
+  return { ...updated, expectedHidden: hidesExpected(count) };
+}
+
+/** End the counting phase of a blind count: expected quantities and differences become visible. */
+export async function revealCount(id: string, actor: Actor, dbx: DbOrTx = db): Promise<void> {
+  return inTransaction(dbx, async (tx) => {
+    const count = await loadOpenCount(tx, id, true);
+    if (!hidesExpected(count)) return;
+    const [updated] = await tx.update(stockCounts).set({ revealedAt: new Date() }).where(eq(stockCounts.id, id)).returning();
+    await writeAudit(tx, { userId: actor.id, action: "count.reveal", entityType: "stock_count", entityId: id, after: { revealedAt: updated.revealedAt } });
+  });
 }
 
 /** Add a product found during the count that was not in the initial list. */

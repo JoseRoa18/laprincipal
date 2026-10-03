@@ -37,12 +37,18 @@ export const movementSchema = z.object({
 });
 export type MovementForm = z.input<typeof movementSchema>;
 
+const countedString = z.string().refine((v) => parseLocalizedNumber(v) !== null, "Escribe el efectivo contado");
+
+export const registerCountSchema = z.object({
+  counts: z.array(z.object({ currencyCode: z.string().min(3), counted: countedString })).min(1),
+});
+
 export const closeSessionSchema = z.object({
   counts: z
     .array(
       z.object({
         currencyCode: z.string().min(3),
-        counted: z.string().refine((v) => parseLocalizedNumber(v) !== null, "Escribe el efectivo contado"),
+        counted: countedString,
         justification: z.string().trim().max(500).optional(),
       }),
     )

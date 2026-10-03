@@ -147,6 +147,8 @@ export const stockCounts = pgTable("stock_counts", {
   filter: jsonb("filter").notNull().default({}),
   status: countStatusEnum("status").notNull().default("open"),
   blind: boolean("blind").notNull().default(true),
+  /** End of the blind phase: from then on expected quantities and differences are shown. */
+  revealedAt: timestamp("revealed_at", { withTimezone: true }),
   startedBy: uuid("started_by")
     .notNull()
     .references(() => users.id),

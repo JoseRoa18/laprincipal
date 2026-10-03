@@ -1,0 +1,1 @@
+ALTER TABLE "stock_counts" ADD COLUMN "revealed_at" timestamp with time zone;

@@ -1,10 +1,10 @@
 "use client";
 
-import { Calculator, Lock } from "lucide-react";
+import { Calculator, Lock, RotateCcw } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { closeCashSessionAction } from "@/app/(app)/caja/actions";
+import { closeCashSessionAction, registerCashCountAction } from "@/app/(app)/caja/actions";
 import { Money } from "@/components/app/money";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,15 +17,20 @@ import { Textarea } from "@/components/ui/textarea";
 import { formatDateTime, formatMoney, parseLocalizedNumber } from "@/lib/format";
 import { D } from "@/lib/money";
 import { denominationsFor, sumDenominations } from "@/modules/cash/domain/denominations";
-import { computeDifference } from "@/modules/cash/domain/summary";
 import { AmountInput } from "./amount-input";
 
 export interface CloseCurrency {
   code: string;
   symbol: string;
   decimals: number;
-  /** Expected cash (kept hidden until the user types a count). */
+}
+
+/** Registered blind count of one currency, returned by the server after counting. */
+export interface CountView {
+  currencyCode: string;
   expected: string;
+  counted: string;
+  difference: string;
 }
 
 export interface ElectronicMethod {
@@ -49,20 +54,29 @@ export interface ReferenceRow {
   at: string | null;
 }
 
+/** Plain input text for a stored amount: "120.5000" → "120.5". */
+const toInputText = (amount: string) => (amount.includes(".") ? amount.replace(/\.?0+$/, "") : amount);
+
 export function CloseSessionForm({
   sessionNumber,
   currencies,
   methods,
   references,
+  initialCount,
 }: {
   sessionNumber: string;
   currencies: CloseCurrency[];
   methods: ElectronicMethod[];
   references: ReferenceRow[];
+  /** Count already registered for this session (e.g. after a page reload), still valid. */
+  initialCount: CountView[] | null;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const [counted, setCounted] = useState<Record<string, string>>({});
+  const [review, setReview] = useState<CountView[] | null>(initialCount);
+  const [counted, setCounted] = useState<Record<string, string>>(() =>
+    Object.fromEntries((initialCount ?? []).map((c) => [c.currencyCode, toInputText(c.counted)])),
+  );
   const [helperOpen, setHelperOpen] = useState<Record<string, boolean>>({});
   const [bills, setBills] = useState<Record<string, Record<string, string>>>({});
   const [justification, setJustification] = useState<Record<string, string>>({});
@@ -75,18 +89,39 @@ export function CloseSessionForm({
     if (raw === undefined || raw.trim() === "") return null;
     return parseLocalizedNumber(raw);
   };
-  const differenceFor = (c: CloseCurrency): string | null => {
-    const n = parsedCount(c.code);
-    return n === null ? null : computeDifference(c.expected, n);
-  };
+  const reviewFor = (code: string) => review?.find((r) => r.currencyCode === code) ?? null;
 
   const missing = currencies.filter((c) => parsedCount(c.code) === null);
   const withDifference = currencies.filter((c) => {
-    const d = differenceFor(c);
-    return d !== null && !D(d).isZero();
+    const r = reviewFor(c.code);
+    return r !== null && !D(r.difference).isZero();
   });
   const missingJustification = withDifference.filter((c) => !(justification[c.code] ?? "").trim());
-  const canSubmit = missing.length === 0 && missingJustification.length === 0 && !pending;
+  const canRegister = !review && missing.length === 0 && !pending;
+  const canSubmit = review !== null && missingJustification.length === 0 && !pending;
+
+  function recount() {
+    setReview(null);
+    setCounted({});
+    setBills({});
+    setJustification({});
+    setFieldErrors({});
+  }
+
+  function registerCount() {
+    startTransition(async () => {
+      const result = await registerCashCountAction({
+        counts: currencies.map((c) => ({ currencyCode: c.code, counted: counted[c.code] ?? "" })),
+      });
+      if (result.ok) {
+        setReview(result.data);
+        setFieldErrors({});
+      } else {
+        setFieldErrors((result.error.details?.fields ?? {}) as Record<string, string>);
+        toast.error(result.error.message);
+      }
+    });
+  }
 
   function setBill(code: string, bill: number, value: string) {
     const next = { ...(bills[code] ?? {}), [String(bill)]: value };
@@ -107,7 +142,11 @@ export function CloseSessionForm({
         if (Object.keys(clean).length) denominations[code] = clean;
       }
       const result = await closeCashSessionAction({
-        counts: currencies.map((c) => ({ currencyCode: c.code, counted: counted[c.code] ?? "", justification: justification[c.code] || undefined })),
+        counts: currencies.map((c) => ({
+          currencyCode: c.code,
+          counted: reviewFor(c.code)?.counted ?? counted[c.code] ?? "",
+          justification: justification[c.code] || undefined,
+        })),
         denominations,
         reconciled,
         closingNotes: notes || undefined,
@@ -116,6 +155,9 @@ export function CloseSessionForm({
         toast.success(`Caja ${result.data.number ?? sessionNumber} cerrada`);
         router.push(`/caja/historial/${result.data.id}`);
         router.refresh();
+      } else if (result.error.details?.recount) {
+        recount();
+        toast.error(result.error.message);
       } else {
         const fields = (result.error.details?.fields ?? {}) as Record<string, string>;
         setFieldErrors(fields);
@@ -131,18 +173,22 @@ export function CloseSessionForm({
           <CardTitle className="flex items-center gap-2">
             <Lock className="size-4" /> Conteo ciego de efectivo
           </CardTitle>
-          <CardDescription>Cuenta el dinero de la gaveta antes de ver el monto esperado. La diferencia aparece al escribir el conteo.</CardDescription>
+          <CardDescription>
+            Cuenta el dinero de la gaveta y registra el conteo. El monto esperado y la diferencia aparecen después; si vuelves a contar, queda anotado en el
+            cierre.
+          </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-6 lg:grid-cols-2">
           {currencies.map((c) => {
-            const diff = differenceFor(c);
+            const r = reviewFor(c.code);
+            const diff = r?.difference ?? null;
             const denominations = denominationsFor(c.code);
             const err = fieldErrors[`justification.${c.code}`];
             return (
               <div key={c.code} className="space-y-3 rounded-xl border p-4">
                 <div className="flex items-center justify-between gap-2">
                   <h3 className="font-medium">Efectivo {c.code === "USD" ? "en dólares" : c.code === "COP" ? "en pesos" : c.code}</h3>
-                  {denominations.length > 0 ? (
+                  {denominations.length > 0 && !review ? (
                     <Button type="button" variant="ghost" size="sm" onClick={() => setHelperOpen((p) => ({ ...p, [c.code]: !p[c.code] }))}>
                       <Calculator />
                       {helperOpen[c.code] ? "Ocultar billetes" : "Contar por billetes"}
@@ -150,7 +196,7 @@ export function CloseSessionForm({
                   ) : null}
                 </div>
 
-                {helperOpen[c.code] ? (
+                {helperOpen[c.code] && !review ? (
                   <div className="grid grid-cols-3 gap-2 sm:grid-cols-6 lg:grid-cols-3">
                     {denominations.map((bill) => (
                       <div key={bill} className="space-y-1">
@@ -179,17 +225,18 @@ export function CloseSessionForm({
                     id={`counted-${c.code}`}
                     symbol={c.symbol}
                     value={counted[c.code] ?? ""}
+                    readOnly={review !== null}
                     onChange={(e) => setCounted((p) => ({ ...p, [c.code]: e.target.value }))}
                     aria-invalid={counted[c.code] !== undefined && counted[c.code] !== "" && parsedCount(c.code) === null}
                   />
                   {counted[c.code] && parsedCount(c.code) === null ? <FieldError>Escribe un monto válido</FieldError> : null}
                 </Field>
 
-                {diff !== null ? (
+                {r && diff !== null ? (
                   <dl className="grid grid-cols-2 gap-2 rounded-lg bg-muted/50 p-3 text-sm">
                     <dt className="text-muted-foreground">Esperado</dt>
                     <dd className="text-right">
-                      <Money value={c.expected} currency={c.code} />
+                      <Money value={r.expected} currency={c.code} />
                     </dd>
                     <dt className="text-muted-foreground">Diferencia</dt>
                     <dd className="text-right font-medium">
@@ -197,7 +244,7 @@ export function CloseSessionForm({
                     </dd>
                   </dl>
                 ) : (
-                  <p className="text-muted-foreground text-xs">Escribe el conteo para ver el esperado y la diferencia.</p>
+                  <p className="text-muted-foreground text-xs">El esperado y la diferencia aparecen al registrar el conteo.</p>
                 )}
 
                 {diff !== null && !D(diff).isZero() ? (
@@ -313,15 +360,29 @@ export function CloseSessionForm({
 
       <div className="bg-background/95 sticky bottom-14 z-10 flex flex-col gap-2 border-t py-3 backdrop-blur sm:flex-row sm:items-center sm:justify-between md:bottom-0">
         <p className="text-muted-foreground text-sm">
-          {missing.length > 0
-            ? `Falta contar: ${missing.map((c) => c.code).join(", ")}`
+          {!review
+            ? missing.length > 0
+              ? `Falta contar: ${missing.map((c) => c.code).join(", ")}`
+              : "Registra el conteo para ver el esperado."
             : missingJustification.length > 0
               ? `Justifica la diferencia en ${missingJustification.map((c) => c.code).join(", ")}`
               : "Todo listo para cerrar."}
         </p>
-        <Button size="lg" onClick={submit} disabled={!canSubmit}>
-          {pending ? "Cerrando..." : "Cerrar caja"}
-        </Button>
+        {!review ? (
+          <Button size="lg" onClick={registerCount} disabled={!canRegister}>
+            {pending ? "Registrando..." : "Registrar conteo"}
+          </Button>
+        ) : (
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Button size="lg" variant="outline" onClick={recount} disabled={pending}>
+              <RotateCcw />
+              Volver a contar
+            </Button>
+            <Button size="lg" onClick={submit} disabled={!canSubmit}>
+              {pending ? "Cerrando..." : "Cerrar caja"}
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );

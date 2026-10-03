@@ -2,7 +2,7 @@ import { eq, inArray } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import * as s from "@/db/schema";
 import { AppError } from "@/lib/errors";
-import { addCashMovement, closeCashSession, openCashSession, reopenCashSession } from "@/modules/cash/application/open-close";
+import { addCashMovement, closeCashSession, openCashSession, registerCashCount, reopenCashSession } from "@/modules/cash/application/open-close";
 import { getOpenCashSession } from "@/modules/cash/application/session";
 import { getSessionSummary } from "@/modules/cash/application/session-summary";
 import { getCashSessionDetail, listCashSessions } from "@/modules/cash/infrastructure/queries";
@@ -235,5 +235,31 @@ describe.skipIf(SKIP)("cash sessions", () => {
     await closeCashSession({ sessionId: second.id, userId: admin.id, counts: [{ currencyCode: "USD", counted: "0" }, { currencyCode: "COP", counted: "0" }] }, db);
     await expect(reopenCashSession({ sessionId: first.id, userId: admin.id }, db)).rejects.toMatchObject({ code: "INVALID_STATE" });
     await expect(reopenCashSession({ sessionId: first.id, userId: admin.id }, db)).rejects.toBeInstanceOf(AppError);
+  });
+
+  it("blind count: the close uses the registered count and asks for a recount after cash changes", async () => {
+    const session = await openCashSession({ userId: seller.id, registerId: store.register.id, openings: [{ currencyCode: "USD", amount: "10" }] }, db);
+    createdSessions.push(session.id);
+
+    const first = await registerCashCount({ sessionId: session.id, userId: seller.id, counts: [{ currencyCode: "USD", counted: "9" }, { currencyCode: "COP", counted: "0" }] }, db);
+    expect(first.find((r) => r.currencyCode === "USD")).toMatchObject({ expected: "10.0000", counted: "9.0000", difference: "-1.0000" });
+
+    // A different count typed after seeing the expected amount is rejected.
+    await expect(
+      closeCashSession({ sessionId: session.id, userId: seller.id, counts: [{ currencyCode: "USD", counted: "10" }, { currencyCode: "COP", counted: "0" }] }, db),
+    ).rejects.toMatchObject({ code: "INVALID_STATE" });
+
+    // Cash moved after the count: it has to be counted again.
+    await addCashMovement({ sessionId: session.id, userId: seller.id, type: "in", currencyCode: "USD", amount: "5", reason: "Sencillo" }, db);
+    await expect(
+      closeCashSession({ sessionId: session.id, userId: seller.id, counts: [{ currencyCode: "USD", justification: "Faltó 1" }, { currencyCode: "COP" }] }, db),
+    ).rejects.toMatchObject({ code: "INVALID_STATE", details: { recount: true } });
+
+    await registerCashCount({ sessionId: session.id, userId: seller.id, counts: [{ currencyCode: "USD", counted: "15" }, { currencyCode: "COP", counted: "0" }] }, db);
+    await closeCashSession({ sessionId: session.id, userId: seller.id, counts: [{ currencyCode: "USD" }, { currencyCode: "COP" }] }, db);
+
+    const detail = (await getCashSessionDetail(session.id, db))!;
+    expect(detail.balances.find((b) => b.currencyCode === "USD")).toMatchObject({ countedAmount: "15.0000", expectedAmount: "15.0000", difference: "0.0000" });
+    expect(detail.closingSummary?.counts.attempts).toBe(2);
   });
 });

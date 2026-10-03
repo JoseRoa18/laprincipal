@@ -4,13 +4,24 @@ import { businessDate } from "@/lib/format";
 import { getRatesSnapshot } from "@/modules/currency/infrastructure/rates";
 import type { AbcClass, StockStatus } from "@/modules/inventory/domain/velocity";
 import { parseDateRange } from "@/modules/reporting/domain/date-range";
-import { buildWorkbook, inventorySheets, marginSheets, noMovementSheets, salesSheets, velocitySheets, type Sheet } from "@/modules/reporting/infrastructure/excel";
+import { getAdjustmentsReport } from "@/modules/reporting/infrastructure/adjustments-report";
+import {
+  adjustmentsSheets,
+  buildWorkbook,
+  inventorySheets,
+  marginSheets,
+  noMovementSheets,
+  salesSheets,
+  velocitySheets,
+  type Sheet,
+} from "@/modules/reporting/infrastructure/excel";
 import { getInventoryValuation, type InventorySort } from "@/modules/reporting/infrastructure/inventory-report";
 import { getMarginReport } from "@/modules/reporting/infrastructure/margin-report";
 import { getNoMovementReport } from "@/modules/reporting/infrastructure/no-movement-report";
 import { getSalesReport } from "@/modules/reporting/infrastructure/sales-report";
 import { getVelocityReport, STATUS_ORDER, type VelocitySort } from "@/modules/reporting/infrastructure/velocity-report";
-import { getStatsSettings } from "@/modules/settings/infrastructure/settings";
+import { buildReportPdf } from "@/modules/reporting/infrastructure/report-pdf";
+import { getCompanySettings, getStatsSettings } from "@/modules/settings/infrastructure/settings";
 
 export const maxDuration = 60;
 
@@ -21,9 +32,10 @@ function oneOf<T extends string>(value: string | null, allowed: readonly T[]): T
 }
 
 /**
- * Excel export of a report with its current filters:
- *   /api/reports/export?report=sales&from=2026-09-01&to=2026-09-08
- *   report = sales | inventory | velocity | margin | no_movement
+ * Excel or PDF export of a report with its current filters:
+ *   /api/reports/export?report=sales&from=2026-09-01&to=2026-09-08&format=pdf
+ *   report = sales | inventory | velocity | margin | no_movement | adjustments
+ *   format = xlsx (default) | pdf
  */
 export async function GET(req: NextRequest) {
   const user = await getSessionUser();
@@ -33,6 +45,7 @@ export async function GET(req: NextRequest) {
   const sp = req.nextUrl.searchParams;
   const params = Object.fromEntries(sp.entries());
   const today = businessDate();
+  const format = sp.get("format") === "pdf" ? "pdf" : "xlsx";
   let sheets: Sheet[];
   let filename: string;
 
@@ -79,8 +92,25 @@ export async function GET(req: NextRequest) {
         filename = `sin_movimiento_${days}d_${today}.xlsx`;
         break;
       }
+      case "adjustments": {
+        const range = parseDateRange(params, today);
+        sheets = adjustmentsSheets(await getAdjustmentsReport(range, { movementLimit: 100_000 }));
+        filename = `ajustes_y_mermas_${range.from}_${range.to}.xlsx`;
+        break;
+      }
       default:
         return NextResponse.json({ error: "Reporte desconocido." }, { status: 400 });
+    }
+    if (format === "pdf") {
+      const company = await getCompanySettings();
+      const pdf = await buildReportPdf(sheets, { companyName: company.name, title: sheets[0]?.notes?.[0] ?? filename });
+      return new NextResponse(new Uint8Array(pdf), {
+        headers: {
+          "content-type": "application/pdf",
+          "content-disposition": `attachment; filename="${filename.replace(/\.xlsx$/, ".pdf")}"`,
+          "cache-control": "private, no-store",
+        },
+      });
     }
     const body = await buildWorkbook(sheets);
     return new NextResponse(body, {

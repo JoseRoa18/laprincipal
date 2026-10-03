@@ -25,6 +25,15 @@ export const preferredSupplierSchema = z.object({
   preferred: z.boolean(),
 });
 
+export const productSupplierSchema = z.object({
+  productId: z.uuid(),
+  supplierId: z.uuid(),
+  supplierCode: optionalText(60),
+  packSize: z.coerce.number().int("Debe ser un número entero.").min(1, "Mínimo 1.").max(100000, "Máximo 100.000."),
+});
+export type ProductSupplierInput = z.output<typeof productSupplierSchema>;
+export type ProductSupplierFormValues = z.input<typeof productSupplierSchema>;
+
 export const receiptLineSchema = z.object({
   productId: z.uuid("Producto inválido."),
   quantity: qtyString("Cantidad"),

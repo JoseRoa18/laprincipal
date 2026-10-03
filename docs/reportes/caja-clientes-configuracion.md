@@ -97,14 +97,13 @@ Los fixtures de integración (`tests/fixtures.ts`) crean sus propias monedas, se
 
 ## 4. Pendientes conocidos
 
-- **Conteo ciego a nivel de interfaz**: el esperado viaja al navegador y se oculta hasta escribir el conteo. Si se quiere ciego "de verdad", cambiar a una acción que devuelva el esperado solo después de registrar el conteo.
-- **Montos en COP**: `parseLocalizedNumber("52.000")` interpreta el punto como decimal (52). Escribir sin separador de miles o con coma decimal ("52000" o "52.000,00"). Es el comportamiento del helper compartido.
+- Resuelto (2026-10-03): **conteo ciego en el servidor**. `registerCashCount` guarda lo contado y el esperado del momento en `cash_session_balances` y solo entonces devuelve el esperado; `closeCashSession` usa ese conteo, rechaza otro valor y pide recontar si el esperado cambió. Cada conteo queda en `audit_logs` (`cash_session.count`) y `closing_summary.counts.attempts` alimenta "Conteo repetido". El vendedor no ve el esperado en `/caja` ni el reporte en vivo de `/caja/historial/[id]`.
+- Resuelto: **montos en COP**. `parseLocalizedNumber("52.000")` da 52000 y, desde 2026-10-03, `0.125` da 0,125 (un grupo de miles no empieza en 0).
 - **Impresión**: el CSS oculta la barra lateral, cabecera y navegación por sus `data-slot`; se validó por código, no en un navegador.
 - **Reabrir** descarta el conteo de cierre (queda en `audit_logs`, entrada `cash_session.reopen` con `before.closingSummary`).
 - **`CRON_SECRET`** no está en `.env.local` (solo en `.env.example`): `/api/cron/backup` responde 500 "no configurado" hasta agregarlo.
 - **Logo WebP**: se codifica con `canvas.toDataURL("image/webp")`; en navegadores sin soporte se guarda PNG (`company/logo.png`).
 - Sin descarga automática de la tasa BCV (fuera del MVP).
-- El estado en `docs/05-progreso.md` (Caja, Clientes, Configuración → listos) no se actualizó por ser un archivo compartido.
 
 Estado de la verificación global (no atribuible al paquete):
 

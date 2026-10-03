@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { classifyAbc } from "./abc";
+import { abcClassify } from "./velocity";
 
-describe("classifyAbc", () => {
+describe("abcClassify", () => {
   it("splits A/B/C by cumulative revenue share", () => {
-    const cls = classifyAbc([
+    const cls = abcClassify([
       { id: "a", revenue: 800 },
       { id: "b", revenue: 150 },
       { id: "c", revenue: 40 },
@@ -18,7 +18,7 @@ describe("classifyAbc", () => {
   });
 
   it("keeps the top seller in A even when it holds all the revenue", () => {
-    const cls = classifyAbc([
+    const cls = abcClassify([
       { id: "only", revenue: "600.0000" },
       { id: "none", revenue: 0 },
     ]);
@@ -27,7 +27,7 @@ describe("classifyAbc", () => {
   });
 
   it("returns C for everything when nothing sold", () => {
-    const cls = classifyAbc([
+    const cls = abcClassify([
       { id: "x", revenue: 0 },
       { id: "y", revenue: 0 },
     ]);
@@ -36,7 +36,7 @@ describe("classifyAbc", () => {
 
   it("classifies the item that crosses the 80 % line as A", () => {
     // 50 + 35 = 85 %: the second item starts at 50 % (< 80 %) so it is still A.
-    const cls = classifyAbc([
+    const cls = abcClassify([
       { id: "p", revenue: 50 },
       { id: "q", revenue: 35 },
       { id: "r", revenue: 15 },

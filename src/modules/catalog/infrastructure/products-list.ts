@@ -1,6 +1,7 @@
 import { and, asc, count, eq, ilike, inArray, isNull, or, sql, type SQL } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { db, type DbOrTx } from "@/db/client";
+import { allQueries } from "@/db/parallel";
 import {
   brands,
   categories,
@@ -239,10 +240,10 @@ export async function listProductsForExport(filter: ProductListFilter, opts: { w
   const ids = rows.map((r) => r.id);
   const prices = await pricesFor(dbx, ids);
   const [codes, eqs, compat] = ids.length
-    ? await Promise.all([
-        dbx.select({ productId: productBarcodes.productId, code: productBarcodes.code }).from(productBarcodes).where(inArray(productBarcodes.productId, ids)),
-        dbx.select({ productId: productEquivalences.productId, code: productEquivalences.code }).from(productEquivalences).where(inArray(productEquivalences.productId, ids)),
-        dbx
+    ? await allQueries(dbx, [
+        () => dbx.select({ productId: productBarcodes.productId, code: productBarcodes.code }).from(productBarcodes).where(inArray(productBarcodes.productId, ids)),
+        () => dbx.select({ productId: productEquivalences.productId, code: productEquivalences.code }).from(productEquivalences).where(inArray(productEquivalences.productId, ids)),
+        () => dbx
           .select({
             productId: productCompatibilities.productId,
             applianceType: productCompatibilities.applianceType,

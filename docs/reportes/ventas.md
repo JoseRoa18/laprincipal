@@ -65,7 +65,7 @@ Fecha: 2026-09-08. Rutas `/vender`, `/ventas/**`, `/cotizaciones/**`, `/imprimir
 ## 5. Pendientes y notas
 
 - Devoluciones de la misma línea en varias veces: el importe se prorratea por cantidad y puede diferir en centavos del total de la línea.
-- El vencimiento de cotizaciones se ejecuta al abrir `/cotizaciones` (no hay cron). Sin tasa del día las cotizaciones guardan tasa 0 y no muestran Bs.
+- El vencimiento de cotizaciones corre en la tarea diaria (`/api/cron/stats`, desde 2026-10-03) y además al abrir `/cotizaciones`. Sin tasa del día las cotizaciones guardan tasa 0 y no muestran Bs.
 - WhatsApp: se abre una pestaña en blanco durante el clic (evita el bloqueo de ventanas) y luego se redirige a `wa.me`; en desarrollo la URL firmada apunta a `APP_URL` local.
 - Impresión automática: usa un marco oculto con `window.print()`; el navegador puede pedir confirmación. La cámara requiere HTTPS o `localhost`.
 - El script de humo deja datos en la base de desarrollo (producto `SMK-*`, venta, cotización cancelada y devolución) y abre una caja si no había.

@@ -1,9 +1,10 @@
 import { and, asc, desc, eq, sql, type SQL } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { db, type DbOrTx } from "@/db/client";
-import { categories, products, stockCountItems, stockCounts, stockLevels, units, users } from "@/db/schema";
+import { categories, products, stockCountItems, stockCounts, units, users } from "@/db/schema";
 import { D } from "@/lib/money";
 import type { CountFilter } from "../application/counts";
+import { hidesExpected } from "../domain/count-visibility";
 
 export type CountStatus = "open" | "applied" | "cancelled";
 
@@ -63,13 +64,13 @@ export interface CountItemRow {
   locationCode: string | null;
   unitSymbol: string;
   unitDecimals: number;
-  expectedQty: string;
+  /** null while a blind count has not been revealed. */
+  expectedQty: string | null;
   countedQty: string | null;
+  /** null while a blind count has not been revealed. */
   difference: string | null;
   costAvgUsd: string;
   countedAt: Date | null;
-  /** Physical stock right now (may differ from expected if there were movements). */
-  currentStock: string;
 }
 
 export interface CountDetail {
@@ -84,6 +85,9 @@ export interface CountDetail {
   startedByName: string;
   appliedAt: Date | null;
   appliedByName: string | null;
+  revealedAt: Date | null;
+  /** Blind count still in its counting phase: expected quantities and differences are not sent. */
+  expectedHidden: boolean;
   items: CountItemRow[];
   totalItems: number;
   countedItems: number;
@@ -108,7 +112,7 @@ export async function getCount(id: string, dbx: DbOrTx = db): Promise<CountDetai
       startedByName: starter.name,
       appliedAt: stockCounts.appliedAt,
       appliedByName: applier.name,
-      warehouseId: stockCounts.warehouseId,
+      revealedAt: stockCounts.revealedAt,
     })
     .from(stockCounts)
     .innerJoin(starter, eq(starter.id, stockCounts.startedBy))
@@ -118,7 +122,39 @@ export async function getCount(id: string, dbx: DbOrTx = db): Promise<CountDetai
     .limit(1);
   if (!row) return null;
 
-  const items = await dbx
+  const expectedHidden = hidesExpected(row);
+  const items = await selectCountItems(dbx, eq(stockCountItems.countId, id), expectedHidden);
+
+  const counted = items.filter((i) => i.countedQty !== null);
+  const diffs = counted.filter((i) => !D(i.difference).isZero());
+  const value = diffs.reduce((acc, i) => acc.plus(D(i.difference).mul(D(i.costAvgUsd))), D(0));
+
+  return {
+    ...row,
+    filter: (row.filter ?? {}) as CountFilter,
+    expectedHidden,
+    items,
+    totalItems: items.length,
+    countedItems: counted.length,
+    differences: diffs.length,
+    differenceValueUsd: value.toFixed(4),
+  };
+}
+
+/** One item of a count, with the same visibility rule as `getCount`. */
+export async function getCountItem(countId: string, itemId: string, dbx: DbOrTx = db): Promise<CountItemRow | null> {
+  const [count] = await dbx
+    .select({ status: stockCounts.status, blind: stockCounts.blind, revealedAt: stockCounts.revealedAt })
+    .from(stockCounts)
+    .where(eq(stockCounts.id, countId))
+    .limit(1);
+  if (!count) return null;
+  const [item] = await selectCountItems(dbx, and(eq(stockCountItems.countId, countId), eq(stockCountItems.id, itemId))!, hidesExpected(count));
+  return item ?? null;
+}
+
+async function selectCountItems(dbx: DbOrTx, where: SQL, expectedHidden: boolean): Promise<CountItemRow[]> {
+  const rows = await dbx
     .select({
       id: stockCountItems.id,
       productId: stockCountItems.productId,
@@ -133,26 +169,11 @@ export async function getCount(id: string, dbx: DbOrTx = db): Promise<CountDetai
       difference: stockCountItems.difference,
       costAvgUsd: products.costAvgUsd,
       countedAt: stockCountItems.countedAt,
-      currentStock: sql<string>`coalesce(${stockLevels.quantity}, 0)`,
     })
     .from(stockCountItems)
     .innerJoin(products, eq(products.id, stockCountItems.productId))
     .innerJoin(units, eq(units.id, products.unitId))
-    .leftJoin(stockLevels, and(eq(stockLevels.productId, products.id), eq(stockLevels.warehouseId, row.warehouseId)))
-    .where(eq(stockCountItems.countId, id))
+    .where(where)
     .orderBy(asc(products.locationCode), asc(products.name));
-
-  const counted = items.filter((i) => i.countedQty !== null);
-  const diffs = counted.filter((i) => !D(i.difference).isZero());
-  const value = diffs.reduce((acc, i) => acc.plus(D(i.difference).mul(D(i.costAvgUsd))), D(0));
-
-  return {
-    ...row,
-    filter: (row.filter ?? {}) as CountFilter,
-    items,
-    totalItems: items.length,
-    countedItems: counted.length,
-    differences: diffs.length,
-    differenceValueUsd: value.toFixed(4),
-  };
+  return expectedHidden ? rows.map((r) => ({ ...r, expectedQty: null, difference: null })) : rows;
 }

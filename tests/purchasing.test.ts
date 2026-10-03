@@ -5,7 +5,7 @@ import { applyMovements } from "@/modules/inventory/application/stock";
 import { upsertStockSettings } from "@/modules/inventory/application/stock-settings";
 import { listMovements } from "@/modules/inventory/infrastructure/movements";
 import { applyReceipt, deleteReceiptDraft, saveReceiptDraft, voidReceipt } from "@/modules/purchasing/application/receipts";
-import { createSupplier, setPreferredSupplier, updateSupplier } from "@/modules/purchasing/application/suppliers";
+import { createSupplier, setPreferredSupplier, updateProductSupplier, updateSupplier } from "@/modules/purchasing/application/suppliers";
 import { getReceipt } from "@/modules/purchasing/infrastructure/receipts";
 import { getPurchaseSuggestions } from "@/modules/purchasing/infrastructure/suggestions";
 import { listSupplierProducts } from "@/modules/purchasing/infrastructure/suppliers";
@@ -136,6 +136,9 @@ describe.skipIf(skip)("purchase receipts", () => {
       [p] = await f.tx.select().from(s.products).where(eq(s.products.id, product.id));
       expect(p.costAvgUsd).toBe("5.0000");
       expect(p.costLastUsd).toBe("5.0000"); // previous purchase cost
+      // No other receipt from this supplier: its last cost is cleared.
+      const [link] = await f.tx.select().from(s.productSuppliers).where(and(eq(s.productSuppliers.productId, product.id), eq(s.productSuppliers.supplierId, supplier.id)));
+      expect(link).toMatchObject({ lastCostAmount: null, lastCostCurrency: null, lastCostUsd: null, lastPurchaseAt: null });
       const [stock] = await f.tx.select().from(s.stockLevels).where(and(eq(s.stockLevels.productId, product.id), eq(s.stockLevels.warehouseId, f.warehouseId)));
       expect(stock.quantity).toBe("10.000");
       const kardex = await listMovements({ productId: product.id, dbx: f.tx });
@@ -153,6 +156,31 @@ describe.skipIf(skip)("purchase receipts", () => {
       await expect(voidReceipt(second.id, "tarde", actor, f.tx)).rejects.toMatchObject({ code: "INVALID_STATE" });
       const [unchanged] = await f.tx.select().from(s.purchaseReceipts).where(eq(s.purchaseReceipts.id, second.id));
       expect(unchanged.status).toBe("applied");
+    });
+  });
+
+  it("voiding a receipt restores the supplier's last cost from its previous receipt", async () => {
+    await withFixtures(async (f) => {
+      const actor = { id: f.userId };
+      const product = await f.createProduct({ costAvgUsd: "0" });
+      const supplier = await f.createSupplier();
+      const receive = async (cost: string) => {
+        const draft = await saveReceiptDraft(
+          { supplierId: supplier.id, receiptDate: "2026-09-08", currencyCode: "USD", exchangeRate: "1", extraCostsUsd: "0", lines: [{ productId: product.id, quantity: "2", unitCostAmount: cost }] },
+          actor,
+          f.tx,
+        );
+        await applyReceipt(draft.id, actor, f.tx);
+        return draft.id;
+      };
+      await receive("7");
+      const second = await receive("9");
+      const linkOf = async () =>
+        (await f.tx.select().from(s.productSuppliers).where(and(eq(s.productSuppliers.productId, product.id), eq(s.productSuppliers.supplierId, supplier.id))))[0];
+      expect((await linkOf()).lastCostUsd).toBe("9.0000");
+
+      await voidReceipt(second, "Precio equivocado", actor, f.tx);
+      expect(await linkOf()).toMatchObject({ lastCostAmount: "7.0000", lastCostCurrency: "USD", lastCostUsd: "7.0000" });
     });
   });
 
@@ -215,6 +243,14 @@ describe.skipIf(skip)("suppliers and suggestions", () => {
       expect(item.status).toBe("buy_now");
       expect(item.suggestedQty).toBe("15.000"); // reorder_qty 12 rounded up to packs of 5
       expect(item.unitCostUsd).toBe("2.8000");
+
+      // Supplier code and pack size are editable; the suggestion follows the new pack.
+      await updateProductSupplier({ productId: product.id, supplierId: other.id, supplierCode: " OT-77 ", packSize: 10 }, actor, f.tx);
+      const edited = (await listSupplierProducts(other.id, f.tx)).find((l) => l.productId === product.id)!;
+      expect(edited).toMatchObject({ supplierCode: "OT-77", packSize: 10 });
+      const regrouped = await getPurchaseSuggestions(f.tx);
+      expect(regrouped.find((g) => g.supplierId === other.id)?.items.find((i) => i.productId === product.id)?.suggestedQty).toBe("20.000");
+      await expect(updateProductSupplier({ productId: product.id, supplierId: f.categoryId, packSize: 1 }, actor, f.tx)).rejects.toMatchObject({ code: "NOT_FOUND" });
     });
   });
 });

@@ -4,8 +4,8 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { parseInput, runAction } from "@/lib/action";
 import { assertRole } from "@/lib/auth-guards";
-import { preferredSupplierSchema, supplierSchema } from "@/modules/purchasing/application/schemas";
-import { createSupplier, setPreferredSupplier, updateSupplier } from "@/modules/purchasing/application/suppliers";
+import { preferredSupplierSchema, productSupplierSchema, supplierSchema } from "@/modules/purchasing/application/schemas";
+import { createSupplier, setPreferredSupplier, updateProductSupplier, updateSupplier } from "@/modules/purchasing/application/suppliers";
 
 export async function createSupplierAction(input: unknown) {
   return runAction(async () => {
@@ -39,5 +39,17 @@ export async function setPreferredSupplierAction(input: unknown) {
     revalidatePath("/compras/que-comprar");
     revalidatePath(`/productos/${data.productId}`);
     return data;
+  });
+}
+
+export async function updateProductSupplierAction(input: unknown) {
+  return runAction(async () => {
+    const user = await assertRole("admin", "warehouse");
+    const data = parseInput(productSupplierSchema, input);
+    await updateProductSupplier(data, user);
+    revalidatePath(`/compras/proveedores/${data.supplierId}`);
+    revalidatePath("/compras/que-comprar");
+    revalidatePath(`/productos/${data.productId}`);
+    return { productId: data.productId, supplierId: data.supplierId };
   });
 }

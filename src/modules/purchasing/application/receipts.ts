@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, lt, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, lt, ne, sql } from "drizzle-orm";
 import { db, type DbOrTx, type Tx } from "@/db/client";
 import { currencies, inventoryMovements, productSuppliers, products, purchaseReceiptItems, purchaseReceipts, suppliers } from "@/db/schema";
 import { AppError, notFound } from "@/lib/errors";
@@ -261,6 +261,37 @@ export async function voidReceipt(id: string, reason: string, actor: Actor, dbx:
         .update(products)
         .set({ costAvgUsd: toMoneyDb(newAvg), costLastUsd: previous ? toMoneyDb(previous.unitCostUsd) : p.costLastUsd })
         .where(eq(products.id, pid));
+
+      // The supplier's last cost goes back to its previous applied receipt, or to no purchase at all.
+      const [prevLink] = await tx
+        .select({
+          amount: purchaseReceiptItems.unitCostAmount,
+          usd: purchaseReceiptItems.unitCostUsd,
+          currencyCode: purchaseReceipts.currencyCode,
+          appliedAt: purchaseReceipts.appliedAt,
+        })
+        .from(purchaseReceiptItems)
+        .innerJoin(purchaseReceipts, eq(purchaseReceipts.id, purchaseReceiptItems.receiptId))
+        .where(
+          and(
+            eq(purchaseReceiptItems.productId, pid),
+            eq(purchaseReceipts.supplierId, receipt.supplierId),
+            eq(purchaseReceipts.status, "applied"),
+            ne(purchaseReceipts.id, id),
+          ),
+        )
+        .orderBy(desc(purchaseReceipts.appliedAt), desc(purchaseReceiptItems.id))
+        .limit(1);
+      await tx
+        .update(productSuppliers)
+        .set({
+          lastCostAmount: prevLink?.amount ?? null,
+          lastCostCurrency: prevLink?.currencyCode ?? null,
+          lastCostUsd: prevLink?.usd ?? null,
+          lastPurchaseAt: prevLink?.appliedAt ?? null,
+          updatedAt: new Date(),
+        })
+        .where(and(eq(productSuppliers.productId, pid), eq(productSuppliers.supplierId, receipt.supplierId)));
     }
 
     const [updated] = await tx

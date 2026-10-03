@@ -7,9 +7,9 @@ import { assertRole } from "@/lib/auth-guards";
 import { AppError } from "@/lib/errors";
 import { verifyUserPin } from "@/modules/auth/application/pin";
 import { getUserById } from "@/modules/auth/infrastructure/users";
-import { addCashMovement, closeCashSession, openCashSession, reopenCashSession } from "@/modules/cash/application/open-close";
+import { addCashMovement, closeCashSession, openCashSession, registerCashCount, reopenCashSession } from "@/modules/cash/application/open-close";
 import { getOpenCashSession } from "@/modules/cash/application/session";
-import { closeSessionSchema, movementSchema, openSessionSchema, toAmount } from "@/modules/cash/domain/forms";
+import { closeSessionSchema, movementSchema, openSessionSchema, registerCountSchema, toAmount } from "@/modules/cash/domain/forms";
 
 function revalidateCash(sessionId?: string) {
   revalidatePath("/caja");
@@ -63,6 +63,22 @@ export async function addCashMovementAction(input: unknown) {
     });
     revalidateCash(session.id);
     return { id: row.id };
+  });
+}
+
+/** Blind count: stores the counted cash and only then returns the expected amounts. */
+export async function registerCashCountAction(input: unknown) {
+  return runAction(async () => {
+    const user = await assertRole("admin", "seller");
+    const data = parseInput(registerCountSchema, input);
+    const session = await getOpenCashSession();
+    if (!session) throw new AppError("CASH_SESSION_REQUIRED", "No hay una caja abierta.");
+
+    return registerCashCount({
+      sessionId: session.id,
+      userId: user.id,
+      counts: data.counts.map((c) => ({ currencyCode: c.currencyCode, counted: toAmount(c.counted) })),
+    });
   });
 }
 

@@ -1,5 +1,6 @@
 import { and, eq, gte, isNotNull, notExists, sql } from "drizzle-orm";
 import { db, type DbOrTx } from "@/db/client";
+import { allQueries } from "@/db/parallel";
 import { inventoryMovements, products, stockSettings } from "@/db/schema";
 import { getDefaultLocation } from "@/modules/core/application/context";
 import { getSetting } from "@/modules/settings/infrastructure/settings";
@@ -24,11 +25,11 @@ export async function getAlerts(dbx: DbOrTx = db): Promise<AlertGroups> {
   const since = new Date(Date.now() - noMovementDays * 86_400_000);
 
   const common = { dbx, warehouseId, pageSize: LIMIT } as const;
-  const [buyNow, soon, excess, noMovement, outOfStock] = await Promise.all([
-    listStock({ ...common, status: "buy_now" }),
-    listStock({ ...common, status: "soon" }),
-    listStock({ ...common, status: "excess" }),
-    listStock({
+  const [buyNow, soon, excess, noMovement, outOfStock] = await allQueries(dbx, [
+    () => listStock({ ...common, status: "buy_now" }),
+    () => listStock({ ...common, status: "soon" }),
+    () => listStock({ ...common, status: "excess" }),
+    () => listStock({
       ...common,
       extraWhere: [
         sql`${qtyExpr} > 0`,
@@ -46,7 +47,7 @@ export async function getAlerts(dbx: DbOrTx = db): Promise<AlertGroups> {
         ),
       ],
     }),
-    listStock({ ...common, extraWhere: [isNotNull(stockSettings.productId), sql`${qtyExpr} <= 0`] }),
+    () => listStock({ ...common, extraWhere: [isNotNull(stockSettings.productId), sql`${qtyExpr} <= 0`] }),
   ]);
 
   return {

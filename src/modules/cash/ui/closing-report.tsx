@@ -27,6 +27,8 @@ export interface ReportData {
   references: ClosingReference[];
   movements: MovementView[];
   reconciled: Record<string, boolean>;
+  /** Blind counts registered before closing; more than 1 means a recount. */
+  countAttempts?: number;
 }
 
 const PRINT_CSS = `
@@ -105,6 +107,11 @@ export function ClosingReport({ data }: { data: ReportData }) {
             </tbody>
           </table>
         </div>
+        {(data.countAttempts ?? 0) > 1 ? (
+          <p className="text-sm">
+            <span className="font-medium">Conteo repetido:</span> se registraron {data.countAttempts} conteos antes de cerrar; el cierre usa el último.
+          </p>
+        ) : null}
         {data.balances.some((b) => b.justification) ? (
           <ul className="space-y-1 text-sm">
             {data.balances

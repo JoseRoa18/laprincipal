@@ -1,6 +1,7 @@
 import { and, asc, desc, eq, gte, inArray, isNull, lt, max, sql } from "drizzle-orm";
 import type { PgColumn } from "drizzle-orm/pg-core";
 import { db, type DbOrTx } from "@/db/client";
+import { allQueries } from "@/db/parallel";
 import {
   inventoryMovements,
   productStats,
@@ -17,6 +18,7 @@ import { businessDate, DEFAULT_TZ } from "@/lib/format";
 import { D, roundTo, toDb, toMoneyDb, toQtyDb } from "@/lib/money";
 import { getDefaultLocation } from "@/modules/core/application/context";
 import {
+  abcClassify,
   daysOfCover,
   reorderPoint,
   safetyStock,
@@ -29,7 +31,6 @@ import {
   type StockStatus,
 } from "@/modules/inventory/domain/velocity";
 import { getSetting } from "@/modules/settings/infrastructure/settings";
-import { classifyAbc } from "../domain/abc";
 import { addDays, dayEndExclusive, dayStart, diffDays, dayOf } from "../domain/date-range";
 import { daysWithStock, type DayMovement, type DaySales } from "../domain/stock-days";
 import { dayExpr, netLineTotal, netQty, SOLD_STATUSES } from "../infrastructure/common";
@@ -105,9 +106,9 @@ export async function recomputeProductStats(opts: RecomputeOptions = {}): Promis
     return { products: 0, autoUpdated: 0, computedAt: new Date(), durationMs: Date.now() - started };
   }
 
-  const [beforeRows, moveRows, saleRows, lastSaleRows, firstStockRows, supplierRows] = await Promise.all([
+  const [beforeRows, moveRows, saleRows, lastSaleRows, firstStockRows, supplierRows] = await allQueries(dbx, [
     // Balance right before the widest window, per product.
-    dbx
+    () => dbx
       .selectDistinctOn([inventoryMovements.productId], {
         productId: inventoryMovements.productId,
         day: dayExpr(inventoryMovements.createdAt, tz),
@@ -117,7 +118,7 @@ export async function recomputeProductStats(opts: RecomputeOptions = {}): Promis
       .where(and(eq(inventoryMovements.warehouseId, warehouseId), lt(inventoryMovements.createdAt, startAt)))
       .orderBy(inventoryMovements.productId, desc(inventoryMovements.createdAt), desc(inventoryMovements.id)),
     // Every movement inside the window, chronological.
-    dbx
+    () => dbx
       .select({
         productId: inventoryMovements.productId,
         day: dayExpr(inventoryMovements.createdAt, tz),
@@ -133,7 +134,7 @@ export async function recomputeProductStats(opts: RecomputeOptions = {}): Promis
       )
       .orderBy(inventoryMovements.productId, asc(inventoryMovements.createdAt), asc(inventoryMovements.id)),
     // Units and revenue per product and business day inside the window.
-    dbx
+    () => dbx
       .select({
         productId: saleItems.productId,
         day: dayExpr(sales.saleDate, tz),
@@ -152,14 +153,14 @@ export async function recomputeProductStats(opts: RecomputeOptions = {}): Promis
       )
       .groupBy(saleItems.productId, dayExpr(sales.saleDate, tz)),
     // Last sale ever (not limited to the window).
-    dbx
+    () => dbx
       .select({ productId: saleItems.productId, lastSaleAt: max(sales.saleDate) })
       .from(saleItems)
       .innerJoin(sales, eq(sales.id, saleItems.saleId))
       .where(and(eq(sales.warehouseId, warehouseId), inArray(sales.status, [...SOLD_STATUSES]), lt(sales.saleDate, endAt)))
       .groupBy(saleItems.productId),
     // First inbound movement ever.
-    dbx
+    () => dbx
       .select({
         productId: inventoryMovements.productId,
         firstStockAt: sql<Date | null>`min(${inventoryMovements.createdAt})`.mapWith(inventoryMovements.createdAt),
@@ -168,7 +169,7 @@ export async function recomputeProductStats(opts: RecomputeOptions = {}): Promis
       .where(and(eq(inventoryMovements.warehouseId, warehouseId), sql`${inventoryMovements.quantity} > 0`, lt(inventoryMovements.createdAt, endAt)))
       .groupBy(inventoryMovements.productId),
     // Preferred supplier first, then the oldest link.
-    dbx
+    () => dbx
       .select({
         productId: productSuppliers.productId,
         leadTimeDays: suppliers.leadTimeDays,
@@ -264,7 +265,7 @@ export async function recomputeProductStats(opts: RecomputeOptions = {}): Promis
     };
   });
 
-  const abc = classifyAbc(computed.map((c) => ({ id: c.productId, revenue: c.revenue90 })));
+  const abc = abcClassify(computed.map((c) => ({ id: c.productId, revenue: c.revenue90 })));
   const computedAt = new Date();
 
   const statsRows = computed.map((c) => {

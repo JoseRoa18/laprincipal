@@ -1,5 +1,6 @@
 import { and, asc, eq, gt, ne } from "drizzle-orm";
 import { db, type DbOrTx } from "@/db/client";
+import { allQueries } from "@/db/parallel";
 import { cashMovements, cashSessionBalances, cashSessions, currencies, paymentMethods, saleReturns, salePayments, sales } from "@/db/schema";
 import { AppError } from "@/lib/errors";
 import {
@@ -41,8 +42,8 @@ export async function getSessionSummary(sessionId: string, dbx: DbOrTx = db): Pr
   const session = await getCashSessionDetail(sessionId, dbx);
   if (!session) throw new AppError("NOT_FOUND", "La sesión de caja no existe.");
 
-  const [payments, changes, refunds, movements] = await Promise.all([
-    dbx
+  const [payments, changes, refunds, movements] = await allQueries(dbx, [
+    () => dbx
       .select({
         paymentMethodId: salePayments.paymentMethodId,
         methodCode: paymentMethods.code,
@@ -62,11 +63,11 @@ export async function getSessionSummary(sessionId: string, dbx: DbOrTx = db): Pr
       .innerJoin(paymentMethods, eq(paymentMethods.id, salePayments.paymentMethodId))
       .where(and(eq(sales.cashSessionId, sessionId), ne(sales.status, "voided")))
       .orderBy(asc(salePayments.createdAt)),
-    dbx
+    () => dbx
       .select({ currencyCode: sales.changeCurrencyCode, amount: sales.changeAmount })
       .from(sales)
       .where(and(eq(sales.cashSessionId, sessionId), ne(sales.status, "voided"), gt(sales.changeAmount, "0"))),
-    dbx
+    () => dbx
       .select({
         refundMethodId: saleReturns.refundMethodId,
         methodCode: paymentMethods.code,
@@ -83,7 +84,7 @@ export async function getSessionSummary(sessionId: string, dbx: DbOrTx = db): Pr
       .leftJoin(paymentMethods, eq(paymentMethods.id, saleReturns.refundMethodId))
       .where(and(eq(saleReturns.cashSessionId, sessionId), eq(saleReturns.status, "completed")))
       .orderBy(asc(saleReturns.createdAt)),
-    dbx
+    () => dbx
       .select({ type: cashMovements.type, currencyCode: cashMovements.currencyCode, amount: cashMovements.amount })
       .from(cashMovements)
       .where(eq(cashMovements.sessionId, sessionId)),

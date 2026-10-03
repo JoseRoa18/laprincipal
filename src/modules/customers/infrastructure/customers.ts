@@ -1,5 +1,6 @@
 import { and, count, desc, eq, isNull, or, sql, type SQL } from "drizzle-orm";
 import { db, type DbOrTx } from "@/db/client";
+import { allQueries } from "@/db/parallel";
 import { customers, priceLists, quotes, sales, users } from "@/db/schema";
 import { normalizeText } from "../domain/schema";
 
@@ -97,8 +98,8 @@ export interface CustomerQuoteRow {
 }
 
 export async function getCustomerHistory(id: string, dbx: DbOrTx = db, limit = 50) {
-  const [salesRows, quoteRows, totals] = await Promise.all([
-    dbx
+  const [salesRows, quoteRows, totals] = await allQueries(dbx, [
+    () => dbx
       .select({
         id: sales.id,
         number: sales.number,
@@ -112,7 +113,7 @@ export async function getCustomerHistory(id: string, dbx: DbOrTx = db, limit = 5
       .where(and(eq(sales.customerId, id), sql`${sales.status} <> 'held'`))
       .orderBy(desc(sales.saleDate))
       .limit(limit),
-    dbx
+    () => dbx
       .select({
         id: quotes.id,
         number: quotes.number,
@@ -125,7 +126,7 @@ export async function getCustomerHistory(id: string, dbx: DbOrTx = db, limit = 5
       .where(eq(quotes.customerId, id))
       .orderBy(desc(quotes.createdAt))
       .limit(limit),
-    dbx
+    () => dbx
       .select({
         salesCount: count(),
         totalUsd: sql<string>`coalesce(sum(${sales.totalUsd}), 0)`,

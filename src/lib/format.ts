@@ -69,10 +69,10 @@ export function parseLocalizedNumber(input: string): string | null {
   if (lastComma > lastDot) {
     normalized = s.replace(/\./g, "").replace(",", ".");
   } else if (lastDot > lastComma) {
-    // Only dots: "52.000" or "1.234.567" are thousands (es-VE), "12.50" or "1.5" are decimals.
-    const dots = (s.match(/\./g) ?? []).length;
-    const afterLastDot = s.length - lastDot - 1;
-    const thousands = dots > 1 || (dots === 1 && afterLastDot === 3);
+    // Only dots: "52.000" or "1.234.567" are thousands (es-VE); "12.50", "1.5",
+    // "0.125" or "1234.567" are decimals. A thousands group never starts with 0
+    // and the leading group has 1 to 3 digits.
+    const thousands = /^-?[1-9]\d{0,2}(\.\d{3})+$/.test(s.replace(/,/g, "").replace(/\s/g, ""));
     normalized = thousands ? s.replace(/\./g, "").replace(/,/g, "") : s.replace(/,/g, "");
   } else {
     normalized = s;

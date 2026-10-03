@@ -1,6 +1,6 @@
-import { and, eq, gt } from "drizzle-orm";
+import { and, count, eq, gt, max } from "drizzle-orm";
 import { db, type Db, type Tx } from "@/db/client";
-import { cashMovements, cashSessionBalances, cashSessions } from "@/db/schema";
+import { auditLogs, cashMovements, cashSessionBalances, cashSessions } from "@/db/schema";
 import { AppError } from "@/lib/errors";
 import { formatMoney } from "@/lib/format";
 import { D, toMoneyDb } from "@/lib/money";
@@ -150,13 +150,93 @@ export async function addCashMovement(input: MovementInput, dbx: Db = db) {
 }
 
 // ---------------------------------------------------------------------------
+// Blind count: the counted cash is stored before the expected amount is
+// revealed, together with the expected amount at that moment. The close then
+// uses the stored count; counting again is allowed and every count stays in
+// the audit log.
+// ---------------------------------------------------------------------------
+
+export interface RegisterCountInput {
+  sessionId: string;
+  userId: string;
+  counts: Array<{ currencyCode: string; counted: string }>;
+}
+
+export interface CountResult {
+  currencyCode: string;
+  expected: string;
+  counted: string;
+  difference: string;
+}
+
+export async function registerCashCount(input: RegisterCountInput, dbx: Db = db): Promise<CountResult[]> {
+  return dbx.transaction(async (tx) => {
+    const session = await lockSession(tx, input.sessionId);
+    if (session.status !== "open") throw new AppError("INVALID_STATE", "Esta caja ya fue cerrada.");
+
+    const summary = await getSessionSummary(session.id, tx);
+    const results: CountResult[] = [];
+    for (const b of summary.balances) {
+      const counted = parseCount(input.counts, b.currencyCode);
+      results.push({ currencyCode: b.currencyCode, expected: b.expected, counted: toMoneyDb(counted), difference: computeDifference(b.expected, counted) });
+      await tx
+        .update(cashSessionBalances)
+        .set({ countedAmount: toMoneyDb(counted), expectedAmount: b.expected })
+        .where(and(eq(cashSessionBalances.sessionId, session.id), eq(cashSessionBalances.currencyCode, b.currencyCode)));
+    }
+
+    await writeAudit(tx, {
+      userId: input.userId,
+      action: "cash_session.count",
+      entityType: "cash_session",
+      entityId: session.id,
+      after: { number: session.number, counts: results },
+    });
+    return results;
+  });
+}
+
+function parseCount(counts: Array<{ currencyCode: string; counted?: string | null }>, currencyCode: string) {
+  const entry = counts.find((c) => c.currencyCode === currencyCode);
+  if (!entry || entry.counted == null || entry.counted === "") throw new AppError("VALIDATION", `Falta el conteo de efectivo en ${currencyCode}.`);
+  const counted = D(entry.counted);
+  if (!counted.isFinite() || counted.lt(0)) throw new AppError("VALIDATION", `El conteo en ${currencyCode} no es válido.`);
+  return counted;
+}
+
+/** Counts registered for the session since it was opened or last reopened. */
+async function countAttempts(tx: Tx, sessionId: string): Promise<number> {
+  const [lastReopen] = await tx
+    .select({ at: max(auditLogs.createdAt) })
+    .from(auditLogs)
+    .where(and(eq(auditLogs.entityType, "cash_session"), eq(auditLogs.entityId, sessionId), eq(auditLogs.action, "cash_session.reopen")));
+  const [row] = await tx
+    .select({ n: count() })
+    .from(auditLogs)
+    .where(
+      and(
+        eq(auditLogs.entityType, "cash_session"),
+        eq(auditLogs.entityId, sessionId),
+        eq(auditLogs.action, "cash_session.count"),
+        lastReopen?.at ? gt(auditLogs.createdAt, lastReopen.at) : undefined,
+      ),
+    );
+  return row?.n ?? 0;
+}
+
+// ---------------------------------------------------------------------------
 // Close
 // ---------------------------------------------------------------------------
 
 export interface CloseSessionInput {
   sessionId: string;
   userId: string;
-  counts: Array<{ currencyCode: string; counted: string; justification?: string | null }>;
+  /**
+   * `counted` is only used when no count was registered with
+   * `registerCashCount`; otherwise the registered count rules and a different
+   * value is rejected (it was typed after seeing the expected amount).
+   */
+  counts: Array<{ currencyCode: string; counted?: string | null; justification?: string | null }>;
   /** currency -> bill -> count, from the counting helper (informative). */
   denominations?: Record<string, Record<string, number>>;
   /** payment method id -> reconciled checkbox (informative). */
@@ -171,15 +251,26 @@ export async function closeCashSession(input: CloseSessionInput, dbx: Db = db) {
 
     const summary = await getSessionSummary(session.id, tx);
     const closedAt = new Date();
+    const attempts = await countAttempts(tx, session.id);
 
     const balances: ClosingSummary["balances"] = [];
     for (const b of summary.balances) {
-      const count = input.counts.find((c) => c.currencyCode === b.currencyCode);
-      if (!count) throw new AppError("VALIDATION", `Falta el conteo de efectivo en ${b.currencyCode}.`);
-      const counted = D(count.counted);
-      if (!counted.isFinite() || counted.lt(0)) throw new AppError("VALIDATION", `El conteo en ${b.currencyCode} no es válido.`);
+      const entry = input.counts.find((c) => c.currencyCode === b.currencyCode);
+      const stored = summary.session.balances.find((x) => x.currencyCode === b.currencyCode);
+      let counted;
+      if (stored?.countedAmount != null) {
+        if (stored.expectedAmount == null || !D(stored.expectedAmount).eq(b.expected)) {
+          throw new AppError("INVALID_STATE", "Hubo ventas o movimientos de efectivo después del conteo. Cuenta de nuevo.", { recount: true });
+        }
+        counted = D(stored.countedAmount);
+        if (entry?.counted != null && entry.counted !== "" && !D(entry.counted).eq(counted)) {
+          throw new AppError("INVALID_STATE", `El conteo en ${b.currencyCode} no coincide con el registrado. Usa "Volver a contar".`, { recount: true });
+        }
+      } else {
+        counted = parseCount(input.counts, b.currencyCode);
+      }
       const difference = computeDifference(b.expected, counted);
-      const justification = count.justification?.trim() || null;
+      const justification = entry?.justification?.trim() || null;
       if (!D(difference).isZero() && !justification) {
         throw new AppError("VALIDATION", `Hay una diferencia de ${formatMoney(difference, b.currencyCode)} en ${b.currencyCode}. Escribe una justificación.`, {
           fields: { [`justification.${b.currencyCode}`]: "Justifica la diferencia" },
@@ -209,7 +300,7 @@ export async function closeCashSession(input: CloseSessionInput, dbx: Db = db) {
       balances,
       methods: summary.methods,
       totals: summary.totals,
-      counts: { denominations: input.denominations ?? {}, reconciled: input.reconciled ?? {} },
+      counts: { denominations: input.denominations ?? {}, reconciled: input.reconciled ?? {}, attempts },
       references: summary.payments
         .filter((p) => !p.countsInDrawer)
         .map((p) => ({

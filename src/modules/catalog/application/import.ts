@@ -1,5 +1,6 @@
 import { and, count, desc, eq, inArray, isNull, ne } from "drizzle-orm";
 import { db, type DbOrTx, type Tx } from "@/db/client";
+import { allQueries } from "@/db/parallel";
 import { importJobs, inventoryMovements, productBarcodes, products, users } from "@/db/schema";
 import { AppError, notFound } from "@/lib/errors";
 import { D } from "@/lib/money";
@@ -34,12 +35,12 @@ export interface ImportPreview {
 }
 
 async function buildLookups(dbx: DbOrTx): Promise<ImportLookups> {
-  const [options, categories, brands, skus, codes] = await Promise.all([
-    getProductFormOptions(dbx),
-    listCategoryOptions(dbx, { includeInactive: false }),
-    listBrands(dbx, { includeInactive: true }),
-    dbx.select({ sku: products.sku }).from(products),
-    dbx.select({ code: productBarcodes.code }).from(productBarcodes),
+  const [options, categories, brands, skus, codes] = await allQueries(dbx, [
+    () => getProductFormOptions(dbx),
+    () => listCategoryOptions(dbx, { includeInactive: false }),
+    () => listBrands(dbx, { includeInactive: true }),
+    () => dbx.select({ sku: products.sku }).from(products),
+    () => dbx.select({ code: productBarcodes.code }).from(productBarcodes),
   ]);
   return {
     categories: categories.map((c) => ({ id: c.id, name: c.name, parentId: c.parentId })),

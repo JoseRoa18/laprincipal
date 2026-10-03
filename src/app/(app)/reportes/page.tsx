@@ -1,4 +1,4 @@
-import { Boxes, ChartColumn, Clock, Gauge, PackageX, Percent, ShoppingBag } from "lucide-react";
+import { Boxes, ChartColumn, Clock, Gauge, PackageMinus, PackageX, Percent, ShoppingBag } from "lucide-react";
 import Link from "next/link";
 import { PageHeader } from "@/components/app/page-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,7 +13,7 @@ const REPORTS = [
   {
     href: "/reportes/ventas",
     title: "Ventas",
-    description: "Por día, producto, categoría, vendedor, método de pago y hora. Con gráfico y Excel.",
+    description: "Por día, producto, categoría, vendedor, método de pago y hora. Con gráfico, Excel y PDF.",
     icon: ChartColumn,
   },
   {
@@ -39,6 +39,12 @@ const REPORTS = [
     title: "Sin movimiento",
     description: "Productos con existencia que llevan tiempo sin venderse y el dinero inmovilizado.",
     icon: PackageX,
+  },
+  {
+    href: "/reportes/ajustes",
+    title: "Ajustes y mermas",
+    description: "Pérdidas y sobrantes por motivo y por producto, incluidos los conteos físicos, valorizados a costo.",
+    icon: PackageMinus,
   },
   {
     href: "/compras/que-comprar",

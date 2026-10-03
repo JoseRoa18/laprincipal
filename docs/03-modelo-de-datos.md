@@ -136,7 +136,7 @@ erDiagram
 
 **inventory_adjustment_items** — `id, adjustment_id, product_id, quantity_delta, unit_cost_usd, notes`.
 
-**stock_counts** — `id, number, warehouse_id, filter jsonb` (categoría o ubicación), `status` (`open | applied | cancelled`), `blind` (bool), `started_by, started_at, applied_by, applied_at, notes`.
+**stock_counts** — `id, number, warehouse_id, filter jsonb` (categoría o ubicación), `status` (`open | applied | cancelled`), `blind` (bool), `revealed_at` (fin de la fase ciega: desde entonces se envían esperado y diferencias), `started_by, started_at, applied_by, applied_at, notes`.
 
 **stock_count_items** — `id, count_id, product_id, expected_qty, counted_qty, difference, counted_by, counted_at`.
 

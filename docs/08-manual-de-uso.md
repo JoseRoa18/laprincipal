@@ -13,9 +13,11 @@ Cada persona entra con su correo y contraseña. El PIN de 4 dígitos sirve para 
 2. Caja → Abrir caja: contar el efectivo inicial en dólares y en pesos y escribirlo.
 
 **Al cerrar (vendedor o administrador)**
-1. Caja → Cerrar caja: contar el efectivo sin mirar lo esperado y escribir lo contado por moneda.
-2. Revisar las referencias de Pago Móvil, punto de venta, Zelle y Binance.
-3. Si hay diferencia, escribir el motivo. Imprimir el cierre.
+1. Caja → Cerrar caja: contar el efectivo y escribir lo contado por moneda. El vendedor no ve el efectivo esperado durante el día.
+2. "Registrar conteo": recién ahí aparecen el esperado y la diferencia. Si te equivocaste, "Volver a contar" borra el conteo y empiezas de nuevo; el cierre deja anotado que se contó más de una vez.
+3. Revisar las referencias de Pago Móvil, punto de venta, Zelle y Binance.
+4. Si hay diferencia, escribir el motivo. "Cerrar caja" e imprimir el cierre.
+5. Si se vende algo después de registrar el conteo, la app pide contar otra vez.
 
 ---
 
@@ -49,18 +51,20 @@ Cada persona entra con su correo y contraseña. El PIN de 4 dígitos sirve para 
 
 **Muchos productos de una vez:** Productos → Importar → descargar la plantilla de Excel, llenarla y subirla. La app avisa los errores por fila antes de aplicar.
 
-**Cuando llega mercancía:** Compras → Entradas → Nueva entrada: proveedor, número de la factura, moneda, productos, cantidades y costos. "Aplicar entrada" actualiza el stock y el costo promedio.
+**Cuando llega mercancía:** Compras → Entradas → Nueva entrada: proveedor, número de la factura, moneda, productos, cantidades y costos. "Aplicar entrada" actualiza el stock y el costo promedio. Si se anula, el stock, el costo y el último costo del proveedor vuelven a como estaban.
+
+**Código y empaque del proveedor:** en la ficha del proveedor (o en la del producto, sección Proveedores) el lápiz permite anotar cómo llama el proveedor al repuesto y cuántas unidades trae cada empaque. "Qué comprar" redondea la cantidad sugerida a ese empaque.
 
 **Ajustes:** Inventario → Ajustes → Nuevo, siempre con motivo (merma, daño, error de conteo, uso interno, garantía).
 
-**Conteo físico:** Inventario → Conteos → Nuevo. Contar desde el celular escaneando o buscando; al final, "Aplicar ajustes" corrige las diferencias.
+**Conteo físico:** Inventario → Conteos → Nuevo. Contar desde el celular escaneando o buscando. En el conteo ciego (el normal) no se ve cuánto dice el sistema; al terminar, "Terminar y ver diferencias" muestra lo esperado y lo que no cuadra. Se puede recontar lo que no cuadre y luego "Aplicar ajustes" corrige las diferencias.
 
 ---
 
 ## Administrador
 
 - **Qué comprar:** Compras → Qué comprar. Lista por proveedor con la cantidad sugerida según la velocidad de venta; se exporta a Excel para enviar al proveedor. Los primeros 30 días usa los mínimos manuales de cada producto; después calcula solo.
-- **Reportes:** ventas por día, producto, vendedor y método de pago; inventario valorizado; velocidad y clasificación ABC; margen; productos sin movimiento. Todo se exporta a Excel.
+- **Reportes:** ventas por día, producto, vendedor y método de pago; inventario valorizado; velocidad y clasificación ABC; margen; productos sin movimiento; ajustes y mermas (pérdidas por motivo y por producto). Todo se exporta a Excel y a PDF.
 - **Usuarios:** Configuración → Usuarios: crear vendedores y almacenistas con su rol, contraseña y PIN. Desactivar cuando alguien se va.
 - **Políticas:** descuento máximo por rol, permitir stock negativo, horas para anular una venta, vigencia de cotizaciones.
 - **Respaldos:** Configuración → Respaldos: respaldo manual y exportación a Excel. Además Supabase guarda respaldos diarios.
