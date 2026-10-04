@@ -447,7 +447,7 @@ interface Seeded {
  * detail/edit pages get crawled. They are deleted afterwards (see removeSeed).
  */
 const SEED_SUPPLIER = "Proveedor QA móvil";
-const SEED_CUSTOMER = "Cliente QA móvil";
+const SEED_CUSTOMER = "Cliente QA Móvil";
 
 /** Seed rows left behind by an interrupted run: reuse them and delete them at the end. */
 async function adoptExistingSeed(): Promise<Seeded> {
@@ -485,7 +485,11 @@ async function seedSampleData(browser: Browser, state: StorageState, ids: Ids): 
     }
     if (!ids.customerId && !created.customerId) {
       await page.goto(`${BASE}/clientes/nuevo`, { waitUntil: "load", timeout: 120_000 });
-      await page.fill("#name", SEED_CUSTOMER);
+      await page.fill("#c-docNumber", String(10_000_000 + Math.floor(Math.random() * 89_999_999)));
+      await page.fill("#c-firstName", "Cliente");
+      await page.fill("#c-lastName", "QA Móvil");
+      await page.getByLabel("Prefijo").selectOption("0414");
+      await page.fill("#c-phoneNumber", "1234567");
       await page.getByRole("button", { name: /^Guardar$/ }).click();
       await page.waitForURL(/\/clientes\/[0-9a-f-]{36}$/, { timeout: 60_000 });
       created.customerId = idFromUrl(/\/clientes\/([0-9a-f-]{36})$/);

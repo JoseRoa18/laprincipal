@@ -154,7 +154,7 @@ erDiagram
 
 ## 7. Clientes
 
-**customers** — `id, kind` (`person | company`), `doc_type` (`V | E | J | G | P | NONE`), `doc_number, name, phone, email, address, customer_type` (`public | technician`), `price_list_id, notes, is_active, deleted_at`. Índice único parcial sobre `(doc_type, doc_number)` cuando no es `NONE`.
+**customers** — `id, kind` (`person | company`, según el documento: J y G son empresas), `doc_type` (`V | E | J | G | P`; `NONE` solo en registros viejos), `doc_number` (sin puntos, guiones ni letra), `name` (nombre para mostrar: "Nombre Apellido" o la razón social), `first_name, last_name` (personas), `phone` (`0414-1234567`, obligatorio), `email`, `state, municipality, parish` (de la lista oficial de Venezuela, `src/modules/customers/domain/venezuela-geo.json`), `address` (sector, calle, casa), `customer_type` (`public | technician`), `price_list_id, notes, is_active, deleted_at`. Índice único parcial sobre `(doc_type, doc_number)` cuando no es `NONE`; la búsqueda por documento ignora puntos y guiones. Toda venta y cotización nueva exige un cliente con documento (`requireIdentifiedCustomer`).
 
 ---
 

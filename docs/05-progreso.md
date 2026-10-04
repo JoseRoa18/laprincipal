@@ -104,6 +104,16 @@ Pendiente: cambio en USD con centavos (decisión del dueño).
 - Ficha y edición de producto: barra fija arriba con foto, nombre, código y código de barras al bajar; en la ficha también precio, existencia y Editar.
 - Migración `0009`: borra `products.part_number` (ya sin uso desde `0008`).
 
+## Cliente obligatorio y consulta de precio (2026-10-04)
+
+- Vender y Nueva cotización empiezan pidiendo la cédula o RIF (V por defecto). Cliente registrado: se confirma y se sigue; nuevo: se registra ahí mismo. Sin cliente no se cobra ni se cotiza (también lo valida el servidor). "Consumidor final" ya no existe para ventas nuevas; las viejas lo conservan.
+- "Solo consultar precio" (`/vender/consulta`): escanear o buscar y ver precio público y técnico en $, Bs y COP, existencia y estante, sin carrito.
+- Cliente: nombre y apellido separados (razón social para J y G), teléfono obligatorio con prefijo (0412, 0414, 0416, 0422, 0424, 0426 o fijo con código de área), dirección opcional en cascada estado → municipio → parroquia + sector/calle/casa. Migración `0010` (columnas nuevas; separa el nombre de los clientes existentes).
+
+## Revisión de diseño con UI UX Pro Max (2026-10-04)
+
+- Cursor de mano en todo lo clicable, contraste del rojo de error a 5,3:1, zoom con dos dedos permitido, enlace "Saltar al contenido", foco que no queda tapado por barras fijas, controles de texto de 24 px con ratón, ojo para ver la contraseña, "Ventas en espera" / "Poner en espera", tarjetas de números en dos columnas en el celular, período comparado una sola vez en el reporte de ventas, etiquetas y orden de títulos corregidos.
+
 ## Navegación en el celular (2026-10-03)
 
 - Barra inferior según el rol: sus cuatro secciones más usadas (admin: Inicio, Vender, Productos, Inventario; almacén: Inicio, Productos, Inventario, Compras; vendedor: Vender, Productos) con indicador de la sección activa.

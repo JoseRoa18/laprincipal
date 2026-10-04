@@ -118,14 +118,10 @@ export const createReturnSchema = z.object({
 });
 export type CreateReturnInput = z.infer<typeof createReturnSchema>;
 
-export const quickCustomerSchema = z.object({
-  name: z.string().trim().min(2, "Escribe el nombre del cliente.").max(120),
-  phone: z.string().trim().max(30).nullable().optional(),
-  docType: z.enum(["V", "E", "J", "G", "P", "NONE"]).default("NONE"),
-  docNumber: z.string().trim().max(30).nullable().optional(),
-  customerType: z.enum(["public", "technician"]).default("public"),
+export const customerDocLookupSchema = z.object({
+  docType: z.enum(["V", "E", "J", "G", "P"]),
+  docNumber: z.string().trim().min(1, "Escribe la cédula o RIF").max(20),
 });
-export type QuickCustomerInput = z.infer<typeof quickCustomerSchema>;
 
 export const pinSchema = z.string().regex(/^\d{4,6}$/, "El PIN debe tener entre 4 y 6 dígitos.");
 
@@ -142,6 +138,8 @@ export function toPosProduct(p: ProductForSale): PosProduct {
 export interface CartCustomer {
   id: string;
   name: string;
+  /** "V-12345678". Optional: carts saved before it existed do not have it. */
+  doc?: string;
   phone: string | null;
   customerType: "public" | "technician";
   priceListId: string | null;

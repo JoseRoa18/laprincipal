@@ -37,6 +37,19 @@ export async function resolveCustomerAndPriceList(
   return { customer, priceListId };
 }
 
+/** Every sale and quote goes to a customer identified by cédula or RIF: no customer, no invoice. */
+export function requireIdentifiedCustomer(customer: CustomerRow | null, action: string): asserts customer is CustomerRow {
+  if (!customer) {
+    throw new AppError("VALIDATION", `Identifica al cliente con su cédula o RIF antes de ${action}.`, { reason: "customer_required" });
+  }
+  if (customer.docType === "NONE" || !customer.docNumber) {
+    throw new AppError("VALIDATION", `${customer.name} no tiene cédula o RIF registrada. Agrégala antes de ${action}.`, {
+      reason: "customer_document_required",
+      customerId: customer.id,
+    });
+  }
+}
+
 export interface PricedLine extends LineInput {
   product: ProductForSale;
 }

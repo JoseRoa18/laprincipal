@@ -12,7 +12,7 @@ import { displayAmounts } from "@/modules/currency/domain/conversion";
 import type { CartCustomer, CartLineData } from "../../application/schemas";
 import type { SaleTotals } from "../../domain/pricing";
 import { exceedsDiscountLimit, supervisorIsValid, useCart, useCartStore } from "../cart-store";
-import { CustomerPicker } from "./customer-picker";
+import { CustomerCard } from "./customer-picker";
 import { DiscountDialog } from "./discount-dialog";
 import { LineEditor } from "./line-editor";
 import type { PosConfig } from "./types";
@@ -56,7 +56,7 @@ export function CartPanel({ config, totals, onCustomerChange, onCheckout, onHold
         ) : null}
       </div>
 
-      <CustomerPicker customer={customer} onSelect={onCustomerChange} />
+      {customer ? <CustomerCard customer={customer} onChange={() => onCustomerChange(null)} /> : null}
 
       {heldSaleId && holdLabel ? (
         <p className="text-muted-foreground flex items-center gap-1.5 text-xs">

@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/app/page-header";
 import { requireRole } from "@/lib/auth-guards";
+import { toCustomerInput } from "@/modules/customers/domain/schema";
 import { getCustomer, listPriceLists } from "@/modules/customers/infrastructure/customers";
 import { CustomerForm } from "@/modules/customers/ui/customer-form";
 
@@ -19,19 +20,7 @@ export default async function EditCustomerPage({ params }: { params: Promise<{ i
       <CustomerForm
         customerId={customer.id}
         priceLists={priceLists}
-        defaultValues={{
-          kind: customer.kind,
-          docType: customer.docType,
-          docNumber: customer.docNumber ?? "",
-          name: customer.name,
-          phone: customer.phone ?? "",
-          email: customer.email ?? "",
-          address: customer.address ?? "",
-          customerType: customer.customerType,
-          priceListId: customer.priceListId ?? "",
-          notes: customer.notes ?? "",
-          isActive: customer.isActive,
-        }}
+        defaultValues={toCustomerInput(customer)}
       />
     </div>
   );

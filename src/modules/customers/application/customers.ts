@@ -4,13 +4,19 @@ import { customers, priceLists } from "@/db/schema";
 import { AppError } from "@/lib/errors";
 import { writeAudit } from "@/modules/core/application/audit";
 import { isUniqueViolation } from "@/modules/core/application/db-errors";
-import { customerInputSchema, normalizeText, type CustomerData, type CustomerInput } from "../domain/schema";
+import { placeError, type Geo } from "../domain/geo";
+import { customerInputSchema, normalizeDocNumber, normalizeText, type CustomerData, type CustomerInput } from "../domain/schema";
+import VENEZUELA from "../domain/venezuela-geo.json";
 
 export type CustomerRow = typeof customers.$inferSelect;
 
 function parse(input: CustomerInput): CustomerData {
   const result = customerInputSchema.safeParse(input);
-  if (result.success) return result.data;
+  if (result.success) {
+    const place = placeError(VENEZUELA as Geo, result.data);
+    if (place) throw new AppError("VALIDATION", place.message, { fields: { [place.field]: place.message } });
+    return result.data;
+  }
   const fields: Record<string, string> = {};
   for (const issue of result.error.issues) {
     const key = issue.path.join(".") || "_";
@@ -33,6 +39,52 @@ async function resolvePriceList(dbx: DbOrTx, data: CustomerData): Promise<string
 
 const DUPLICATE_MESSAGE = "Ya existe un cliente con ese documento.";
 
+function columns(data: CustomerData) {
+  return {
+    kind: data.kind,
+    docType: data.docType,
+    docNumber: data.docNumber,
+    name: data.name,
+    firstName: data.firstName,
+    lastName: data.lastName,
+    phone: data.phone,
+    email: data.email,
+    state: data.state,
+    municipality: data.municipality,
+    parish: data.parish,
+    address: data.address,
+    customerType: data.customerType,
+    notes: data.notes,
+    isActive: data.isActive,
+  };
+}
+
+/**
+ * The stored document number compared the way users type it: without dots,
+ * dashes or a leading V/E/J/G (old records may keep them).
+ */
+export const normalizedDocSql = sql`regexp_replace(regexp_replace(upper(coalesce(${customers.docNumber}, '')), '[^0-9A-Z]', '', 'g'), '^[VEJG](?=[0-9])', '')`;
+
+/** Customer with this cédula/RIF (not deleted), whatever the punctuation it was saved with. */
+export async function findCustomerByDocument(docType: string, docNumber: string, dbx: DbOrTx = db): Promise<CustomerRow | null> {
+  const n = normalizeDocNumber(docNumber, docType);
+  if (!n) return null;
+  const [row] = await dbx
+    .select()
+    .from(customers)
+    .where(and(eq(customers.docType, docType as CustomerRow["docType"]), sql`${normalizedDocSql} = ${n}`, isNull(customers.deletedAt)))
+    .limit(1);
+  return row ?? null;
+}
+
+async function assertDocumentFree(dbx: DbOrTx, data: CustomerData, exceptId?: string) {
+  const other = await findCustomerByDocument(data.docType, data.docNumber, dbx);
+  if (other && other.id !== exceptId) {
+    const message = `Ya existe un cliente con ese documento: ${other.name}.`;
+    throw new AppError("CONFLICT", message, { fields: { docNumber: message }, customerId: other.id });
+  }
+}
+
 /**
  * Create a customer. Plain function (no "use server") so the POS quick-add
  * and the customers screen share it.
@@ -40,24 +92,13 @@ const DUPLICATE_MESSAGE = "Ya existe un cliente con ese documento.";
 export async function createCustomer(input: CustomerInput, userId?: string | null, dbx: Db = db): Promise<CustomerRow> {
   const data = parse(input);
   return dbx.transaction(async (tx) => {
+    await assertDocumentFree(tx, data);
     const priceListId = await resolvePriceList(tx, data);
     let row: CustomerRow;
     try {
       [row] = await tx
         .insert(customers)
-        .values({
-          kind: data.kind,
-          docType: data.docType,
-          docNumber: data.docType === "NONE" ? null : data.docNumber,
-          name: data.name,
-          phone: data.phone,
-          email: data.email,
-          address: data.address,
-          customerType: data.customerType,
-          priceListId,
-          notes: data.notes,
-          isActive: data.isActive,
-        })
+        .values({ ...columns(data), priceListId })
         .returning();
     } catch (err) {
       if (isUniqueViolation(err)) throw new AppError("CONFLICT", DUPLICATE_MESSAGE, { fields: { docNumber: DUPLICATE_MESSAGE } });
@@ -73,24 +114,13 @@ export async function updateCustomer(id: string, input: CustomerInput, userId: s
   return dbx.transaction(async (tx) => {
     const [before] = await tx.select().from(customers).where(and(eq(customers.id, id), isNull(customers.deletedAt))).limit(1);
     if (!before) throw new AppError("NOT_FOUND", "El cliente no existe.");
+    await assertDocumentFree(tx, data, id);
     const priceListId = await resolvePriceList(tx, data);
     let row: CustomerRow;
     try {
       [row] = await tx
         .update(customers)
-        .set({
-          kind: data.kind,
-          docType: data.docType,
-          docNumber: data.docType === "NONE" ? null : data.docNumber,
-          name: data.name,
-          phone: data.phone,
-          email: data.email,
-          address: data.address,
-          customerType: data.customerType,
-          priceListId,
-          notes: data.notes,
-          isActive: data.isActive,
-        })
+        .set({ ...columns(data), priceListId })
         .where(eq(customers.id, id))
         .returning();
     } catch (err) {
@@ -152,7 +182,7 @@ export async function searchCustomers(q: string, limit = 10, dbx: DbOrTx = db): 
         isNull(customers.deletedAt),
         or(
           sql`normalize_text(${customers.name}) ILIKE ${pattern}`,
-          sql`${customers.docNumber} ILIKE ${rawPattern}`,
+          sql`${normalizedDocSql} LIKE ${`%${normalizeDocNumber(term)}%`}`,
           sql`${customers.phone} ILIKE ${rawPattern}`,
         ),
       ),

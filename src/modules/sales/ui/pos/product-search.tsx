@@ -23,6 +23,11 @@ interface Props {
   rateVes: string | null;
   onAdd: (product: PosProduct) => void;
   handle?: Ref<ProductSearchHandle>;
+  /** Price check: products without a price can be picked too (to see that they lack one). */
+  allowUnpriced?: boolean;
+  placeholder?: string;
+  /** Hide the empty results box while idle (the price check shows its own hint). */
+  compact?: boolean;
 }
 
 async function fetchProducts(params: Record<string, string>, signal?: AbortSignal): Promise<PosProduct[]> {
@@ -38,7 +43,7 @@ async function fetchProducts(params: Record<string, string>, signal?: AbortSigna
  * the exact barcode is resolved first, then a single search hit, otherwise
  * the results are listed. Camera scanning uses html5-qrcode on demand.
  */
-export function ProductSearch({ priceListId, rateVes, onAdd, handle }: Props) {
+export function ProductSearch({ priceListId, rateVes, onAdd, handle, allowUnpriced = false, placeholder, compact = false }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [term, setTerm] = useState("");
   const [results, setResults] = useState<PosProduct[]>([]);
@@ -114,7 +119,7 @@ export function ProductSearch({ priceListId, rateVes, onAdd, handle }: Props) {
   }
 
   function add(product: PosProduct) {
-    if (!hasPrice(product)) {
+    if (!allowUnpriced && !hasPrice(product)) {
       toast.error(`"${product.name}" no tiene precio de venta (Falta precio). Pídele al administrador que se lo ponga.`);
       reset();
       return;
@@ -193,7 +198,7 @@ export function ProductSearch({ priceListId, rateVes, onAdd, handle }: Props) {
             value={term}
             onChange={(e) => onChange(e.target.value)}
             onKeyDown={onKeyDown}
-            placeholder="Buscar o escanear: nombre, número de parte, código…"
+            placeholder={placeholder ?? "Buscar o escanear: nombre, número de parte, código…"}
             aria-label="Buscar producto"
             autoComplete="off"
             className="h-12 pr-16 pl-10 text-base"
@@ -215,74 +220,77 @@ export function ProductSearch({ priceListId, rateVes, onAdd, handle }: Props) {
         </Button>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto rounded-xl border">
-        {results.length === 0 ? (
-          <div className="text-muted-foreground flex h-full min-h-40 flex-col items-center justify-center gap-2 p-6 text-center text-sm">
-            {searched && term ? (
-              <>
-                <PackageSearch className="size-8" />
-                <p>Sin resultados para “{term}”.</p>
-              </>
-            ) : (
-              <>
-                <ScanBarcode className="size-8" />
-                <p>Escanea un código o escribe para buscar. El producto entra al carrito al instante.</p>
-              </>
-            )}
-          </div>
-        ) : (
-          <ul role="listbox" aria-label="Resultados" className="divide-y">
-            {results.map((p, i) => {
-              const stock = D(p.stockAvailable);
-              const out = stock.lte(0);
-              const priced = hasPrice(p);
-              const bs = priced && rateVes ? D(p.priceUsd!).mul(rateVes) : null;
-              return (
-                <li key={p.id} role="option" aria-selected={i === highlight} aria-disabled={!priced}>
-                  <button
-                    type="button"
-                    onClick={() => add(p)}
-                    onMouseEnter={() => setHighlight(i)}
-                    className={cn(
-                      "flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-muted/60 active:bg-muted",
-                      i === highlight && "bg-muted/60",
-                      !priced && "opacity-60",
-                    )}
-                  >
-                    <span className="bg-muted flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-md">
-                      {p.thumbUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={p.thumbUrl} alt="" width={48} height={48} className="size-full object-cover" />
-                      ) : (
-                        <PackageSearch className="text-muted-foreground size-5" />
+      {/* Compact (price check): no placeholder box until there is something to show. */}
+      {compact && results.length === 0 && !(searched && term) ? null : (
+        <div className="min-h-0 flex-1 overflow-y-auto rounded-xl border">
+          {results.length === 0 ? (
+            <div className="text-muted-foreground flex h-full min-h-40 flex-col items-center justify-center gap-2 p-6 text-center text-sm">
+              {searched && term ? (
+                <>
+                  <PackageSearch className="size-8" />
+                  <p>Sin resultados para “{term}”.</p>
+                </>
+              ) : (
+                <>
+                  <ScanBarcode className="size-8" />
+                  <p>Escanea un código o escribe para buscar. El producto entra al carrito al instante.</p>
+                </>
+              )}
+            </div>
+          ) : (
+            <ul role="listbox" aria-label="Resultados" className="divide-y">
+              {results.map((p, i) => {
+                const stock = D(p.stockAvailable);
+                const out = stock.lte(0);
+                const priced = hasPrice(p);
+                const bs = priced && rateVes ? D(p.priceUsd!).mul(rateVes) : null;
+                return (
+                  <li key={p.id} role="option" aria-selected={i === highlight} aria-disabled={!priced}>
+                    <button
+                      type="button"
+                      onClick={() => add(p)}
+                      onMouseEnter={() => setHighlight(i)}
+                      className={cn(
+                        "flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-muted/60 active:bg-muted",
+                        i === highlight && "bg-muted/60",
+                        !priced && "opacity-60",
                       )}
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate font-medium">{p.name}</span>
-                      <span className="text-muted-foreground block truncate text-xs">
-                        {[p.sku, p.locationCode].filter(Boolean).join(" · ")}
+                    >
+                      <span className="bg-muted flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-md">
+                        {p.thumbUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={p.thumbUrl} alt="" width={48} height={48} className="size-full object-cover" />
+                        ) : (
+                          <PackageSearch className="text-muted-foreground size-5" />
+                        )}
                       </span>
-                      <span className={cn("block text-xs", out ? "text-destructive font-medium" : "text-muted-foreground")}>
-                        {out ? "Agotado" : `Disponible: ${formatQty(stock, p.unitDecimals)} ${p.unitSymbol}`}
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate font-medium">{p.name}</span>
+                        <span className="text-muted-foreground block truncate text-xs">
+                          {[p.sku, p.locationCode].filter(Boolean).join(" · ")}
+                        </span>
+                        <span className={cn("block text-xs", out ? "text-destructive font-medium" : "text-muted-foreground")}>
+                          {out ? "Agotado" : `Disponible: ${formatQty(stock, p.unitDecimals)} ${p.unitSymbol}`}
+                        </span>
                       </span>
-                    </span>
-                    <span className="shrink-0 text-right">
-                      {priced ? (
-                        <span className="block text-base font-semibold tabular-nums">{formatMoney(p.priceUsd!, "USD")}</span>
-                      ) : (
-                        <Badge variant="outline" className="border-amber-400 text-amber-800 dark:text-amber-300">
-                          Falta precio
-                        </Badge>
-                      )}
-                      {bs ? <span className="text-muted-foreground block text-xs tabular-nums">{formatMoney(bs, "VES")}</span> : null}
-                    </span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </div>
+                      <span className="shrink-0 text-right">
+                        {priced ? (
+                          <span className="block text-base font-semibold tabular-nums">{formatMoney(p.priceUsd!, "USD")}</span>
+                        ) : (
+                          <Badge variant="outline" className="border-amber-400 text-amber-800 dark:text-amber-300">
+                            Falta precio
+                          </Badge>
+                        )}
+                        {bs ? <span className="text-muted-foreground block text-xs tabular-nums">{formatMoney(bs, "VES")}</span> : null}
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+      )}
 
       <BarcodeScanner
         open={scannerOpen}

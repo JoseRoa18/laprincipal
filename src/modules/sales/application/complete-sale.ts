@@ -15,7 +15,7 @@ import { adjustReserved, applyMovements, lockStock, type MovementInput } from "@
 import { getSetting } from "@/modules/settings/infrastructure/settings";
 import { computePaymentState, type PaymentInput } from "../domain/payments";
 import { exceedsDiscountLimit } from "../domain/pricing";
-import { priceLines, resolveCustomerAndPriceList } from "./cart-pricing";
+import { priceLines, requireIdentifiedCustomer, resolveCustomerAndPriceList } from "./cart-pricing";
 import type { CompleteSaleInput } from "./schemas";
 import type { SupervisorApproval } from "./supervisor-token";
 
@@ -135,6 +135,7 @@ async function completeNewSale(dbx: Db, input: CompleteSaleInput, ctx: SaleConte
   }
 
   const { customer, priceListId } = await resolveCustomerAndPriceList(dbx, input.customerId);
+  requireIdentifiedCustomer(customer, "cobrar");
   const maxPct = D(policies.maxDiscountPctByRole[ctx.role] ?? 0);
   const allowNegative = policies.allowNegativeStock && ctx.role === "admin" && input.allowNegativeStock === true;
 
@@ -256,7 +257,7 @@ async function completeNewSale(dbx: Db, input: CompleteSaleInput, ctx: SaleConte
         branchId: location.branchId,
         warehouseId: location.warehouseId,
         cashSessionId: session?.id ?? null,
-        customerId: customer?.id ?? null,
+        customerId: customer.id,
         sellerId: ctx.sellerId,
         priceListId: quote ? quote.priceListId : priceListId,
         status: "completed",
@@ -337,7 +338,7 @@ async function completeNewSale(dbx: Db, input: CompleteSaleInput, ctx: SaleConte
       after: {
         number,
         sellerId: ctx.sellerId,
-        customerId: customer?.id ?? null,
+        customerId: customer.id,
         totalUsd: totals.totalUsd.toFixed(2),
         discountUsd: totals.discountUsd.toFixed(2),
         paidUsd: payState.paidUsd.toFixed(2),

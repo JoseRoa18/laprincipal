@@ -71,6 +71,13 @@
       "when": 1791064259591,
       "tag": "0009_drop_part_number",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1791116891799,
+      "tag": "0010_customer_names_and_address",
+      "breakpoints": true
     }
   ]
 }

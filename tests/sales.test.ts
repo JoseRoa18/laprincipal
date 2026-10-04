@@ -6,6 +6,7 @@ import {
   cashRegisters,
   cashSessions,
   currencies,
+  customers,
   documentSeries,
   inventoryMovements,
   paymentMethods,
@@ -50,6 +51,8 @@ describe.skipIf(SKIP)("sales: complete, void, return, quotes", () => {
   let taxId: string;
   let publicListId: string;
   let cashUsdId: string;
+  /** Every sale needs an identified customer. */
+  let customerId: string;
   let cashCopId: string;
   let pagoMovilId: string;
 
@@ -134,6 +137,11 @@ describe.skipIf(SKIP)("sales: complete, void, return, quotes", () => {
     await db.insert(cashSessions).values({ registerId, status: "open", openedBy: adminId });
 
     ctx = { userId: adminId, sellerId: adminId, role: "admin", warehouseId, branchId, cashRegisterId: registerId };
+    const [customer] = await db
+      .insert(customers)
+      .values({ name: "Cliente Ventas", firstName: "Cliente", lastName: "Ventas", docType: "V", docNumber: String(10_000_000 + Math.floor(Math.random() * 89_999_999)), phone: "0414-1234567" })
+      .returning();
+    customerId = customer.id;
   });
 
   afterAll(async () => {
@@ -142,14 +150,33 @@ describe.skipIf(SKIP)("sales: complete, void, return, quotes", () => {
     for (const s of mine) await db.delete(saleReturns).where(eq(saleReturns.saleId, s.id));
     await db.delete(sales).where(eq(sales.createdBy, adminId));
     await db.delete(quotes).where(eq(quotes.createdBy, adminId));
+    await db.delete(customers).where(eq(customers.id, customerId));
     await db.delete(cashSessions).where(eq(cashSessions.registerId, registerId));
     await db.delete(cashRegisters).where(eq(cashRegisters.id, registerId));
     await close();
   });
 
+  it("refuses to sell or quote without a customer identified by cédula or RIF", async () => {
+    const product = await makeProduct({ price: "10", stock: "5" });
+    const lines = [{ productId: product.id, quantity: "1" }];
+    const payments = [{ paymentMethodId: cashUsdId, amount: "10" }];
+    await expect(completeSale(db, completeSaleSchema.parse({ lines, payments }), ctx)).rejects.toMatchObject({ code: "VALIDATION", details: { reason: "customer_required" } });
+    const [noDoc] = await db.insert(customers).values({ name: "Sin cédula", docType: "NONE" }).returning();
+    try {
+      await expect(completeSale(db, completeSaleSchema.parse({ customerId: noDoc.id, lines, payments }), ctx)).rejects.toMatchObject({
+        code: "VALIDATION",
+        details: { reason: "customer_document_required" },
+      });
+      await expect(createQuote(db, createQuoteSchema.parse({ lines }), ctx)).rejects.toMatchObject({ code: "VALIDATION", details: { reason: "customer_required" } });
+    } finally {
+      await db.delete(customers).where(eq(customers.id, noDoc.id));
+    }
+    expect((await stockOf(product.id)).quantity.toFixed(0)).toBe("5");
+  });
+
   it("completes a sale with mixed payments, moves stock, writes kardex and numbers consecutively", async () => {
     const product = await makeProduct({ price: "11.60", stock: "5", cost: "7" });
-    const input = completeSaleSchema.parse({
+    const input = completeSaleSchema.parse({ customerId,
       lines: [{ productId: product.id, quantity: "2" }],
       payments: [
         { paymentMethodId: cashUsdId, amount: "10" },
@@ -192,7 +219,7 @@ describe.skipIf(SKIP)("sales: complete, void, return, quotes", () => {
     expect(D(mv.unitCostUsd).toFixed(2)).toBe("7.00");
     expect(mv.referenceType).toBe("sale");
 
-    const second = await completeSale(db, completeSaleSchema.parse({ lines: [{ productId: product.id, quantity: "1" }], payments: [{ paymentMethodId: cashUsdId, amount: "11.60" }] }), ctx);
+    const second = await completeSale(db, completeSaleSchema.parse({ customerId, lines: [{ productId: product.id, quantity: "1" }], payments: [{ paymentMethodId: cashUsdId, amount: "11.60" }] }), ctx);
     expect(Number(second.number.replace("V-", ""))).toBe(Number(first.number.replace("V-", "")) + 1);
   });
 
@@ -200,7 +227,7 @@ describe.skipIf(SKIP)("sales: complete, void, return, quotes", () => {
     const product = await makeProduct({ price: "7.50", stock: "2" });
     const res = await completeSale(
       db,
-      completeSaleSchema.parse({ lines: [{ productId: product.id, quantity: "1" }], payments: [{ paymentMethodId: cashUsdId, amount: "10" }], changeCurrencyCode: "COP" }),
+      completeSaleSchema.parse({ customerId, lines: [{ productId: product.id, quantity: "1" }], payments: [{ paymentMethodId: cashUsdId, amount: "10" }], changeCurrencyCode: "COP" }),
       ctx,
     );
     expect(res.changeUsd).toBe("2.50");
@@ -211,7 +238,7 @@ describe.skipIf(SKIP)("sales: complete, void, return, quotes", () => {
   it("rejects a sale that is not fully paid", async () => {
     const product = await makeProduct({ price: "20", stock: "2" });
     await expect(
-      completeSale(db, completeSaleSchema.parse({ lines: [{ productId: product.id, quantity: "1" }], payments: [{ paymentMethodId: cashUsdId, amount: "5" }] }), ctx),
+      completeSale(db, completeSaleSchema.parse({ customerId, lines: [{ productId: product.id, quantity: "1" }], payments: [{ paymentMethodId: cashUsdId, amount: "5" }] }), ctx),
     ).rejects.toMatchObject({ code: "VALIDATION" });
     expect((await stockOf(product.id)).quantity.toFixed(0)).toBe("2");
   });
@@ -220,7 +247,7 @@ describe.skipIf(SKIP)("sales: complete, void, return, quotes", () => {
     const product = await makeProduct({ price: "5", stock: "1" });
     let error: unknown;
     try {
-      await completeSale(db, completeSaleSchema.parse({ lines: [{ productId: product.id, quantity: "2" }], payments: [{ paymentMethodId: cashUsdId, amount: "10" }] }), ctx);
+      await completeSale(db, completeSaleSchema.parse({ customerId, lines: [{ productId: product.id, quantity: "2" }], payments: [{ paymentMethodId: cashUsdId, amount: "10" }] }), ctx);
     } catch (err) {
       error = err;
     }
@@ -235,7 +262,7 @@ describe.skipIf(SKIP)("sales: complete, void, return, quotes", () => {
     const a = createTestDb();
     const b = createTestDb();
     try {
-      const input = completeSaleSchema.parse({ lines: [{ productId: product.id, quantity: "1" }], payments: [{ paymentMethodId: cashUsdId, amount: "9" }] });
+      const input = completeSaleSchema.parse({ customerId, lines: [{ productId: product.id, quantity: "1" }], payments: [{ paymentMethodId: cashUsdId, amount: "9" }] });
       const results = await Promise.allSettled([completeSale(a.db, input, ctx), completeSale(b.db, input, ctx)]);
       const ok = results.filter((r) => r.status === "fulfilled");
       const failed = results.filter((r): r is PromiseRejectedResult => r.status === "rejected");
@@ -257,7 +284,7 @@ describe.skipIf(SKIP)("sales: complete, void, return, quotes", () => {
   it("requires a supervisor for discounts over the role limit and records who authorized", async () => {
     const product = await makeProduct({ price: "100", stock: "5" });
     const sellerCtx: SaleContext = { ...ctx, role: "seller" };
-    const input = completeSaleSchema.parse({
+    const input = completeSaleSchema.parse({ customerId,
       lines: [{ productId: product.id, quantity: "1", discountType: "pct", discountValue: "25" }],
       payments: [{ paymentMethodId: cashUsdId, amount: "75" }],
     });
@@ -276,28 +303,28 @@ describe.skipIf(SKIP)("sales: complete, void, return, quotes", () => {
     const product = await makeProduct({ price: "10", stock: "5" });
     const line = [{ productId: product.id, quantity: "1" }];
     const requestId = crypto.randomUUID();
-    const input = completeSaleSchema.parse({ lines: line, payments: [{ paymentMethodId: cashUsdId, amount: "10" }], clientRequestId: requestId });
+    const input = completeSaleSchema.parse({ customerId, lines: line, payments: [{ paymentMethodId: cashUsdId, amount: "10" }], clientRequestId: requestId });
     const first = await completeSale(db, input, ctx);
     const again = await completeSale(db, input, ctx);
     expect(again.saleId).toBe(first.saleId);
     expect((await stockOf(product.id)).quantity.toFixed(0)).toBe("4");
 
     // A barcode scanned into the cash amount is not a payment.
-    await expect(completeSale(db, completeSaleSchema.parse({ lines: line, payments: [{ paymentMethodId: cashUsdId, amount: "7591234567890" }] }), ctx)).rejects.toMatchObject({
+    await expect(completeSale(db, completeSaleSchema.parse({ customerId, lines: line, payments: [{ paymentMethodId: cashUsdId, amount: "7591234567890" }] }), ctx)).rejects.toMatchObject({
       code: "VALIDATION",
     });
     // The screen computed pesos with an older rate, or showed another total.
     await expect(
-      completeSale(db, completeSaleSchema.parse({ lines: line, payments: [{ paymentMethodId: cashCopId, amount: "41000" }], clientRates: { COP: "4000" } }), ctx),
+      completeSale(db, completeSaleSchema.parse({ customerId, lines: line, payments: [{ paymentMethodId: cashCopId, amount: "41000" }], clientRates: { COP: "4000" } }), ctx),
     ).rejects.toMatchObject({ code: "CONFLICT", details: { reason: "rates_changed" } });
     await expect(
-      completeSale(db, completeSaleSchema.parse({ lines: line, payments: [{ paymentMethodId: cashUsdId, amount: "10" }], expectedTotalUsd: "9.50" }), ctx),
+      completeSale(db, completeSaleSchema.parse({ customerId, lines: line, payments: [{ paymentMethodId: cashUsdId, amount: "10" }], expectedTotalUsd: "9.50" }), ctx),
     ).rejects.toMatchObject({ code: "CONFLICT", details: { reason: "prices_changed" } });
   });
 
   it("voids a sale and restores stock", async () => {
     const product = await makeProduct({ price: "4", stock: "5", cost: "2" });
-    const sale = await completeSale(db, completeSaleSchema.parse({ lines: [{ productId: product.id, quantity: "2" }], payments: [{ paymentMethodId: cashUsdId, amount: "8" }] }), ctx);
+    const sale = await completeSale(db, completeSaleSchema.parse({ customerId, lines: [{ productId: product.id, quantity: "2" }], payments: [{ paymentMethodId: cashUsdId, amount: "8" }] }), ctx);
     expect((await stockOf(product.id)).quantity.toFixed(0)).toBe("3");
 
     await expect(voidSale(db, { saleId: sale.saleId, reason: "Prueba" }, { userId: adminId, role: "seller" })).rejects.toMatchObject({ code: "FORBIDDEN" });
@@ -322,7 +349,7 @@ describe.skipIf(SKIP)("sales: complete, void, return, quotes", () => {
 
   it("registers a partial return with restock and refund in COP, then a full one", async () => {
     const product = await makeProduct({ price: "10", stock: "5", cost: "6" });
-    const sale = await completeSale(db, completeSaleSchema.parse({ lines: [{ productId: product.id, quantity: "3" }], payments: [{ paymentMethodId: cashUsdId, amount: "30" }] }), ctx);
+    const sale = await completeSale(db, completeSaleSchema.parse({ customerId, lines: [{ productId: product.id, quantity: "3" }], payments: [{ paymentMethodId: cashUsdId, amount: "30" }] }), ctx);
     const [item] = await db.select().from(saleItems).where(eq(saleItems.saleId, sale.saleId));
 
     const returnInput = createReturnSchema.parse({ saleId: sale.saleId, items: [{ saleItemId: item.id, quantity: "1" }], restock: true, refundMethodId: cashCopId, reasonText: "Pieza equivocada" });
@@ -378,7 +405,7 @@ describe.skipIf(SKIP)("sales: complete, void, return, quotes", () => {
 
     const done = await completeSale(
       db,
-      completeSaleSchema.parse({
+      completeSaleSchema.parse({ customerId,
         heldSaleId: held.saleId,
         lines: [{ productId: product.id, quantity: "2", discountType: "amount", discountValue: "0.60" }],
         payments: [{ paymentMethodId: cashUsdId, amount: "5.40" }],
@@ -394,7 +421,7 @@ describe.skipIf(SKIP)("sales: complete, void, return, quotes", () => {
     const product = await makeProduct({ price: "50", stock: "3" });
     const quote = await createQuote(
       db,
-      createQuoteSchema.parse({ lines: [{ productId: product.id, quantity: "2" }], reserveStock: true, notes: "Entrega el viernes" }),
+      createQuoteSchema.parse({ customerId, lines: [{ productId: product.id, quantity: "2" }], reserveStock: true, notes: "Entrega el viernes" }),
       ctx,
     );
     expect(quote.number).toMatch(/^C-\d{6}$/);
@@ -405,12 +432,12 @@ describe.skipIf(SKIP)("sales: complete, void, return, quotes", () => {
 
     // Only one unit is available for other customers while the quote reserves two.
     await expect(
-      completeSale(db, completeSaleSchema.parse({ lines: [{ productId: product.id, quantity: "2" }], payments: [{ paymentMethodId: cashUsdId, amount: "120" }] }), ctx),
+      completeSale(db, completeSaleSchema.parse({ customerId, lines: [{ productId: product.id, quantity: "2" }], payments: [{ paymentMethodId: cashUsdId, amount: "120" }] }), ctx),
     ).rejects.toMatchObject({ code: "INSUFFICIENT_STOCK" });
 
     const sale = await completeSale(
       db,
-      completeSaleSchema.parse({ quoteId: quote.quoteId, lines: [{ productId: product.id, quantity: "2" }], payments: [{ paymentMethodId: cashUsdId, amount: "100" }] }),
+      completeSaleSchema.parse({ customerId, quoteId: quote.quoteId, lines: [{ productId: product.id, quantity: "2" }], payments: [{ paymentMethodId: cashUsdId, amount: "100" }] }),
       ctx,
     );
     expect(sale.totalUsd).toBe("100.00");

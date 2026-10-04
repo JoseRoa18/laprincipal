@@ -2,8 +2,9 @@ import { and, eq, isNull, or, sql } from "drizzle-orm";
 import { db, type Db, type DbOrTx } from "@/db/client";
 import { customers } from "@/db/schema";
 import { normalizeSearch } from "@/modules/catalog/infrastructure/product-lookup";
-import { createCustomer } from "@/modules/customers/application/customers";
-import type { CartCustomer, QuickCustomerInput } from "../application/schemas";
+import { createCustomer, findCustomerByDocument } from "@/modules/customers/application/customers";
+import { formatDoc, type CustomerInput } from "@/modules/customers/domain/schema";
+import type { CartCustomer } from "../application/schemas";
 
 export interface CustomerSearchResult extends CartCustomer {
   docType: string;
@@ -50,24 +51,22 @@ export async function searchCustomers(q: string, opts: { limit?: number; dbx?: D
     .limit(opts.limit ?? 10);
 }
 
-export async function getCartCustomer(id: string, dbx: DbOrTx = db): Promise<CartCustomer | null> {
-  const [row] = await dbx.select(selection).from(customers).where(eq(customers.id, id)).limit(1);
-  if (!row) return null;
-  return { id: row.id, name: row.name, phone: row.phone, customerType: row.customerType, priceListId: row.priceListId };
+function toCartCustomer(row: { id: string; name: string; docType: string; docNumber: string | null; phone: string | null; customerType: "public" | "technician"; priceListId: string | null }): CartCustomer {
+  return { id: row.id, name: row.name, doc: formatDoc(row.docType, row.docNumber) || undefined, phone: row.phone, customerType: row.customerType, priceListId: row.priceListId };
 }
 
-/** Quick create from the POS, delegated to the customers module (audit, TECH list, duplicates). */
-export async function createQuickCustomer(input: QuickCustomerInput, userId: string, dbx: Db = db): Promise<CartCustomer> {
-  const row = await createCustomer(
-    {
-      name: input.name,
-      phone: input.phone ?? null,
-      docType: input.docType,
-      docNumber: input.docType === "NONE" ? null : (input.docNumber ?? null),
-      customerType: input.customerType,
-    },
-    userId,
-    dbx,
-  );
-  return { id: row.id, name: row.name, phone: row.phone, customerType: row.customerType, priceListId: row.priceListId };
+export async function getCartCustomer(id: string, dbx: DbOrTx = db): Promise<CartCustomer | null> {
+  const [row] = await dbx.select(selection).from(customers).where(eq(customers.id, id)).limit(1);
+  return row ? toCartCustomer(row) : null;
+}
+
+/** The POS starts every sale by cédula/RIF: the customer with that document, if registered. */
+export async function findCartCustomerByDocument(docType: string, docNumber: string, dbx: DbOrTx = db): Promise<CartCustomer | null> {
+  const row = await findCustomerByDocument(docType, docNumber, dbx);
+  return row ? toCartCustomer(row) : null;
+}
+
+/** New customer from the POS, delegated to the customers module (validation, audit, TECH list, duplicates). */
+export async function createQuickCustomer(input: CustomerInput, userId: string, dbx: Db = db): Promise<CartCustomer> {
+  return toCartCustomer(await createCustomer(input, userId, dbx));
 }

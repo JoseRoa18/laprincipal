@@ -64,9 +64,16 @@ async function main() {
   const rates = await getRatesSnapshot(today);
   const vesForTenUsd = (10 * Number(rates.rateSet.VES)).toFixed(2);
 
+  // Every sale needs a customer identified by cédula.
+  const [customer] = await db
+    .insert(s.customers)
+    .values({ name: `Cliente Humo ${stamp}`, firstName: "Cliente", lastName: `Humo ${stamp}`, docType: "V", docNumber: String(10_000_000 + Math.floor(Math.random() * 89_999_999)), phone: "0414-1234567" })
+    .returning();
+
   const sale = await completeSale(
     db,
     completeSaleSchema.parse({
+      customerId: customer.id,
       lines: [{ productId: product.id, quantity: "2" }],
       payments: [
         { paymentMethodId: cashUsd.id, amount: "13.20" },

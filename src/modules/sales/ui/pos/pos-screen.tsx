@@ -28,6 +28,7 @@ import type { CartCustomer, PosProduct } from "../../application/schemas";
 import { CartStoreProvider, cartTotals, exceedsDiscountLimit, posCartStore, quoteCartStore, supervisorIsValid, useCart, useCartStore } from "../cart-store";
 import { CartPanel } from "./cart-panel";
 import { CheckoutDialog } from "./checkout-dialog";
+import { CustomerGate } from "./customer-gate";
 import { fetchHeldSales, HELD_SALES_KEY, HeldSalesDrawer } from "./held-sales-drawer";
 import { HoldDialog } from "./hold-dialog";
 import { ProductSearch, type ProductSearchHandle } from "./product-search";
@@ -138,6 +139,10 @@ function PosInner({ config }: { config: PosConfig }) {
   }, [hydrated]);
 
   const openCheckout = useCallback(() => {
+    if (!store.getState().customer) {
+      toast.info("Primero identifica al cliente con su cédula o RIF.");
+      return;
+    }
     if (store.getState().lines.length === 0) {
       toast.info("Agrega productos al carrito.");
       searchRef.current?.focus();
@@ -181,7 +186,7 @@ function PosInner({ config }: { config: PosConfig }) {
 
   const primaryAction = useCallback(() => {
     if (isSale) openCheckout();
-    else if (store.getState().lines.length > 0) setQuoteOpen(true);
+    else if (store.getState().customer && store.getState().lines.length > 0) setQuoteOpen(true);
   }, [isSale, openCheckout, store]);
 
   useEffect(() => {
@@ -200,7 +205,11 @@ function PosInner({ config }: { config: PosConfig }) {
 
   function onCustomerChange(next: CartCustomer | null) {
     store.getState().setCustomer(next);
-    void refreshProducts(priceListFor(next, config));
+    // Without a customer the cédula screen shows; the lines wait in the cart.
+    if (next) {
+      void refreshProducts(priceListFor(next, config));
+      requestAnimationFrame(() => searchRef.current?.focus());
+    }
   }
 
   async function hold(label: string): Promise<boolean> {
@@ -307,45 +316,51 @@ function PosInner({ config }: { config: PosConfig }) {
         </Alert>
       ) : null}
 
-      <div className="flex min-h-0 flex-1 flex-col gap-3 lg:flex-row">
-        <section className="flex min-h-[40vh] min-w-0 flex-1 flex-col lg:min-h-0">
-          <ProductSearch priceListId={priceListId} rateVes={rateVes} onAdd={(p) => store.getState().addProduct(p)} handle={searchRef} />
-        </section>
-        <aside className="flex min-h-0 w-full flex-col lg:w-[420px] xl:w-[460px]">
-          <CartPanel
-            config={config}
-            totals={totals}
-            onCustomerChange={onCustomerChange}
-            onCheckout={openCheckout}
-            onHold={() => setHoldOpen(true)}
-            onQuote={() => (store.getState().lines.length > 0 ? setQuoteOpen(true) : toast.info("Agrega productos primero."))}
-          />
-        </aside>
-      </div>
-
-      <div className="bg-background/95 supports-backdrop-filter:bg-background/80 sticky bottom-14 z-30 -mx-3 border-t px-3 py-2 backdrop-blur md:bottom-0 lg:hidden">
-        <div className="flex items-center gap-3">
-          <div className="min-w-0 flex-1">
-            <p className="text-muted-foreground text-xs">Total</p>
-            <p className="text-2xl font-bold tabular-nums">{formatMoney(totals.totalUsd, "USD")}</p>
-            {amounts.VES ? <p className="text-muted-foreground text-xs tabular-nums">{formatMoney(amounts.VES, "VES")}</p> : null}
+      {customer ? (
+        <>
+          <div className="flex min-h-0 flex-1 flex-col gap-3 lg:flex-row">
+            <section className="flex min-h-[40vh] min-w-0 flex-1 flex-col lg:min-h-0">
+              <ProductSearch priceListId={priceListId} rateVes={rateVes} onAdd={(p) => store.getState().addProduct(p)} handle={searchRef} />
+            </section>
+            <aside className="flex min-h-0 w-full flex-col lg:w-[420px] xl:w-[460px]">
+              <CartPanel
+                config={config}
+                totals={totals}
+                onCustomerChange={onCustomerChange}
+                onCheckout={openCheckout}
+                onHold={() => setHoldOpen(true)}
+                onQuote={() => (store.getState().lines.length > 0 ? setQuoteOpen(true) : toast.info("Agrega productos primero."))}
+              />
+            </aside>
           </div>
-          {isSale ? (
-            <>
-              <Button type="button" variant="outline" size="lg" className="h-12" disabled={lines.length === 0} onClick={() => setHoldOpen(true)} aria-label="Poner en espera">
-                <PauseCircle />
-              </Button>
-              <Button type="button" size="lg" className="h-12 px-6 text-base" disabled={lines.length === 0} onClick={openCheckout}>
-                Cobrar
-              </Button>
-            </>
-          ) : (
-            <Button type="button" size="lg" className="h-12 px-6 text-base" disabled={lines.length === 0} onClick={() => setQuoteOpen(true)}>
-              Guardar cotización
-            </Button>
-          )}
-        </div>
-      </div>
+
+          <div className="bg-background/95 supports-backdrop-filter:bg-background/80 sticky bottom-14 z-30 -mx-3 border-t px-3 py-2 backdrop-blur md:bottom-0 lg:hidden">
+            <div className="flex items-center gap-3">
+              <div className="min-w-0 flex-1">
+                <p className="text-muted-foreground text-xs">Total</p>
+                <p className="text-2xl font-bold tabular-nums">{formatMoney(totals.totalUsd, "USD")}</p>
+                {amounts.VES ? <p className="text-muted-foreground text-xs tabular-nums">{formatMoney(amounts.VES, "VES")}</p> : null}
+              </div>
+              {isSale ? (
+                <>
+                  <Button type="button" variant="outline" size="lg" className="h-12" disabled={lines.length === 0} onClick={() => setHoldOpen(true)} aria-label="Poner en espera">
+                    <PauseCircle />
+                  </Button>
+                  <Button type="button" size="lg" className="h-12 px-6 text-base" disabled={lines.length === 0} onClick={openCheckout}>
+                    Cobrar
+                  </Button>
+                </>
+              ) : (
+                <Button type="button" size="lg" className="h-12 px-6 text-base" disabled={lines.length === 0} onClick={() => setQuoteOpen(true)}>
+                  Guardar cotización
+                </Button>
+              )}
+            </div>
+          </div>
+        </>
+      ) : (
+        <CustomerGate mode={config.mode} onSelect={onCustomerChange} />
+      )}
 
       {isSale ? (
         <>

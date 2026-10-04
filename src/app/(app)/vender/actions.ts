@@ -16,9 +16,10 @@ import { clearActingSeller, getActingSeller, setActingSeller } from "@/modules/s
 import { completeSale } from "@/modules/sales/application/complete-sale";
 import { discardHeldSale, holdSale } from "@/modules/sales/application/hold-sale";
 import { createQuote } from "@/modules/sales/application/quotes";
-import { completeSaleSchema, createQuoteSchema, holdSaleSchema, pinSchema, quickCustomerSchema } from "@/modules/sales/application/schemas";
+import { completeSaleSchema, createQuoteSchema, customerDocLookupSchema, holdSaleSchema, pinSchema } from "@/modules/sales/application/schemas";
 import { issueSupervisorToken, verifySupervisorToken } from "@/modules/sales/application/supervisor-token";
-import { createQuickCustomer } from "@/modules/sales/infrastructure/customers-lookup";
+import type { CustomerInput } from "@/modules/customers/domain/schema";
+import { createQuickCustomer, findCartCustomerByDocument } from "@/modules/sales/infrastructure/customers-lookup";
 
 async function sellerContext() {
   const user = await assertRole("admin", "seller");
@@ -113,12 +114,21 @@ export async function clearActingSellerAction() {
   });
 }
 
+/** New customer typed at the counter (sellers too: customers are handled inside the POS). */
 export async function quickCreateCustomerAction(input: unknown) {
   return runAction(async () => {
     const user = await assertRole("admin", "seller");
-    const data = parseInput(quickCustomerSchema, input);
-    const customer = await createQuickCustomer(data, user.id);
+    const customer = await createQuickCustomer(input as CustomerInput, user.id);
     revalidatePath("/clientes");
     return customer;
+  });
+}
+
+/** First step of every sale and quote: who is the customer (by cédula/RIF)? Null when not registered. */
+export async function findCustomerByDocAction(input: unknown) {
+  return runAction(async () => {
+    await assertRole("admin", "seller");
+    const { docType, docNumber } = parseInput(customerDocLookupSchema, input);
+    return findCartCustomerByDocument(docType, docNumber);
   });
 }

@@ -12,7 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { requireRole } from "@/lib/auth-guards";
 import { formatDate, formatDateTime } from "@/lib/format";
-import { CUSTOMER_TYPE_LABEL, formatDoc } from "@/modules/customers/domain/schema";
+import { CUSTOMER_TYPE_LABEL, formatAddress, formatDoc } from "@/modules/customers/domain/schema";
 import { getCustomer, getCustomerHistory } from "@/modules/customers/infrastructure/customers";
 
 export const metadata = { title: "Cliente" };
@@ -88,7 +88,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
               <Item label="Lista de precios">{customer.priceListName ?? "—"}</Item>
               <Item label="Teléfono">{customer.phone || "—"}</Item>
               <Item label="Correo">{customer.email || "—"}</Item>
-              <Item label="Dirección">{customer.address || "—"}</Item>
+              <Item label="Dirección">{formatAddress(customer) || "—"}</Item>
               <Item label="Registrado">{formatDate(customer.createdAt)}</Item>
               {customer.notes ? (
                 <div className="sm:col-span-2">

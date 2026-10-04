@@ -11,7 +11,7 @@ import { nextDocumentNumber } from "@/modules/core/application/numbering";
 import { getRatesSnapshot } from "@/modules/currency/infrastructure/rates";
 import { adjustReserved, lockStock } from "@/modules/inventory/application/stock";
 import { getSetting } from "@/modules/settings/infrastructure/settings";
-import { persistedDiscount, priceLines, resolveCustomerAndPriceList } from "./cart-pricing";
+import { persistedDiscount, priceLines, requireIdentifiedCustomer, resolveCustomerAndPriceList } from "./cart-pricing";
 import type { CreateQuoteInput } from "./schemas";
 
 export interface QuoteContext {
@@ -32,6 +32,7 @@ export async function createQuote(dbx: Db, input: CreateQuoteInput, ctx: QuoteCo
     ctx.warehouseId && ctx.branchId ? { warehouseId: ctx.warehouseId, branchId: ctx.branchId } : await getDefaultLocation(dbx);
   const snapshot = await getRatesSnapshot(businessDate(), dbx);
   const { customer, priceListId } = await resolveCustomerAndPriceList(dbx, input.customerId);
+  requireIdentifiedCustomer(customer, "guardar la cotización");
   const today = businessDate();
   const validUntil = input.validUntil ?? defaultQuoteValidUntil(policies.quoteValidityDays);
   if (validUntil < today) throw new AppError("VALIDATION", "La fecha de vigencia no puede ser anterior a hoy.");
@@ -69,7 +70,7 @@ export async function createQuote(dbx: Db, input: CreateQuoteInput, ctx: QuoteCo
       .insert(quotes)
       .values({
         number,
-        customerId: customer?.id ?? null,
+        customerId: customer.id,
         sellerId: ctx.sellerId,
         priceListId,
         status: "open",
