@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Field, FieldContent, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/app/password-input";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Switch } from "@/components/ui/switch";
 import type { UserListRow } from "@/modules/auth/infrastructure/users";
@@ -123,9 +124,8 @@ function CreateUserForm({ onClose }: { onClose: () => void }) {
         <div className="grid gap-4 sm:grid-cols-2">
           <Field data-invalid={Boolean(errors.password) || undefined}>
             <FieldLabel htmlFor="create-password">Contraseña</FieldLabel>
-            <Input
+            <PasswordInput
               id="create-password"
-              type="password"
               autoComplete="new-password"
               aria-invalid={Boolean(errors.password)}
               {...register("password")}
@@ -135,9 +135,8 @@ function CreateUserForm({ onClose }: { onClose: () => void }) {
           </Field>
           <Field data-invalid={Boolean(errors.passwordConfirm) || undefined}>
             <FieldLabel htmlFor="create-password-confirm">Confirmar contraseña</FieldLabel>
-            <Input
+            <PasswordInput
               id="create-password-confirm"
-              type="password"
               autoComplete="new-password"
               aria-invalid={Boolean(errors.passwordConfirm)}
               {...register("passwordConfirm")}
@@ -332,9 +331,8 @@ function ResetPasswordForm({ user, onClose }: { user: UserListRow; onClose: () =
       <div className="grid gap-4">
         <Field data-invalid={Boolean(errors.password) || undefined}>
           <FieldLabel htmlFor="reset-password">Nueva contraseña</FieldLabel>
-          <Input
+          <PasswordInput
             id="reset-password"
-            type="password"
             autoComplete="new-password"
             aria-invalid={Boolean(errors.password)}
             {...register("password")}
@@ -344,9 +342,8 @@ function ResetPasswordForm({ user, onClose }: { user: UserListRow; onClose: () =
         </Field>
         <Field data-invalid={Boolean(errors.passwordConfirm) || undefined}>
           <FieldLabel htmlFor="reset-password-confirm">Confirmar contraseña</FieldLabel>
-          <Input
+          <PasswordInput
             id="reset-password-confirm"
-            type="password"
             autoComplete="new-password"
             aria-invalid={Boolean(errors.passwordConfirm)}
             {...register("passwordConfirm")}

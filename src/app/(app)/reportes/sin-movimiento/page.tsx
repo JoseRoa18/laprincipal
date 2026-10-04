@@ -56,7 +56,7 @@ export default async function NoMovementReportPage({ searchParams }: { searchPar
         />
       ) : (
         <>
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-2 gap-3">
             <KpiCard label="Productos sin movimiento" value={formatQty(report.count)} hint={`Con existencia y sin ventas desde el ${formatDate(new Date(`${report.cutoff}T12:00:00-04:00`))}`} />
             <KpiCard
               label="Dinero inmovilizado"

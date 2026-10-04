@@ -65,7 +65,7 @@
   --muted-foreground: oklch(0.49 0.03 256);
   --accent: oklch(0.93 0.025 252);
   --accent-foreground: oklch(0.25 0.06 256);
-  --destructive: oklch(0.577 0.245 27.3);
+  --destructive: oklch(0.53 0.22 27);
   --border: oklch(0.895 0.012 252);
   --input: oklch(0.895 0.012 252);
   --ring: oklch(0.55 0.13 256);
@@ -132,6 +132,35 @@
   }
   html {
     @apply font-sans;
+    /* Focus and in-page jumps land clear of the sticky header and the bottom bars. */
+    scroll-padding-top: 4.5rem;
+    scroll-padding-bottom: 5rem;
+  }
+  @media (width < 48rem) {
+    html {
+      /* Phones: bottom navigation plus a sticky action bar above it. */
+      scroll-padding-bottom: 9rem;
+    }
+  }
+  /* Tailwind 4 leaves buttons with the arrow cursor: anything clickable shows the hand. */
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  summary,
+  select:not(:disabled),
+  input:is([type="checkbox"], [type="radio"]):not(:disabled),
+  label:has(> input:is([type="checkbox"], [type="radio"]):not(:disabled)) {
+    cursor: pointer;
+  }
+  /* No 300 ms double-tap wait on phones. */
+  a,
+  button,
+  [role="button"],
+  input,
+  select,
+  textarea,
+  label,
+  summary {
+    touch-action: manipulation;
   }
 }
 /* Motion helpers */
@@ -227,8 +256,9 @@
   }
 }
 
-/* Enlaces y controles propios que deben medir 44 px al tocar (min-height solo con puntero grueso). */
+/* Enlaces y controles propios: 24 px con ratón (mínimo WCAG 2.2) y 44 px al tocar. */
 @utility tap-target {
+  min-height: 1.5rem;
   @media (pointer: coarse) {
     min-height: 2.75rem;
   }

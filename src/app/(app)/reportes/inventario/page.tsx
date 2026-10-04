@@ -54,7 +54,7 @@ export default async function InventoryReportPage({ searchParams }: { searchPara
         />
       ) : (
         <>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             <KpiCard label="Valor a costo" value={<Money value={v.totalValue} />} hint={<Equivalents usd={v.totalValue} rates={rates.rateSet} />} />
             <KpiCard label="Unidades en existencia" value={formatQty(v.totalQty, 2)} />
             <KpiCard label="Productos con existencia" value={formatQty(v.withStock)} />

@@ -592,7 +592,7 @@ function posScenarios(mode: "sale" | "quote", product: SeedProduct | undefined):
       {
         name: "en espera",
         run: async (page) => {
-          await page.getByRole("button", { name: /^En espera/ }).first().click();
+          await page.getByRole("button", { name: /^Ventas en espera/ }).first().click();
           return dialogLocator(page);
         },
       },

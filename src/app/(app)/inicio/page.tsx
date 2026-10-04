@@ -80,7 +80,7 @@ export default async function HomePage() {
         </Card>
       ) : null}
 
-      <div className="stagger grid gap-4 *:animate-in *:fade-in-0 *:slide-in-from-bottom-2 *:duration-500 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="stagger grid grid-cols-2 gap-3 *:animate-in *:fade-in-0 *:slide-in-from-bottom-2 *:duration-500 sm:gap-4 lg:grid-cols-4">
         {showSales ? (
           <KpiCard
             label="Ventas de hoy"

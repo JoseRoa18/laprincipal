@@ -10,6 +10,7 @@ import { changeOwnPasswordAction, changeOwnPinAction } from "@/app/(app)/configu
 import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/app/password-input";
 import { applyFieldErrors } from "@/modules/core/ui/form-errors";
 import { changeOwnPasswordSchema, setPinSchema, type ChangeOwnPasswordInput, type SetPinInput } from "@/modules/settings/domain/user-forms";
 
@@ -48,9 +49,8 @@ export function ChangePasswordForm({ email }: { email: string }) {
 
       <Field data-invalid={Boolean(errors.currentPassword) || undefined}>
         <FieldLabel htmlFor="currentPassword">Contraseña actual</FieldLabel>
-        <Input
+        <PasswordInput
           id="currentPassword"
-          type="password"
           autoComplete="current-password"
           aria-invalid={Boolean(errors.currentPassword)}
           {...register("currentPassword")}
@@ -60,16 +60,15 @@ export function ChangePasswordForm({ email }: { email: string }) {
 
       <Field data-invalid={Boolean(errors.password) || undefined}>
         <FieldLabel htmlFor="password">Nueva contraseña</FieldLabel>
-        <Input id="password" type="password" autoComplete="new-password" aria-invalid={Boolean(errors.password)} {...register("password")} />
+        <PasswordInput id="password" autoComplete="new-password" aria-invalid={Boolean(errors.password)} {...register("password")} />
         <FieldDescription>Mínimo 8 caracteres.</FieldDescription>
         <FieldError errors={[errors.password]} />
       </Field>
 
       <Field data-invalid={Boolean(errors.passwordConfirm) || undefined}>
         <FieldLabel htmlFor="passwordConfirm">Confirmar nueva contraseña</FieldLabel>
-        <Input
+        <PasswordInput
           id="passwordConfirm"
-          type="password"
           autoComplete="new-password"
           aria-invalid={Boolean(errors.passwordConfirm)}
           {...register("passwordConfirm")}

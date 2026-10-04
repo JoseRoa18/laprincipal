@@ -165,6 +165,7 @@ export function ReturnForm({ saleId, saleNumber, items, reasons, methods, origin
                       onChange={(e) => setQty((q) => ({ ...q, [item.id]: e.target.value }))}
                       inputMode="decimal"
                       placeholder={`máx. ${formatQty(max, item.unitDecimals)}`}
+                      aria-label={`Cantidad a devolver de ${item.description}`}
                       aria-invalid={line?.invalid}
                       className="h-10 text-right"
                     />

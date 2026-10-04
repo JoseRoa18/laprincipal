@@ -62,21 +62,22 @@ export function DateRangeFilter({
           </Button>
         ))}
       </div>
+      {/* Phones: "desde a hasta" on one row with full-width dates, instead of wrapping one by one. */}
       <form
-        className="flex flex-wrap items-center gap-2"
+        className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 md:flex md:flex-wrap"
         onSubmit={(e) => {
           e.preventDefault();
           if (customValid) navigate({ preset: "custom", from: customFrom, to: customTo });
         }}
       >
-        <span className="text-muted-foreground text-sm">{active === "custom" ? "Personalizado:" : "Otro período:"}</span>
+        <span className="text-muted-foreground col-span-3 text-sm">{active === "custom" ? "Personalizado:" : "Otro período:"}</span>
         <Input
           type="date"
           aria-label="Desde"
           value={customFrom}
           max={customTo || undefined}
           onChange={(e) => setCustomFrom(e.target.value)}
-          className="h-8 w-auto"
+          className="h-8 w-full md:w-auto"
         />
         <span className="text-muted-foreground text-sm">a</span>
         <Input
@@ -85,9 +86,9 @@ export function DateRangeFilter({
           value={customTo}
           min={customFrom || undefined}
           onChange={(e) => setCustomTo(e.target.value)}
-          className="h-8 w-auto"
+          className="h-8 w-full md:w-auto"
         />
-        <Button type="submit" size="sm" variant={active === "custom" ? "default" : "secondary"} disabled={!customValid}>
+        <Button type="submit" size="sm" className="col-span-3" variant={active === "custom" ? "default" : "secondary"} disabled={!customValid}>
           Aplicar
         </Button>
       </form>

@@ -248,6 +248,7 @@ function PosInner({ config }: { config: PosConfig }) {
         <div className="flex min-w-0 items-center gap-2 text-sm">
           {isSale ? (
             <>
+              <h1 className="sr-only">Vender</h1>
               <UserRound className="text-muted-foreground size-4 shrink-0" />
               <span className="truncate">
                 Vende <span className="font-semibold">{config.seller.name}</span>
@@ -260,13 +261,13 @@ function PosInner({ config }: { config: PosConfig }) {
           ) : (
             <>
               <BackLink href="/cotizaciones" label="Volver a cotizaciones" />
-              <span className="font-semibold">Nueva cotización</span>
+              <h1 className="font-semibold">Nueva cotización</h1>
             </>
           )}
         </div>
         {isSale ? (
           <Button type="button" variant="outline" size="sm" onClick={() => setHeldOpen(true)}>
-            <PauseCircle /> En espera {heldCount > 0 ? <Badge>{heldCount}</Badge> : null}
+            <PauseCircle /> Ventas en espera {heldCount > 0 ? <Badge>{heldCount}</Badge> : null}
           </Button>
         ) : null}
       </div>

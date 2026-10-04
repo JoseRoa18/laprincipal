@@ -31,7 +31,8 @@ export default async function SalesReportPage({ searchParams }: { searchParams: 
   const t = report.totals;
   const p = report.previousTotals;
   const hasData = t.count > 0 || report.voided.count > 0 || report.returned.count > 0;
-  const prev = `${rangeDays(range) === 1 ? "el día anterior" : "el período anterior"} (${describeRange(report.previous)})`;
+  // The compared dates go once in the page description, not in every card.
+  const prev = rangeDays(range) === 1 ? "el día anterior" : "el período anterior";
   const chartData = report.byDay.map((d) => ({ day: d.day, total: Number(d.total), count: d.count }));
   const exportParams = { from: range.from, to: range.to };
 
@@ -40,7 +41,7 @@ export default async function SalesReportPage({ searchParams }: { searchParams: 
       <PageHeader
         back={{ href: "/reportes", label: "Volver a reportes" }}
         title="Ventas"
-        description={describeRange(range)}
+        description={`${describeRange(range)} · se compara con ${describeRange(report.previous).toLowerCase()}`}
         actions={
           <>
             <ExportButton report="sales" params={exportParams} disabled={!hasData} />
@@ -58,7 +59,7 @@ export default async function SalesReportPage({ searchParams }: { searchParams: 
         />
       ) : (
         <>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-6">
             <KpiCard
               label="Total vendido"
               value={<Money value={t.total} />}

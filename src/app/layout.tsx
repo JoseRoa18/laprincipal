@@ -16,7 +16,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
+  // No maximumScale: pinch zoom stays available (form controls are 16 px on touch, so iOS does not auto-zoom).
   viewportFit: "cover",
   themeColor: "#ffffff",
 };

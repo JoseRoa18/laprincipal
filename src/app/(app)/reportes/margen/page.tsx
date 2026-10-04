@@ -98,7 +98,7 @@ export default async function MarginReportPage({ searchParams }: { searchParams:
         <EmptyState icon={Percent} title="Aún no hay ventas en este período" description="Cambia el período para ver el margen." />
       ) : (
         <>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             <KpiCard label="Ingresos sin IVA" value={<Money value={report.totals.revenue} />} hint="Lo cobrado menos el IVA incluido en el precio" />
             <KpiCard label="Costo de lo vendido" value={<Money value={report.totals.cost} />} hint="Costo promedio al momento de cada venta" />
             <KpiCard label="Margen bruto" value={<Money value={report.totals.margin} colored />} />

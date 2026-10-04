@@ -31,7 +31,7 @@ export function KpiCard({
         <CardTitle className="text-muted-foreground text-xs font-medium tracking-wide uppercase">{label}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-1">
-        <div className="text-2xl font-semibold whitespace-nowrap">{value}</div>
+        <div className="text-xl font-semibold whitespace-nowrap tabular-nums sm:text-2xl">{value}</div>
         {hint ? <div className="text-muted-foreground text-xs">{hint}</div> : null}
         {delta === null && deltaLabel ? <p className="text-muted-foreground text-xs">Sin datos para comparar con {deltaLabel}</p> : null}
         {typeof delta === "number" ? <Delta value={delta} label={deltaLabel} upIsGood={upIsGood} /> : null}
@@ -47,7 +47,7 @@ export function Delta({ value, label, upIsGood = true }: { value: number; label?
   const Icon = flat ? Minus : rounded > 0 ? ArrowUpRight : ArrowDownRight;
   return (
     <p
-      className={cn("card-lift", 
+      className={cn(
         "flex items-center gap-1 text-xs tabular-nums",
         flat ? "text-muted-foreground" : good ? "text-emerald-700 dark:text-emerald-400" : "text-destructive",
       )}

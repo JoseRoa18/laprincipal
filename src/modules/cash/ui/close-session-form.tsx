@@ -187,7 +187,7 @@ export function CloseSessionForm({
             return (
               <div key={c.code} className="space-y-3 rounded-xl border p-4">
                 <div className="flex items-center justify-between gap-2">
-                  <h3 className="font-medium">Efectivo {c.code === "USD" ? "en dólares" : c.code === "COP" ? "en pesos" : c.code}</h3>
+                  <h2 className="font-medium">Efectivo {c.code === "USD" ? "en dólares" : c.code === "COP" ? "en pesos" : c.code}</h2>
                   {denominations.length > 0 && !review ? (
                     <Button type="button" variant="ghost" size="sm" onClick={() => setHelperOpen((p) => ({ ...p, [c.code]: !p[c.code] }))}>
                       <Calculator />
@@ -354,7 +354,7 @@ export function CloseSessionForm({
           <CardTitle>Notas del cierre</CardTitle>
         </CardHeader>
         <CardContent>
-          <Textarea rows={2} placeholder="Opcional" value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={500} />
+          <Textarea rows={2} placeholder="Opcional" aria-label="Notas del cierre" value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={500} />
         </CardContent>
       </Card>
 

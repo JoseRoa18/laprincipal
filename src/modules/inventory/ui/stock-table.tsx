@@ -107,7 +107,7 @@ export function StockTable({ rows, showCosts, canEdit }: { rows: StockRow[]; sho
           return (
             <li key={r.productId} className="bg-card ring-foreground/10 rounded-xl p-3 ring-1">
               <div className="flex items-start gap-3">
-                <Link href={`/productos/${r.productId}`}>
+                <Link href={`/productos/${r.productId}`} aria-hidden="true" tabIndex={-1}>
                   <Thumb url={r.thumbUrl} className="size-12" />
                 </Link>
                 <div className="min-w-0 flex-1">

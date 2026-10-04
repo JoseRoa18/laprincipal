@@ -289,7 +289,7 @@ export function CountSheet({
                     return (
                       <TableRow key={i.id}>
                         <TableCell>
-                          <button type="button" className="text-left font-medium hover:underline" onClick={() => open && focusItem(i.id)}>
+                          <button type="button" className="tap-target text-left font-medium hover:underline" onClick={() => open && focusItem(i.id)}>
                             {i.productName}
                           </button>
                           <span className="text-muted-foreground block text-xs">{[i.sku, i.locationCode].filter(Boolean).join(" · ")}</span>

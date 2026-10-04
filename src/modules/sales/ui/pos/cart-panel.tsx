@@ -171,7 +171,7 @@ export function CartPanel({ config, totals, onCustomerChange, onCheckout, onHold
         ) : (
           <>
             <Button type="button" variant="outline" size="lg" className="h-12" disabled={lines.length === 0} onClick={onHold}>
-              <PauseCircle /> En espera
+              <PauseCircle /> Poner en espera
             </Button>
             {config.canQuote ? (
               <Button type="button" variant="outline" size="lg" className="h-12" disabled={lines.length === 0} onClick={onQuote}>

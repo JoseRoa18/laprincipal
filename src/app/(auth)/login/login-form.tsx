@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/app/password-input";
 import { Label } from "@/components/ui/label";
 import { loginAction, type LoginState } from "./actions";
 
@@ -18,7 +19,7 @@ export function LoginForm({ next }: { next?: string }) {
       </div>
       <div className="space-y-2">
         <Label htmlFor="password">Contraseña</Label>
-        <Input id="password" name="password" type="password" autoComplete="current-password" required />
+        <PasswordInput id="password" name="password" autoComplete="current-password" required />
       </div>
       {state.error ? (
         <p role="alert" className="text-destructive text-sm">

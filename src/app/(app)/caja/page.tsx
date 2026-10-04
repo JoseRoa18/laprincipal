@@ -89,13 +89,13 @@ export default async function CashPage() {
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <Card size="sm">
           <CardHeader>
             <CardTitle className="text-muted-foreground text-xs font-medium">Tiempo abierta</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="flex items-center gap-2 text-2xl font-semibold">
+            <p className="flex items-center gap-2 text-xl font-semibold sm:text-2xl">
               <ClockArrowDown className="text-muted-foreground size-5" />
               <SessionClock since={summary.session.openedAt.toISOString()} />
             </p>
@@ -109,7 +109,7 @@ export default async function CashPage() {
             <CardTitle className="text-muted-foreground text-xs font-medium">Cobrado en la sesión</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-semibold tabular-nums">
+            <p className="text-xl font-semibold tabular-nums sm:text-2xl">
               <Money value={summary.totals.netUsd} currency="USD" />
             </p>
             <p className="text-muted-foreground text-xs">
@@ -130,7 +130,7 @@ export default async function CashPage() {
                 <CardTitle className="text-muted-foreground text-xs font-medium">Efectivo esperado {b.currencyCode}</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-2xl font-semibold tabular-nums">
+                <p className="text-xl font-semibold tabular-nums sm:text-2xl">
                   <Money value={b.expected} currency={b.currencyCode} />
                 </p>
                 <p className="text-muted-foreground text-xs">
@@ -145,7 +145,7 @@ export default async function CashPage() {
                 <CardTitle className="text-muted-foreground text-xs font-medium">Fondo inicial {b.currencyCode}</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-2xl font-semibold tabular-nums">
+                <p className="text-xl font-semibold tabular-nums sm:text-2xl">
                   <Money value={b.opening} currency={b.currencyCode} />
                 </p>
                 <p className="text-muted-foreground text-xs">El efectivo esperado se ve al cerrar, después de contar.</p>
