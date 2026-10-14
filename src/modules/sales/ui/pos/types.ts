@@ -15,6 +15,8 @@ export interface PosRates {
 export interface PosPolicies {
   /** Max discount for the acting seller's role. */
   maxDiscountPct: number;
+  /** Least pesos handed back for the cents of a dollar change. */
+  minCopChange: number;
   allowNegativeStock: boolean;
   requireRatesToSell: boolean;
   requireOpenCashSession: boolean;

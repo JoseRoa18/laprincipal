@@ -227,12 +227,32 @@ describe.skipIf(SKIP)("sales: complete, void, return, quotes", () => {
     const product = await makeProduct({ price: "7.50", stock: "2" });
     const res = await completeSale(
       db,
-      completeSaleSchema.parse({ customerId, lines: [{ productId: product.id, quantity: "1" }], payments: [{ paymentMethodId: cashUsdId, amount: "10" }], changeCurrencyCode: "COP" }),
+      completeSaleSchema.parse({ customerId, lines: [{ productId: product.id, quantity: "1" }], payments: [{ paymentMethodId: cashUsdId, amount: "10" }], changeOption: "COP" }),
       ctx,
     );
     expect(res.changeUsd).toBe("2.50");
     expect(res.changeCurrencyCode).toBe("COP");
     expect(res.changeAmount).toBe("10300");
+  });
+
+  it("gives whole dollars plus the cents in pesos by default, and saves both parts", async () => {
+    // $7.63 paid with $10: change $2.37 → $2 + 0.37 × 4100 = 1517 → COP 1500.
+    const product = await makeProduct({ price: "7.63", stock: "2" });
+    const res = await completeSale(
+      db,
+      completeSaleSchema.parse({ customerId, lines: [{ productId: product.id, quantity: "1" }], payments: [{ paymentMethodId: cashUsdId, amount: "10" }] }),
+      ctx,
+    );
+    expect(res.changeUsd).toBe("2.37");
+    expect(res.changeParts).toEqual([
+      { currencyCode: "USD", amount: "2" },
+      { currencyCode: "COP", amount: "1500" },
+    ]);
+    const [sale] = await db.select().from(sales).where(eq(sales.id, res.saleId));
+    expect(sale.changeCurrencyCode).toBe("USD");
+    expect(D(sale.changeAmount).toFixed(2)).toBe("2.00");
+    expect(sale.changeExtraCurrencyCode).toBe("COP");
+    expect(D(sale.changeExtraAmount).toFixed(0)).toBe("1500");
   });
 
   it("rejects a sale that is not fully paid", async () => {

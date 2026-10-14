@@ -74,6 +74,38 @@ async function resolveBrandId(tx: Tx, input: Pick<ProductInput, "brandId" | "new
 }
 
 /**
+ * Cost typed after the product was registered ("Falta costo"). It is the last
+ * cost, and also the average while no purchase has set a real one.
+ */
+export async function setProductCost(args: { productId: string; costUsd: string }, user: ActorUser): Promise<void> {
+  if (!D(args.costUsd).gt(0)) throw new AppError("VALIDATION", "El costo debe ser mayor que cero.", { fields: { costUsd: "Mayor que cero" } });
+  await db.transaction(async (tx) => {
+    const [before] = await tx
+      .select({ id: products.id, deletedAt: products.deletedAt, costAvgUsd: products.costAvgUsd, costLastUsd: products.costLastUsd })
+      .from(products)
+      .where(eq(products.id, args.productId))
+      .for("update")
+      .limit(1);
+    if (!before || before.deletedAt) throw notFound("El producto");
+    const cost = toMoneyDb(args.costUsd);
+    const [{ purchases }] = await tx
+      .select({ purchases: count() })
+      .from(inventoryMovements)
+      .where(and(eq(inventoryMovements.productId, args.productId), eq(inventoryMovements.type, "purchase_in")));
+    const costAvgUsd = Number(purchases) === 0 || !D(before.costAvgUsd).gt(0) ? cost : before.costAvgUsd;
+    await tx.update(products).set({ costLastUsd: cost, costAvgUsd }).where(eq(products.id, args.productId));
+    await writeAudit(tx, {
+      userId: user.id,
+      action: "product.cost",
+      entityType: "product",
+      entityId: args.productId,
+      before: { costAvgUsd: before.costAvgUsd, costLastUsd: before.costLastUsd },
+      after: { costAvgUsd, costLastUsd: cost },
+    });
+  });
+}
+
+/**
  * Set the selling prices of a product (the "Poner precios" screen). The
  * technician price is suggested from the public one when left empty.
  */

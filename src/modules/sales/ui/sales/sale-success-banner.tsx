@@ -7,22 +7,22 @@ import { Button } from "@/components/ui/button";
 import { formatMoney } from "@/lib/format";
 import { D } from "@/lib/money";
 import { ShareWhatsAppButton } from "./sale-actions";
+import { formatChange, type ChangeGiven } from "../../domain/payments";
 
 interface Props {
   saleId: string;
   number: string | null;
   totalUsd: string;
   changeUsd: string;
-  changeCurrencyCode: string | null;
-  changeAmount: string;
+  changeParts: ChangeGiven[];
   /** Print the ticket automatically through a hidden frame. */
   autoPrint: boolean;
   wantsWhatsapp: boolean;
 }
 
 /** Shown right after a sale: what to hand over and what to do next. */
-export function SaleSuccessBanner({ saleId, number, totalUsd, changeUsd, changeCurrencyCode, changeAmount, autoPrint, wantsWhatsapp }: Props) {
-  const hasChange = D(changeUsd).gt(0) && changeCurrencyCode;
+export function SaleSuccessBanner({ saleId, number, totalUsd, changeUsd, changeParts, autoPrint, wantsWhatsapp }: Props) {
+  const hasChange = D(changeUsd).gt(0) && changeParts.length > 0;
   return (
     <div className="rounded-xl border border-emerald-300 bg-emerald-50 p-4 text-emerald-950 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-50">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -35,8 +35,8 @@ export function SaleSuccessBanner({ saleId, number, totalUsd, changeUsd, changeC
               {hasChange ? (
                 <>
                   {" · "}
-                  <span className="font-semibold">Cambio: {formatMoney(changeAmount, changeCurrencyCode!)}</span>
-                  {changeCurrencyCode !== "USD" ? ` (${formatMoney(changeUsd, "USD")})` : ""}
+                  <span className="font-semibold">Cambio: {formatChange(changeParts)}</span>
+                  {changeParts.some((p) => p.currencyCode !== "USD") ? ` (${formatMoney(changeUsd, "USD")})` : ""}
                 </>
               ) : null}
             </p>

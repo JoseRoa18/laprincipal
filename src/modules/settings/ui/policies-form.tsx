@@ -93,6 +93,7 @@ export function PoliciesForm({ defaultValues }: { defaultValues: PoliciesFormInp
           {numberField("techPriceMarkdownPct", "Precio Técnico sugerido", "Porcentaje por debajo del precio Público al crear un producto.", errors.techPriceMarkdownPct)}
           {numberField("defaultMarginPct", "Margen sugerido", "Margen sobre el precio para sugerir el precio Público desde el costo.", errors.defaultMarginPct)}
           {numberField("quoteValidityDays", "Vigencia de cotizaciones", "Días de validez por defecto.", errors.quoteValidityDays, "días")}
+          {numberField("minCopChange", "Vuelto mínimo en pesos", "Cuando el vuelto es en dólares, los centavos se dan en pesos redondeados a la centena, nunca menos de esto.", errors.minCopChange, "COP")}
         </CardContent>
       </Card>
 

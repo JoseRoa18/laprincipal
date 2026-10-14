@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { can, requireUser } from "@/lib/auth-guards";
 import { formatDateTime, formatQty } from "@/lib/format";
 import { homeForRole } from "@/lib/navigation";
-import { countProductsWithoutPrice } from "@/modules/catalog/infrastructure/products-list";
+import { countProductsWithoutCost, countProductsWithoutPrice } from "@/modules/catalog/infrastructure/products-list";
 import { getRatesSnapshot } from "@/modules/currency/infrastructure/rates";
 import { formatDay } from "@/modules/reporting/domain/date-range";
 import { getDashboardData } from "@/modules/reporting/infrastructure/dashboard";
@@ -31,10 +31,11 @@ export default async function HomePage() {
   const user = await requireUser();
   // Sellers only sell: no sales figures, straight to the counter.
   if (user.role === "seller") redirect(homeForRole(user.role));
-  const [rates, data, withoutPrice] = await Promise.all([
+  const [rates, data, withoutPrice, withoutCost] = await Promise.all([
     getRatesSnapshot(),
     getDashboardData(),
     can(user.role, "manage_products") ? countProductsWithoutPrice() : Promise.resolve(0),
+    can(user.role, "view_costs") ? countProductsWithoutCost() : Promise.resolve(0),
   ]);
   const firstName = user.name.split(" ")[0];
   const showSales = user.role !== "warehouse";
@@ -63,19 +64,27 @@ export default async function HomePage() {
         </Card>
       ) : null}
 
-      {withoutPrice > 0 ? (
+      {withoutPrice > 0 || withoutCost > 0 ? (
         <Card className="border-amber-300 bg-amber-50/60 dark:border-amber-800 dark:bg-amber-950/40">
           <CardContent className="flex flex-wrap items-center justify-between gap-3 py-4">
             <div className="flex items-center gap-3">
               <TriangleAlert className="size-5 shrink-0 text-amber-600" />
               <div>
                 <p className="font-medium">
-                  {withoutPrice} {withoutPrice === 1 ? "producto sin precio" : "productos sin precio"}
+                  {[
+                    withoutPrice > 0 ? `${withoutPrice} ${withoutPrice === 1 ? "producto sin precio" : "productos sin precio"}` : null,
+                    withoutCost > 0 ? `${withoutCost} sin costo` : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
                 </p>
-                <p className="text-muted-foreground text-sm">Están registrados pero no se pueden vender hasta ponerles el precio público.</p>
+                <p className="text-muted-foreground text-sm">
+                  {withoutPrice > 0 ? "Sin precio no se pueden vender. " : null}
+                  {withoutCost > 0 ? "Sin costo, el margen y el valor del inventario no son reales." : null}
+                </p>
               </div>
             </div>
-            <Button render={<Link href="/productos/precios" />}>Poner precios</Button>
+            <Button render={<Link href={withoutPrice > 0 ? "/productos/precios" : "/productos/precios?falta=costo"} />}>Poner precios y costos</Button>
           </CardContent>
         </Card>
       ) : null}

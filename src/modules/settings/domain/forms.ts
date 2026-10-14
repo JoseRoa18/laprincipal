@@ -58,6 +58,12 @@ export const policiesFormSchema = z.object({
   quoteValidityDays: z.number({ error: "Escribe los días" }).int("Días enteros").min(1, "Mínimo 1 día").max(365, "Máximo 365 días"),
   techPriceMarkdownPct: pctNumber("Descuento técnico"),
   defaultMarginPct: z.number({ error: "Escribe el margen" }).min(0, "Mínimo 0").max(99, "Máximo 99"),
+  minCopChange: z
+    .number({ error: "Escribe el monto" })
+    .int("Pesos enteros")
+    .min(0, "Mínimo 0")
+    .max(10000, "Máximo 10.000")
+    .refine((v) => v % 100 === 0, "En centenas: 100, 200, 300…"),
   requireRatesToSell: z.boolean(),
   requireOpenCashSession: z.boolean(),
 });

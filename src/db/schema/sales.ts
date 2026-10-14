@@ -91,6 +91,9 @@ export const sales = pgTable(
     changeUsd: money("change_usd").notNull().default("0"),
     changeCurrencyCode: text("change_currency_code").references(() => currencies.code),
     changeAmount: money("change_amount").notNull().default("0"),
+    /** Second part of a split change: the cents of a dollar change handed back in pesos. */
+    changeExtraCurrencyCode: text("change_extra_currency_code").references(() => currencies.code),
+    changeExtraAmount: money("change_extra_amount").notNull().default("0"),
     rateVes: rate("rate_ves").notNull().default("0"),
     rateCop: rate("rate_cop").notNull().default("0"),
     /** Label shown when a sale is held ("Cliente de la gorra azul"). */

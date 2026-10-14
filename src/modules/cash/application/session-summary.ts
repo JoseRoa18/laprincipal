@@ -1,16 +1,9 @@
-import { and, asc, eq, gt, ne } from "drizzle-orm";
+import { and, asc, eq, gt, ne, or } from "drizzle-orm";
 import { db, type DbOrTx } from "@/db/client";
 import { allQueries } from "@/db/parallel";
 import { cashMovements, cashSessionBalances, cashSessions, currencies, paymentMethods, saleReturns, salePayments, sales } from "@/db/schema";
 import { AppError } from "@/lib/errors";
-import {
-  summarizeSession,
-  type CurrencyBalance,
-  type MethodTotal,
-  type PaymentInput,
-  type RefundInput,
-  type SessionTotals,
-} from "../domain/summary";
+import { changeInputsFromSales, type CurrencyBalance, type MethodTotal, type PaymentInput, type RefundInput, type SessionTotals, summarizeSession } from "../domain/summary";
 import { getCashSessionDetail, type SessionDetail } from "../infrastructure/queries";
 
 export interface PaymentView extends PaymentInput {
@@ -64,9 +57,9 @@ export async function getSessionSummary(sessionId: string, dbx: DbOrTx = db): Pr
       .where(and(eq(sales.cashSessionId, sessionId), ne(sales.status, "voided")))
       .orderBy(asc(salePayments.createdAt)),
     () => dbx
-      .select({ currencyCode: sales.changeCurrencyCode, amount: sales.changeAmount })
+      .select({ currencyCode: sales.changeCurrencyCode, amount: sales.changeAmount, extraCurrencyCode: sales.changeExtraCurrencyCode, extraAmount: sales.changeExtraAmount })
       .from(sales)
-      .where(and(eq(sales.cashSessionId, sessionId), ne(sales.status, "voided"), gt(sales.changeAmount, "0"))),
+      .where(and(eq(sales.cashSessionId, sessionId), ne(sales.status, "voided"), or(gt(sales.changeAmount, "0"), gt(sales.changeExtraAmount, "0")))),
     () => dbx
       .select({
         refundMethodId: saleReturns.refundMethodId,
@@ -95,7 +88,7 @@ export async function getSessionSummary(sessionId: string, dbx: DbOrTx = db): Pr
   const computed = summarizeSession({
     openings: session.balances.map((b) => ({ currencyCode: b.currencyCode, openingAmount: b.openingAmount })),
     payments,
-    changes,
+    changes: changeInputsFromSales(changes),
     refunds: refundRows,
     movements,
   });

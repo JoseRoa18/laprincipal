@@ -46,6 +46,7 @@ export async function loadPosConfig(opts: { user: SessionUser; mode: "sale" | "q
     },
     policies: {
       maxDiscountPct: policies.maxDiscountPctByRole[acting.role] ?? 0,
+      minCopChange: policies.minCopChange,
       allowNegativeStock: policies.allowNegativeStock,
       requireRatesToSell: policies.requireRatesToSell,
       requireOpenCashSession: policies.requireOpenCashSession,

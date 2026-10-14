@@ -38,6 +38,14 @@ export interface ChangeInput {
   amount: Num;
 }
 
+/** Each sale's change leaves its drawers separately: a split change takes dollars from one and pesos from the other. */
+export function changeInputsFromSales(rows: Array<{ currencyCode: string | null; amount: Num; extraCurrencyCode: string | null; extraAmount: Num }>): ChangeInput[] {
+  return rows.flatMap((r) => [
+    { currencyCode: r.currencyCode, amount: r.amount },
+    { currencyCode: r.extraCurrencyCode, amount: r.extraAmount },
+  ]);
+}
+
 export interface RefundInput {
   refundMethodId: string | null;
   methodCode?: string | null;

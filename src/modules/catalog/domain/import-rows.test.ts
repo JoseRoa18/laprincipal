@@ -134,7 +134,9 @@ describe("validateImportRows", () => {
       ]),
     );
     expect(rows[1].errors).toEqual(expect.arrayContaining(["Ya existe un producto con el número de parte LP-000001", expect.stringContaining("ya está registrado")]));
-    expect(rows[1].warnings).toEqual([expect.stringContaining("Se creará la marca")]);
+    expect(rows[1].warnings).toEqual(expect.arrayContaining([expect.stringContaining("Se creará la marca")]));
+    // No cost is a reminder, not an error: the row is imported with "Falta costo".
+    expect(rows[2].warnings).toEqual(expect.arrayContaining([expect.stringContaining("Falta costo")]));
     expect(rows[2].errors).toEqual([]);
     expect(rows[2].input?.sku).toBe("NEW-1");
     expect(rows[3].errors).toEqual(

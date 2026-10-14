@@ -166,7 +166,13 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
                 {showCosts ? (
                   <>
                     <Row label="Costo promedio">
-                      <Money value={product.costAvgUsd} />
+                      {D(product.costAvgUsd).gt(0) ? (
+                        <Money value={product.costAvgUsd} />
+                      ) : (
+                        <Link href="/productos/precios?falta=costo" className="text-amber-700 underline-offset-4 hover:underline dark:text-amber-300">
+                          Falta costo
+                        </Link>
+                      )}
                     </Row>
                     {product.costLastUsd ? (
                       <Row label="Último costo">

@@ -13,7 +13,7 @@ import { nextDocumentNumber } from "@/modules/core/application/numbering";
 import { getRatesSnapshot } from "@/modules/currency/infrastructure/rates";
 import { adjustReserved, applyMovements, lockStock, type MovementInput } from "@/modules/inventory/application/stock";
 import { getSetting } from "@/modules/settings/infrastructure/settings";
-import { computePaymentState, type PaymentInput } from "../domain/payments";
+import { computePaymentState, type PaymentInput, changePartsOf, type ChangeGiven } from "../domain/payments";
 import { exceedsDiscountLimit } from "../domain/pricing";
 import { priceLines, requireIdentifiedCustomer, resolveCustomerAndPriceList } from "./cart-pricing";
 import type { CompleteSaleInput } from "./schemas";
@@ -38,9 +38,13 @@ export interface CompleteSaleResult {
   number: string;
   totalUsd: string;
   changeUsd: string;
+  /** Main part of the change (the dollars of a split change). */
   changeCurrencyCode: string | null;
   changeAmount: string;
+  /** Every part handed back: one, or two for dollars plus the cents in pesos. */
+  changeParts: ChangeGiven[];
 }
+
 
 /**
  * Complete a counter sale. Everything is recomputed on the server: prices come
@@ -74,6 +78,8 @@ async function findSaleByRequestId(dbx: Db, clientRequestId: string): Promise<Co
       changeUsd: sales.changeUsd,
       changeCurrencyCode: sales.changeCurrencyCode,
       changeAmount: sales.changeAmount,
+      changeExtraCurrencyCode: sales.changeExtraCurrencyCode,
+      changeExtraAmount: sales.changeExtraAmount,
     })
     .from(sales)
     .where(eq(sales.clientRequestId, clientRequestId))
@@ -86,6 +92,7 @@ async function findSaleByRequestId(dbx: Db, clientRequestId: string): Promise<Co
     changeUsd: D(row.changeUsd).toFixed(2),
     changeCurrencyCode: row.changeCurrencyCode,
     changeAmount: D(row.changeAmount).toString(),
+    changeParts: changePartsOf(row),
   };
 }
 
@@ -121,7 +128,7 @@ async function completeNewSale(dbx: Db, input: CompleteSaleInput, ctx: SaleConte
   // The screen computed the amounts with the rates it loaded; if a rate changed since
   // (BCV update, admin correction), ask to review instead of charging something else.
   if (input.clientRates) {
-    const used = new Set([...paymentInputs.map((p) => p.currencyCode), input.changeCurrencyCode ?? "USD"]);
+    const used = new Set([...paymentInputs.map((p) => p.currencyCode), ...(input.changeOption ?? "USD").split("+")]);
     for (const code of used) {
       const current = snapshot.rateSet[code];
       const seen = input.clientRates[code];
@@ -212,7 +219,7 @@ async function completeNewSale(dbx: Db, input: CompleteSaleInput, ctx: SaleConte
     // Payments must cover the total (half-cent tolerance inside computePaymentState).
     let payState;
     try {
-      payState = computePaymentState(totals.totalUsd, paymentInputs, snapshot.rateSet, cashCurrencies);
+      payState = computePaymentState(totals.totalUsd, paymentInputs, snapshot.rateSet, cashCurrencies, { minCopChange: policies.minCopChange });
     } catch (err) {
       throw new AppError("RATES_REQUIRED", err instanceof Error ? err.message : "Falta una tasa de cambio.");
     }
@@ -225,12 +232,14 @@ async function completeNewSale(dbx: Db, input: CompleteSaleInput, ctx: SaleConte
     }
     let changeCurrencyCode: string | null = null;
     let changeAmount = D(0);
+    let changeExtraCurrencyCode: string | null = null;
+    let changeExtraAmount = D(0);
     if (payState.changeUsd.gt(0)) {
-      const wanted = input.changeCurrencyCode ?? "USD";
-      const option = payState.changeOptions.find((o) => o.currency.code === wanted) ?? payState.changeOptions[0];
+      // Without a choice, the first option: dollars plus the cents in pesos when possible.
+      const option = payState.changeOptions.find((o) => o.key === input.changeOption) ?? payState.changeOptions[0];
       if (!option) throw new AppError("VALIDATION", "No hay una moneda de efectivo configurada para dar el cambio.");
-      changeCurrencyCode = option.currency.code;
-      changeAmount = option.amount;
+      [changeCurrencyCode, changeAmount] = [option.parts[0].currency.code, option.parts[0].amount];
+      if (option.parts[1]) [changeExtraCurrencyCode, changeExtraAmount] = [option.parts[1].currency.code, option.parts[1].amount];
     }
 
     // The cash session must still be open when the sale is written: a close that
@@ -269,6 +278,8 @@ async function completeNewSale(dbx: Db, input: CompleteSaleInput, ctx: SaleConte
         changeUsd: toMoneyDb(payState.changeUsd),
         changeCurrencyCode,
         changeAmount: toMoneyDb(changeAmount),
+        changeExtraCurrencyCode,
+        changeExtraAmount: toMoneyDb(changeExtraAmount),
         rateVes: toRateDb(snapshot.rateSet.VES ?? 0),
         rateCop: toRateDb(snapshot.rateSet.COP ?? 0),
         notes: input.notes ?? null,
@@ -356,6 +367,12 @@ async function completeNewSale(dbx: Db, input: CompleteSaleInput, ctx: SaleConte
       changeUsd: payState.changeUsd.toFixed(2),
       changeCurrencyCode,
       changeAmount: changeAmount.toString(),
+      changeParts: changePartsOf({
+        changeCurrencyCode,
+        changeAmount: changeAmount.toString(),
+        changeExtraCurrencyCode,
+        changeExtraAmount: changeExtraAmount.toString(),
+      }),
     };
   });
 }

@@ -59,7 +59,8 @@ export const completeSaleSchema = z.object({
   customerId: z.uuid().nullable().optional(),
   globalDiscount: globalDiscountSchema,
   payments: z.array(paymentInputSchema).default([]),
-  changeCurrencyCode: z.string().trim().max(3).nullable().optional(),
+  /** How the change goes back: "USD", "COP", "VES" or "USD+COP" (dollars plus the cents in pesos). */
+  changeOption: z.string().trim().max(10).nullable().optional(),
   supervisorToken: z.string().nullable().optional(),
   heldSaleId: z.uuid().nullable().optional(),
   quoteId: z.uuid().nullable().optional(),

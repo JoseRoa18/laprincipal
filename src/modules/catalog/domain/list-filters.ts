@@ -3,6 +3,7 @@
 export type StockFilter = "all" | "out" | "buy_now" | "soon" | "ok" | "excess" | "no_data";
 export type ActiveFilter = "1" | "0" | "all";
 export type PriceFilter = "all" | "missing";
+export type CostFilter = "all" | "missing";
 
 export interface ProductListFilter {
   q: string;
@@ -12,7 +13,14 @@ export interface ProductListFilter {
   active: ActiveFilter;
   /** "missing": products without a selling price ("Falta precio"). */
   price: PriceFilter;
+  /** "missing": products registered without a cost ("Falta costo"). Only for users who see costs. */
+  cost: CostFilter;
 }
+
+export const COST_FILTER_LABELS: Record<CostFilter, string> = {
+  all: "Con y sin costo",
+  missing: "Falta costo",
+};
 
 export const PRICE_FILTER_LABELS: Record<PriceFilter, string> = {
   all: "Con y sin precio",
@@ -47,5 +55,6 @@ export function parseListFilter(params: Record<string, string | string[] | undef
     stock: (Object.keys(STOCK_FILTER_LABELS) as StockFilter[]).includes(stock as StockFilter) ? (stock as StockFilter) : "all",
     active: active === "0" || active === "all" ? active : "1",
     price: str("precio") === "sin" ? "missing" : "all",
+    cost: str("costo") === "sin" ? "missing" : "all",
   };
 }

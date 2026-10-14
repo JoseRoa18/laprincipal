@@ -17,7 +17,7 @@ import { D } from "@/lib/money";
 import { cn } from "cn";
 import { displayAmounts } from "@/modules/currency/domain/conversion";
 import type { CompleteSaleResult } from "../../application/complete-sale";
-import { computePaymentState, remainingIn, type PaymentInput } from "../../domain/payments";
+import { MIXED_CHANGE_KEY, computePaymentState, remainingIn, type PaymentInput } from "../../domain/payments";
 import type { SaleTotals } from "../../domain/pricing";
 import { useCart, useCartStore, type SupervisorAuth } from "../cart-store";
 import type { PosPaymentMethod } from "../../infrastructure/payment-methods";
@@ -82,7 +82,8 @@ function CheckoutForm({
   const notes = useCart((s) => s.notes);
 
   const [rows, setRows] = useState<PaymentRow[]>([]);
-  const [changeCurrency, setChangeCurrency] = useState("USD");
+  // Null: the first option (dollars plus the cents in pesos when there are cents).
+  const [changeKey, setChangeKey] = useState<string | null>(null);
   const [print, setPrint] = useState(true);
   const [whatsapp, setWhatsapp] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -128,11 +129,12 @@ function CheckoutForm({
       .filter((p) => p.valid)
       .map((p) => ({ key: p.row.key, paymentMethodId: p.method!.id, currencyCode: p.method!.currencyCode, amount: p.amount!, reference: p.row.reference || null }));
     try {
-      return computePaymentState(totals.totalUsd, inputs, rateSet, cashCurrencies);
+      return computePaymentState(totals.totalUsd, inputs, rateSet, cashCurrencies, { minCopChange: config.policies.minCopChange });
     } catch {
       return null;
     }
-  }, [parsed, totals.totalUsd, rateSet, cashCurrencies]);
+  }, [parsed, totals.totalUsd, rateSet, cashCurrencies, config.policies.minCopChange]);
+  const changeOption = state ? (state.changeOptions.find((o) => o.key === changeKey) ?? state.changeOptions[0] ?? null) : null;
 
   const missingReference = parsed.some((p) => p.valid && p.method?.requiresReference && !p.row.reference.trim());
   const invalidAmount = parsed.some((p) => p.row.amount.trim() && !p.valid);
@@ -176,7 +178,7 @@ function CheckoutForm({
       payments: parsed
         .filter((p) => p.valid)
         .map((p) => ({ paymentMethodId: p.method!.id, amount: p.amount!, reference: p.row.reference.trim() || null })),
-      changeCurrencyCode: state.changeUsd.gt(0) ? changeCurrency : null,
+      changeOption: state.changeUsd.gt(0) ? (changeOption?.key ?? null) : null,
       supervisorToken: extra.supervisorToken ?? supervisor?.token ?? null,
       heldSaleId,
       quoteId,
@@ -342,22 +344,26 @@ function CheckoutForm({
           <div className="rounded-lg border border-emerald-300 bg-emerald-50 p-3 text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-100">
             <p className="text-xs font-medium tracking-wide uppercase">Cambio · {formatMoney(state.changeUsd, "USD")}</p>
             <div className="mt-2 grid grid-cols-2 gap-2">
-              {state.changeOptions.map((o) => (
-                <button
-                  key={o.currency.code}
-                  type="button"
-                  onClick={() => setChangeCurrency(o.currency.code)}
-                  className={cn(
-                    "rounded-lg border px-3 py-2 text-left transition-colors",
-                    changeCurrency === o.currency.code
-                      ? "border-emerald-600 bg-white ring-2 ring-emerald-500 dark:bg-emerald-900"
-                      : "border-emerald-200 bg-white/60 dark:bg-emerald-900/40",
-                  )}
-                >
-                  <span className="block text-xs">Efectivo {o.currency.code}</span>
-                  <span className="block text-lg font-bold tabular-nums">{formatMoney(o.amount, o.currency.code)}</span>
-                </button>
-              ))}
+              {state.changeOptions.map((o) => {
+                const mixed = o.parts.length > 1 || o.key === MIXED_CHANGE_KEY;
+                const selected = changeOption?.key === o.key;
+                return (
+                  <button
+                    key={o.key}
+                    type="button"
+                    aria-pressed={selected}
+                    onClick={() => setChangeKey(o.key)}
+                    className={cn(
+                      "rounded-lg border px-3 py-2 text-left transition-colors",
+                      mixed && "col-span-2",
+                      selected ? "border-emerald-600 bg-white ring-2 ring-emerald-500 dark:bg-emerald-900" : "border-emerald-200 bg-white/60 dark:bg-emerald-900/40",
+                    )}
+                  >
+                    <span className="block text-xs">{mixed ? "Dólares + centavos en pesos" : `Todo en ${o.parts[0].currency.code}`}</span>
+                    <span className="block text-lg font-bold tabular-nums">{o.parts.map((p) => formatMoney(p.amount, p.currency.code)).join(" + ")}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
         ) : rows.length > 0 ? (

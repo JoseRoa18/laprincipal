@@ -1,4 +1,5 @@
 import Decimal from "decimal.js";
+import { formatMoney } from "@/lib/format";
 import { D, roundTo, sum, type Num } from "@/lib/money";
 import { rateFor, toCash, type CurrencyInfo, type RateSet } from "@/modules/currency/domain/conversion";
 
@@ -19,10 +20,41 @@ export interface ComputedPayment extends PaymentInput {
   amountUsd: Decimal;
 }
 
-export interface ChangeOption {
+export interface ChangePart {
   currency: CurrencyInfo;
-  /** Change amount in that currency, rounded to its cash step. */
+  /** Amount in that currency, rounded to its cash step. */
   amount: Decimal;
+}
+
+/**
+ * One way to hand the change back: all in one currency ("USD", "COP"...) or
+ * "USD+COP", whole dollars plus the cents in pesos (there are no US coins at
+ * the counter).
+ */
+export interface ChangeOption {
+  key: string;
+  parts: ChangePart[];
+}
+
+export const MIXED_CHANGE_KEY = "USD+COP";
+
+/** Smallest amount of pesos handed back when the cents go in pesos (default of `policies.minCopChange`). */
+export const DEFAULT_MIN_COP_CHANGE = 200;
+
+/**
+ * Whole dollars in USD and the cents in pesos, rounded to the nearest peso
+ * cash step (100) and never below `minCop`: $5.37 at 4,000 → $5 + COP 1,500;
+ * $0.03 → COP 200. Null when there are no cents or no peso rate.
+ */
+export function mixedChange(changeUsd: Num, usd: CurrencyInfo, cop: CurrencyInfo, rates: RateSet, minCop: Num = DEFAULT_MIN_COP_CHANGE): ChangeOption | null {
+  const change = D(changeUsd);
+  const whole = change.floor();
+  const cents = change.minus(whole);
+  if (cents.lte(0) || !rates[cop.code]) return null;
+  let pesos = toCash(cents.mul(rateFor(cop.code, rates)), cop);
+  const min = D(minCop ?? DEFAULT_MIN_COP_CHANGE);
+  if (pesos.lt(min)) pesos = min;
+  return { key: MIXED_CHANGE_KEY, parts: [...(whole.gt(0) ? [{ currency: usd, amount: whole }] : []), { currency: cop, amount: pesos }] };
 }
 
 export interface PaymentState {
@@ -54,6 +86,7 @@ export function computePaymentState(
   inputs: PaymentInput[],
   rates: RateSet,
   cashCurrencies: CurrencyInfo[],
+  opts: { minCopChange?: Num } = {},
 ): PaymentState {
   const total = D(totalUsd);
   const payments = inputs.map((p) => computePayment(p, rates));
@@ -64,14 +97,37 @@ export function computePaymentState(
   const remainingUsd = diff.lt("-0.005") ? roundTo(diff.abs(), 2) : D(0);
   const changeUsd = diff.gt("0.005") ? roundTo(diff, 2) : D(0);
 
-  const changeOptions: ChangeOption[] = changeUsd.gt(0)
-    ? cashCurrencies.map((c) => ({
-        currency: c,
-        amount: toCash(changeUsd.mul(rateFor(c.code, rates)), c),
-      }))
-    : [];
+  const changeOptions: ChangeOption[] = [];
+  if (changeUsd.gt(0)) {
+    // Dollars plus the cents in pesos comes first: it is how the counter gives change.
+    const usd = cashCurrencies.find((c) => c.code === "USD");
+    const cop = cashCurrencies.find((c) => c.code === "COP");
+    const mixed = usd && cop ? mixedChange(changeUsd, usd, cop, rates, opts.minCopChange) : null;
+    if (mixed) changeOptions.push(mixed);
+    for (const c of cashCurrencies) {
+      changeOptions.push({ key: c.code, parts: [{ currency: c, amount: toCash(changeUsd.mul(rateFor(c.code, rates)), c) }] });
+    }
+  }
 
   return { payments, paidUsd, remainingUsd, changeUsd, changeOptions, isPaid: remainingUsd.isZero() };
+}
+
+export interface ChangeGiven {
+  currencyCode: string;
+  amount: string;
+}
+
+/** The change as saved on a sale: main part plus the pesos of a split change. */
+export function changePartsOf(row: { changeCurrencyCode: string | null; changeAmount: Num; changeExtraCurrencyCode?: string | null; changeExtraAmount?: Num }): ChangeGiven[] {
+  const parts: ChangeGiven[] = [];
+  if (row.changeCurrencyCode && D(row.changeAmount).gt(0)) parts.push({ currencyCode: row.changeCurrencyCode, amount: D(row.changeAmount).toString() });
+  if (row.changeExtraCurrencyCode && D(row.changeExtraAmount ?? 0).gt(0)) parts.push({ currencyCode: row.changeExtraCurrencyCode, amount: D(row.changeExtraAmount!).toString() });
+  return parts;
+}
+
+/** "$ 5,00 + COP 1.500". */
+export function formatChange(parts: ChangeGiven[]): string {
+  return parts.map((p) => formatMoney(p.amount, p.currencyCode)).join(" + ");
 }
 
 /** Amount still owed expressed in a given currency (for the "faltan" hint). */

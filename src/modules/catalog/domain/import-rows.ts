@@ -291,7 +291,7 @@ export function validateImportRows(rows: RawImportRow[], lookups: ImportLookups)
       else warnings.push("Sin precio de venta: queda con 'Falta precio' y no se vende hasta ponérselo");
     }
     // Stock loaded without a cost would drag the average cost down for good.
-    if (initialStock && D(initialStock).gt(0) && !(cost && D(cost).gt(0))) errors.push("Costo obligatorio: la fila tiene stock inicial");
+    if (!(cost && D(cost).gt(0))) warnings.push("Sin costo: queda con 'Falta costo' y se carga después");
 
     let barcode: string | null = null;
     const barcodeText = (v.barcode ?? "").trim();

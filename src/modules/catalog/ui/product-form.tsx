@@ -394,7 +394,9 @@ export function ProductForm({ mode, productId, initialValues, options, canViewCo
               hint={
                 margin.marginPct
                   ? `Margen público ${formatPct(margin.marginPct)}${techMargin.marginPct ? ` · técnico ${formatPct(techMargin.marginPct)}` : ""}`
-                  : "Costo unitario para calcular el margen"
+                  : cost?.trim()
+                    ? "Costo unitario para calcular el margen"
+                    : "Si aún no lo tienes, déjalo vacío: queda con \"Falta costo\" y lo cargas después."
               }
             >
               <Input id="costUsd" inputMode="decimal" placeholder="0,00" className={controlClass} {...register("costUsd")} />

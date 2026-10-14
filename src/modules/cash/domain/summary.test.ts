@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { denominationsFor, sumDenominations } from "./denominations";
 import {
+  changeInputsFromSales,
   computeCurrencyBalances,
   computeDifference,
   computeMethodTotals,
@@ -79,6 +80,27 @@ describe("computeCurrencyBalances", () => {
     expect(usd.salesCash).toBe("0.0000");
     expect(usd.refundsCash).toBe("0.0000");
     expect(usd.expected).toBe("29.5000"); // 50 - 0.5 + 10 - 30
+  });
+
+  it("takes a split change from each drawer: the dollars and the pesos", () => {
+    const changes = changeInputsFromSales([
+      { currencyCode: "USD", amount: "2", extraCurrencyCode: "COP", extraAmount: "1500" },
+      { currencyCode: "COP", amount: "4000", extraCurrencyCode: null, extraAmount: "0" },
+    ]);
+    const [usd, cop] = computeCurrencyBalances({
+      openings: [
+        { currencyCode: "USD", openingAmount: "50" },
+        { currencyCode: "COP", openingAmount: "100000" },
+      ],
+      payments: [],
+      changes,
+      refunds: [],
+      movements: [],
+    });
+    expect(usd.changeGiven).toBe("2.0000");
+    expect(usd.expected).toBe("48.0000");
+    expect(cop.changeGiven).toBe("5500.0000");
+    expect(cop.expected).toBe("94500.0000");
   });
 
   it("with nothing sold the expected equals the opening", () => {

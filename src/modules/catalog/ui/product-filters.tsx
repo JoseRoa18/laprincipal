@@ -4,7 +4,7 @@ import { FileSpreadsheet } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { NativeSelect, NativeSelectOptGroup, NativeSelectOption } from "@/components/ui/native-select";
-import { ACTIVE_FILTER_LABELS, PRICE_FILTER_LABELS, STOCK_FILTER_LABELS, type ProductListFilter } from "../domain/list-filters";
+import { ACTIVE_FILTER_LABELS, COST_FILTER_LABELS, PRICE_FILTER_LABELS, STOCK_FILTER_LABELS, type ProductListFilter } from "../domain/list-filters";
 import type { BrandOption, CategoryOption } from "../infrastructure/catalog-options";
 
 /** Category / brand / stock / active selects bound to the URL, plus the Excel export link. */
@@ -13,11 +13,14 @@ export function ProductFilters({
   brands,
   filter,
   exportHref,
+  showCost = false,
 }: {
   categories: CategoryOption[];
   brands: BrandOption[];
   filter: ProductListFilter;
   exportHref: string | null;
+  /** Users who see costs can list the products without one. */
+  showCost?: boolean;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -81,6 +84,15 @@ export function ProductFilters({
           </NativeSelectOption>
         ))}
       </NativeSelect>
+      {showCost ? (
+        <NativeSelect aria-label="Costo" className={selectClass} value={filter.cost} onChange={(e) => set("costo", e.target.value === "missing" ? "sin" : "")}>
+          {Object.entries(COST_FILTER_LABELS).map(([value, label]) => (
+            <NativeSelectOption key={value} value={value}>
+              {label}
+            </NativeSelectOption>
+          ))}
+        </NativeSelect>
+      ) : null}
       {exportHref ? (
         <Button variant="outline" className="h-10" render={<a href={exportHref} />}>
           <FileSpreadsheet /> Exportar Excel

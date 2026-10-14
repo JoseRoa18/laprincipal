@@ -6,7 +6,7 @@ import { AppError } from "@/lib/errors";
 import { D } from "@/lib/money";
 import { generateInternalBarcodeFor } from "@/modules/catalog/application/barcodes";
 import { applyImport, undoImport, validateImportFile } from "@/modules/catalog/application/import";
-import { createProduct, deleteProduct, setProductPrices, updateProduct } from "@/modules/catalog/application/products";
+import { createProduct, deleteProduct, setProductCost, setProductPrices, updateProduct } from "@/modules/catalog/application/products";
 import { isValidEan13 } from "@/modules/catalog/domain/barcodes";
 import type { ProductInput } from "@/modules/catalog/domain/product-schema";
 import { searchProducts } from "@/modules/catalog/infrastructure/product-lookup";
@@ -212,6 +212,20 @@ describe.skipIf(SKIP)("catalog integration", () => {
     expect(isValidEan13(generated.code)).toBe(true);
     expect(Number(generated.code.slice(2, 12))).toBe(Number(result.barcode!.slice(2, 12)) + 1);
     await expect(generateInternalBarcodeFor(other.id, { id: base.userId })).rejects.toBeInstanceOf(AppError);
+  });
+
+  it("registers stock without a cost and takes the cost later as the average too", async () => {
+    const p = await createProduct(productInput(base, { costUsd: null, initialStock: "3" }), { id: base.userId });
+    created.push(p.id);
+    const [before] = await db.select().from(s.products).where(eq(s.products.id, p.id));
+    expect(D(before.costAvgUsd).isZero()).toBe(true);
+    expect(before.costLastUsd).toBeNull();
+
+    await setProductCost({ productId: p.id, costUsd: "8.5" }, { id: base.userId });
+    const [after] = await db.select().from(s.products).where(eq(s.products.id, p.id));
+    expect(D(after.costAvgUsd).toFixed(2)).toBe("8.50");
+    expect(D(after.costLastUsd).toFixed(2)).toBe("8.50");
+    await expect(setProductCost({ productId: p.id, costUsd: "0" }, { id: base.userId })).rejects.toMatchObject({ code: "VALIDATION" });
   });
 
   it("registers a product without a selling price that cannot be sold until priced", async () => {

@@ -22,6 +22,7 @@ import { getDefaultLocation } from "@/modules/core/application/context";
 import { fromUsd } from "@/modules/currency/domain/conversion";
 import { getRatesSnapshot } from "@/modules/currency/infrastructure/rates";
 import { cn } from "cn";
+import { D } from "@/lib/money";
 
 export const metadata = { title: "Productos" };
 
@@ -104,8 +105,8 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
 
       <div className="space-y-2">
         <SearchInput placeholder="Nombre, número de parte, equivalencia, modelo o código" autoFocus={false} />
-        <MobileFilters activeCount={[filter.categoryId, filter.brandId, filter.stock !== "all", filter.price !== "all", filter.active !== "1"].filter(Boolean).length}>
-          <ProductFilters categories={categories} brands={brands} filter={filter} exportHref={total > 0 && canManage ? exportHref : null} />
+        <MobileFilters activeCount={[filter.categoryId, filter.brandId, filter.stock !== "all", filter.price !== "all", filter.cost !== "all", filter.active !== "1"].filter(Boolean).length}>
+          <ProductFilters categories={categories} brands={brands} filter={filter} exportHref={total > 0 && canManage ? exportHref : null} showCost={showCosts} />
         </MobileFilters>
       </div>
 
@@ -179,6 +180,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
                       <span className="text-sm tabular-nums">
                         Stock {formatQty(p.stockAvailable, p.unitDecimals)} {p.unitSymbol}
                       </span>
+                      {showCosts && !D(p.costAvgUsd).gt(0) ? <MissingCost /> : null}
                       <StockStatusBadge status={p.status} />
                       {p.locationCode ? <Badge variant="outline">{p.locationCode}</Badge> : null}
                       {!p.isActive ? <Badge variant="secondary">Inactivo</Badge> : null}
@@ -242,7 +244,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
                       </TableCell>
                       {showCosts ? (
                         <TableCell className="text-right">
-                          <Money value={p.costAvgUsd} />
+                          {D(p.costAvgUsd).gt(0) ? <Money value={p.costAvgUsd} /> : <MissingCost />}
                           {margin?.marginPct ? <p className={`text-xs ${margin.belowCost ? "text-destructive" : "text-muted-foreground"}`}>{formatPct(margin.marginPct)}</p> : null}
                         </TableCell>
                       ) : null}
@@ -269,6 +271,14 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
 /** Without a selling price the product is registered but cannot be sold. */
 function priced(p: { publicPriceUsd: string | null }): boolean {
   return Boolean(p.publicPriceUsd && Number(p.publicPriceUsd) > 0);
+}
+
+function MissingCost() {
+  return (
+    <Badge variant="outline" className="border-amber-400 text-amber-800 dark:text-amber-300">
+      Falta costo
+    </Badge>
+  );
 }
 
 function MissingPrice() {

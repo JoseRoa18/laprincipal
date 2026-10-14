@@ -11,6 +11,7 @@ import { D } from "@/lib/money";
 import { userCanOpenSale } from "@/modules/sales/application/sale-access";
 import { getSaleDetail } from "@/modules/sales/infrastructure/sales-queries";
 import { SaleSuccessBanner } from "@/modules/sales/ui/sales/sale-success-banner";
+import { formatChange } from "@/modules/sales/domain/payments";
 
 export const metadata = { title: "Venta registrada" };
 
@@ -52,8 +53,7 @@ export default async function SaleDonePage({
         number={sale.number}
         totalUsd={sale.totalUsd}
         changeUsd={sale.changeUsd}
-        changeCurrencyCode={sale.changeCurrencyCode}
-        changeAmount={sale.changeAmount}
+        changeParts={sale.changeParts}
         autoPrint={sp.imprimir === "1"}
         wantsWhatsapp={sp.whatsapp === "1"}
       />
@@ -96,10 +96,10 @@ export default async function SaleDonePage({
                   <Money value={p.amount} currency={p.currencyCode} />
                 </div>
               ))}
-              {D(sale.changeUsd).gt(0) && sale.changeCurrencyCode ? (
+              {sale.changeParts.length > 0 ? (
                 <div className="flex justify-between gap-2 font-medium">
                   <span>Cambio entregado</span>
-                  <Money value={sale.changeAmount} currency={sale.changeCurrencyCode} />
+                  <span className="tabular-nums">{formatChange(sale.changeParts)}</span>
                 </div>
               ) : null}
             </div>

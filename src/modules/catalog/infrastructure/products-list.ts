@@ -109,6 +109,7 @@ async function buildConditions(dbx: DbOrTx, filter: ProductListFilter): Promise<
       sql`not exists (select 1 from ${priceListItems} where ${priceListItems.productId} = ${products.id} and ${priceListItems.priceListId} = ${publicId} and ${priceListItems.priceUsd} > 0)`,
     );
   }
+  if (filter.cost === "missing") conds.push(missingCostSql);
   const { stockAvailable, statusExpr } = statusSql();
   if (filter.stock === "out") conds.push(sql`${stockAvailable} <= 0`);
   else if (filter.stock !== "all") conds.push(sql`${statusExpr} = ${filter.stock}`);
@@ -314,5 +315,14 @@ export async function countProductsWithoutPrice(dbx: DbOrTx = db): Promise<numbe
         sql`not exists (select 1 from ${priceListItems} where ${priceListItems.productId} = ${products.id} and ${priceListItems.priceListId} = ${publicId} and ${priceListItems.priceUsd} > 0)`,
       ),
     );
+  return row?.n ?? 0;
+}
+
+/** Registered without a cost: neither an average nor a last cost ("Falta costo"). */
+export const missingCostSql = sql`(${products.costAvgUsd} <= 0 and coalesce(${products.costLastUsd}, 0) <= 0)`;
+
+/** Products (not deleted) without a cost, for the "Falta costo" reminders. */
+export async function countProductsWithoutCost(dbx: DbOrTx = db): Promise<number> {
+  const [row] = await dbx.select({ n: count() }).from(products).where(and(isNull(products.deletedAt), missingCostSql));
   return row?.n ?? 0;
 }

@@ -10,7 +10,7 @@ import { getStorage } from "@/lib/storage";
 import { addBarcode, generateInternalBarcodeFor, removeBarcode, setPrimaryBarcode } from "@/modules/catalog/application/barcodes";
 import { addProductImage, deleteProductImage, setPrimaryImage, type ImageFile } from "@/modules/catalog/application/images";
 import { applyAiImage, enhanceProductImageWithAi, generateCatalogPhoto, revertAiImage, type AiPhotoResult } from "@/modules/catalog/application/photo-ai";
-import { createProduct, deleteProduct, setProductActive, setProductPrices, updateProduct } from "@/modules/catalog/application/products";
+import { createProduct, deleteProduct, setProductActive, setProductCost, setProductPrices, updateProduct } from "@/modules/catalog/application/products";
 import { productFormSchema, toProductInput } from "@/modules/catalog/domain/product-schema";
 import { searchProducts } from "@/modules/catalog/infrastructure/product-lookup";
 import { getDefaultLocation } from "@/modules/core/application/context";
@@ -51,6 +51,25 @@ export async function setProductPricesAction(input: unknown) {
     if (publicPrice === null) throw new AppError("VALIDATION", "Precio público inválido.", { fields: { publicPriceUsd: "Número inválido" } });
     if (data.techPriceUsd && techPrice === null) throw new AppError("VALIDATION", "Precio técnico inválido.", { fields: { techPriceUsd: "Número inválido" } });
     await setProductPrices({ productId: data.productId, publicPriceUsd: publicPrice, techPriceUsd: techPrice }, user);
+    revalidateProducts(data.productId);
+    revalidatePath("/productos/precios");
+    return { productId: data.productId };
+  });
+}
+
+const costSchema = z.object({
+  productId: z.uuid("Identificador inválido"),
+  costUsd: z.string().trim().min(1, "Escribe el costo"),
+});
+
+/** "Falta costo": the unit cost typed after the product was registered. */
+export async function setProductCostAction(input: unknown) {
+  return runAction(async () => {
+    const user = await assertRole("admin", "warehouse");
+    const data = parseInput(costSchema, input);
+    const cost = parseLocalizedNumber(data.costUsd);
+    if (cost === null) throw new AppError("VALIDATION", "Costo inválido.", { fields: { costUsd: "Número inválido" } });
+    await setProductCost({ productId: data.productId, costUsd: cost }, user);
     revalidateProducts(data.productId);
     revalidatePath("/productos/precios");
     return { productId: data.productId };

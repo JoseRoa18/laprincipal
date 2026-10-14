@@ -12,6 +12,7 @@ import { getSaleDetail } from "@/modules/sales/infrastructure/sales-queries";
 import { SaleActions } from "@/modules/sales/ui/sales/sale-actions";
 import { SaleStatusBadge } from "@/modules/sales/ui/status-badge";
 import { getPolicies } from "@/modules/settings/infrastructure/settings";
+import { formatChange } from "@/modules/sales/domain/payments";
 
 export const metadata = { title: "Detalle de venta" };
 
@@ -161,12 +162,12 @@ export default async function SaleDetailPage({ params }: { params: Promise<{ id:
                 <span className="text-muted-foreground">Pagado</span>
                 <Money value={sale.paidUsd} />
               </div>
-              {D(sale.changeUsd).gt(0) && sale.changeCurrencyCode ? (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Cambio ({sale.changeCurrencyCode})</span>
+              {sale.changeParts.length > 0 ? (
+                <div className="flex justify-between gap-2">
+                  <span className="text-muted-foreground">Cambio</span>
                   <span>
-                    <Money value={sale.changeAmount} currency={sale.changeCurrencyCode} className="font-medium" />
-                    {sale.changeCurrencyCode !== "USD" ? <span className="text-muted-foreground text-xs"> = {formatMoney(sale.changeUsd, "USD")}</span> : null}
+                    <span className="font-medium tabular-nums">{formatChange(sale.changeParts)}</span>
+                    {sale.changeParts.some((p) => p.currencyCode !== "USD") ? <span className="text-muted-foreground text-xs"> = {formatMoney(sale.changeUsd, "USD")}</span> : null}
                   </span>
                 </div>
               ) : null}

@@ -78,6 +78,13 @@
       "when": 1791116891799,
       "tag": "0010_customer_names_and_address",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1791981592316,
+      "tag": "0011_split_change",
+      "breakpoints": true
     }
   ]
 }

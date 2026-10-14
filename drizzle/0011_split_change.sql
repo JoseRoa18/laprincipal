@@ -1,0 +1,3 @@
+ALTER TABLE "sales" ADD COLUMN "change_extra_currency_code" text;--> statement-breakpoint
+ALTER TABLE "sales" ADD COLUMN "change_extra_amount" numeric(18, 4) DEFAULT '0' NOT NULL;--> statement-breakpoint
+ALTER TABLE "sales" ADD CONSTRAINT "sales_change_extra_currency_code_currencies_code_fk" FOREIGN KEY ("change_extra_currency_code") REFERENCES "public"."currencies"("code") ON DELETE no action ON UPDATE no action;

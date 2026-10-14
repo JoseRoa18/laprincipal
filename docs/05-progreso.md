@@ -104,6 +104,11 @@ Pendiente: cambio en USD con centavos (decisión del dueño).
 - Ficha y edición de producto: barra fija arriba con foto, nombre, código y código de barras al bajar; en la ficha también precio, existencia y Editar.
 - Migración `0009`: borra `products.part_number` (ya sin uso desde `0008`).
 
+## Vuelto mixto y productos sin costo (2026-10-14)
+
+- Vuelto en dólares: los dólares enteros en USD y los centavos en pesos, redondeados a la centena más cercana y nunca menos de 200 pesos (configurable en Políticas: "Vuelto mínimo en pesos"). Es la opción marcada por defecto al cobrar; siguen "Todo en USD" y "Todo en COP". La venta guarda las dos partes (`change_*` y `change_extra_*`, migración `0011`) y el cierre de caja descuenta cada una de su gaveta.
+- Productos sin costo: se registran (formulario e importación) aunque tengan existencia; quedan con "Falta costo" (lista, ficha, filtro, Inicio). "Poner precios y costos" tiene las pestañas Falta precio / Falta costo; el costo cargado después queda también como costo promedio mientras no haya compras.
+
 ## Cliente obligatorio y consulta de precio (2026-10-04)
 
 - Vender y Nueva cotización empiezan pidiendo la cédula o RIF (V por defecto). Cliente registrado: se confirma y se sigue; nuevo: se registra ahí mismo. Sin cliente no se cobra ni se cotiza (también lo valida el servidor). "Consumidor final" ya no existe para ventas nuevas; las viejas lo conservan.

@@ -22,6 +22,8 @@ export const policiesSchema = z.object({
   quoteValidityDays: z.number().default(7),
   techPriceMarkdownPct: z.number().default(10),
   defaultMarginPct: z.number().default(35),
+  /** Change in dollars: the cents go back in pesos, to the nearest 100 and never below this. */
+  minCopChange: z.number().default(200),
   requireRatesToSell: z.boolean().default(true),
   requireOpenCashSession: z.boolean().default(true),
 });

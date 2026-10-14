@@ -1,3 +1,4 @@
+import { changePartsOf, type ChangeGiven } from "../domain/payments";
 import { TZDate } from "@date-fns/tz";
 import { addDays } from "date-fns";
 import { and, count, desc, eq, exists, gte, inArray, lt, ne, sql } from "drizzle-orm";
@@ -138,6 +139,8 @@ export interface SaleDetail {
   changeUsd: string;
   changeCurrencyCode: string | null;
   changeAmount: string;
+  /** Every part of the change handed back (dollars, and the cents in pesos). */
+  changeParts: ChangeGiven[];
   rateVes: string;
   rateCop: string;
   cashSessionId: string | null;
@@ -317,6 +320,7 @@ export async function getSaleDetail(id: string, dbx: DbOrTx = db): Promise<SaleD
     changeUsd: s.changeUsd,
     changeCurrencyCode: s.changeCurrencyCode,
     changeAmount: s.changeAmount,
+    changeParts: changePartsOf(s),
     rateVes: s.rateVes,
     rateCop: s.rateCop,
     cashSessionId: s.cashSessionId,

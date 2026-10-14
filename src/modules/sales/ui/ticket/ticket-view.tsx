@@ -2,6 +2,7 @@ import { formatDateTime, formatMoney, formatQty } from "@/lib/format";
 import { D } from "@/lib/money";
 import type { CompanySettings, PrintingSettings } from "@/modules/settings/infrastructure/settings";
 import type { SaleDetail } from "../../infrastructure/sales-queries";
+import { formatChange } from "../../domain/payments";
 
 interface Props {
   sale: SaleDetail;
@@ -78,9 +79,7 @@ export function TicketView({ sale, company, printing }: Props) {
           ))}
         </>
       ) : null}
-      {D(sale.changeUsd).gt(0) && sale.changeCurrencyCode ? (
-        <Row label={`Cambio (${sale.changeCurrencyCode === "USD" ? "efectivo $" : "efectivo " + sale.changeCurrencyCode})`} value={formatMoney(sale.changeAmount, sale.changeCurrencyCode)} bold />
-      ) : null}
+      {sale.changeParts.length > 0 ? <Row label="Cambio" value={formatChange(sale.changeParts)} bold /> : null}
       {sale.notes ? (
         <>
           <Divider />

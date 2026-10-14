@@ -85,11 +85,6 @@ export const productFormSchema = z
     message: "Pon primero el precio público",
     path: ["techPriceUsd"],
   })
-  // Stock loaded without a cost would drag the average cost down for good.
-  .refine((d) => !D(parseLocalizedNumber(d.initialStock) ?? 0).gt(0) || D(parseLocalizedNumber(d.costUsd) ?? 0).gt(0), {
-    message: "Escribe el costo: hay existencia inicial",
-    path: ["costUsd"],
-  })
   .refine((d) => d.brandId !== NEW_BRAND_OPTION || d.newBrandName !== "", {
     message: "Escribe el nombre de la nueva marca",
     path: ["newBrandName"],

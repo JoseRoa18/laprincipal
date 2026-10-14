@@ -6,6 +6,7 @@ import { formatDateOnly } from "../../application/labels";
 import type { QuoteDetail } from "../quotes-queries";
 import type { SaleDetail } from "../sales-queries";
 import { isInternalCode } from "@/modules/catalog/domain/sku";
+import { formatChange } from "../../domain/payments";
 
 /**
  * A4 documents rendered on the server with @react-pdf/renderer. Plain
@@ -165,10 +166,10 @@ export function SaleDocument({ sale, company, printing }: { sale: SaleDetail; co
                 </Text>
               </View>
             ))}
-            {D(sale.changeUsd).gt(0) && sale.changeCurrencyCode ? (
+            {sale.changeParts.length > 0 ? (
               <View style={styles.totalRow}>
                 <Text>Cambio entregado</Text>
-                <Text>{formatMoney(sale.changeAmount, sale.changeCurrencyCode)}</Text>
+                <Text>{formatChange(sale.changeParts)}</Text>
               </View>
             ) : null}
           </View>
