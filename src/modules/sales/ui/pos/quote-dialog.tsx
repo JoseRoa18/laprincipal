@@ -57,7 +57,11 @@ function QuoteForm({ config, onDone }: { config: PosConfig; onDone: () => void }
         validUntil: validUntil || null,
         notes: notes.trim() || null,
         reserveStock: reserve,
-      });
+      }).catch(() => null);
+      if (!result) {
+        setError("Sin conexión no se pueden guardar cotizaciones. Inténtalo cuando vuelva internet.");
+        return;
+      }
       if (!result.ok) {
         setError(result.error.message);
         return;

@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { AppHeader } from "@/components/app/app-header";
 import { AppSidebar } from "@/components/app/app-sidebar";
 import { MobileNav } from "@/components/app/mobile-nav";
+import { OfflineProvider } from "@/modules/sales/ui/offline/offline-provider";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { requireUser } from "@/lib/auth-guards";
 import { getCompanySettings } from "@/modules/settings/infrastructure/settings";
@@ -26,6 +27,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           {children}
         </div>
         <MobileNav user={user} />
+        {user.role === "admin" || user.role === "seller" ? <OfflineProvider /> : null}
       </SidebarInset>
     </SidebarProvider>
   );

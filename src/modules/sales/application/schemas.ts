@@ -72,6 +72,18 @@ export const completeSaleSchema = z.object({
   /** Rates the screen used (currency → units per USD) and the total it showed. */
   clientRates: z.record(z.string(), z.string().regex(/^\d+(\.\d+)?$/)).optional(),
   expectedTotalUsd: z.string().regex(/^\d+(\.\d+)?$/).optional(),
+  /**
+   * Sold without a connection and sent later: when it happened, the unit price
+   * the device charged per product (its saved list) and who sold it.
+   */
+  offline: z
+    .object({
+      soldAt: z.iso.datetime({ offset: true }),
+      unitPrices: z.record(z.uuid(), z.string().regex(/^\d+(\.\d+)?$/)),
+      sellerId: z.uuid().nullable().optional(),
+    })
+    .nullable()
+    .optional(),
 });
 export type CompleteSaleInput = z.infer<typeof completeSaleSchema>;
 

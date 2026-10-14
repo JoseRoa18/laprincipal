@@ -1,6 +1,7 @@
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import type { SessionUser } from "@/lib/auth-guards";
+import { ConnectionStatus } from "@/modules/sales/ui/offline/connection-status";
 import { RateBadge } from "./rate-badge";
 import { SectionTitle } from "./section-title";
 
@@ -12,6 +13,7 @@ export function AppHeader({ user }: { user: SessionUser }) {
       <div className="min-w-0 flex-1">
         <SectionTitle fallback="La Principal 2050" />
       </div>
+      <ConnectionStatus />
       <RateBadge canEdit={user.role === "admin"} />
     </header>
   );

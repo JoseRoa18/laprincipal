@@ -46,7 +46,12 @@ function SellerSwitchForm({ config, onDone }: { config: PosConfig; onDone: () =>
       return;
     }
     startTransition(async () => {
-      const result = await switchSellerAction({ userId, pin });
+      // Checking a PIN needs the server.
+      const result = await switchSellerAction({ userId, pin }).catch(() => null);
+      if (!result) {
+        setError("Sin conexión no se puede cambiar de vendedor.");
+        return;
+      }
       if (!result.ok) {
         setError(result.error.message);
         setPin("");
@@ -60,7 +65,11 @@ function SellerSwitchForm({ config, onDone }: { config: PosConfig; onDone: () =>
 
   function restore() {
     startTransition(async () => {
-      const result = await clearActingSellerAction();
+      const result = await clearActingSellerAction().catch(() => null);
+      if (!result) {
+        toast.error("Sin conexión no se puede cambiar de vendedor.");
+        return;
+      }
       if (!result.ok) {
         toast.error(result.error.message);
         return;

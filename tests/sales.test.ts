@@ -10,6 +10,7 @@ import {
   documentSeries,
   inventoryMovements,
   paymentMethods,
+  priceHistory,
   priceListItems,
   priceLists,
   products,
@@ -253,6 +254,58 @@ describe.skipIf(SKIP)("sales: complete, void, return, quotes", () => {
     expect(D(sale.changeAmount).toFixed(2)).toBe("2.00");
     expect(sale.changeExtraCurrencyCode).toBe("COP");
     expect(D(sale.changeExtraAmount).toFixed(0)).toBe("1500");
+  });
+
+  describe("sales made offline and sent later", () => {
+    const minutesAgo = (m: number) => new Date(Date.now() - m * 60_000);
+
+    it("keeps the price the product had when it was sold, the sale time and a negative stock", async () => {
+      // Sold offline at $10 an hour ago; the price went up to $12 half an hour ago.
+      const product = await makeProduct({ price: "12", stock: "1" });
+      await db.insert(priceHistory).values({ productId: product.id, priceListId: publicListId, oldPriceUsd: "10.0000", newPriceUsd: "12.0000", changedBy: adminId, changedAt: minutesAgo(30) });
+      const soldAt = minutesAgo(60).toISOString();
+      const requestId = crypto.randomUUID();
+      const input = completeSaleSchema.parse({
+        customerId,
+        lines: [{ productId: product.id, quantity: "2" }],
+        payments: [{ paymentMethodId: cashUsdId, amount: "20" }],
+        clientRequestId: requestId,
+        clientRates: { VES: "36.500000", COP: "4100.000000" },
+        expectedTotalUsd: "20.00",
+        offline: { soldAt, unitPrices: { [product.id]: "10" } },
+      });
+      const res = await completeSale(db, input, ctx);
+      expect(res.totalUsd).toBe("20.00");
+      const [sale] = await db.select().from(sales).where(eq(sales.id, res.saleId));
+      expect(sale.soldOffline).toBe(true);
+      expect(sale.saleDate.toISOString()).toBe(soldAt);
+      // Only 1 in stock but 2 left the counter: recorded anyway, stock goes negative.
+      expect((await stockOf(product.id)).quantity.toFixed(0)).toBe("-1");
+
+      // Sent twice (the answer was lost): one sale.
+      const again = await completeSale(db, input, ctx);
+      expect(again.saleId).toBe(res.saleId);
+    });
+
+    it("refuses an invented price or a rate that was never official", async () => {
+      const product = await makeProduct({ price: "12", stock: "5" });
+      const base = { customerId, lines: [{ productId: product.id, quantity: "1" }], payments: [{ paymentMethodId: cashUsdId, amount: "20" }] };
+      await expect(
+        completeSale(db, completeSaleSchema.parse({ ...base, offline: { soldAt: minutesAgo(5).toISOString(), unitPrices: { [product.id]: "5" } } }), ctx),
+      ).rejects.toMatchObject({ code: "CONFLICT", details: { reason: "offline_prices" } });
+      // The change goes in dollars plus pesos: the peso rate the device used must exist.
+      await expect(
+        completeSale(
+          db,
+          completeSaleSchema.parse({ ...base, clientRates: { COP: "9999" }, offline: { soldAt: minutesAgo(5).toISOString(), unitPrices: { [product.id]: "12" } } }),
+          ctx,
+        ),
+      ).rejects.toMatchObject({ code: "CONFLICT", details: { reason: "offline_rates" } });
+      await expect(
+        completeSale(db, completeSaleSchema.parse({ ...base, offline: { soldAt: new Date(Date.now() + 86_400_000).toISOString(), unitPrices: {} } }), ctx),
+      ).rejects.toMatchObject({ code: "VALIDATION", details: { reason: "offline_date" } });
+      expect((await stockOf(product.id)).quantity.toFixed(0)).toBe("5");
+    });
   });
 
   it("rejects a sale that is not fully paid", async () => {

@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
 import type { SessionUser } from "@/lib/auth-guards";
+import { forgetOfflineData } from "@/modules/sales/ui/offline/offline-provider";
 
 const ROLE_LABEL: Record<SessionUser["role"], string> = {
   admin: "Administrador",
@@ -53,7 +54,13 @@ export function UserMenu({ user }: { user: SessionUser }) {
             <DropdownMenuItem
               variant="destructive"
               disabled={pending}
-              onClick={() => startTransition(() => logoutAction())}
+              onClick={() =>
+                startTransition(async () => {
+                  // The saved catalog and cached pages leave with the session; unsent sales stay.
+                  await forgetOfflineData().catch(() => undefined);
+                  await logoutAction();
+                })
+              }
             >
               <LogOut />
               {pending ? "Saliendo..." : "Cerrar sesión"}

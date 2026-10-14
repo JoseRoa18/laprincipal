@@ -27,6 +27,7 @@ export default auth((req) => {
 export const config = {
   matcher: [
     // api/cron authenticates with a Bearer secret; api/files handles its own auth (public photos, signed documents).
-    "/((?!api/auth|api/cron|api/files|_next/static|_next/image|favicon.ico|icons|manifest.webmanifest|.*\\.(?:png|jpg|jpeg|gif|svg|webp|ico|css|js|map|txt|woff2?)$).*)",
+    // sin-conexion is the offline fallback the service worker shows (no data on it).
+    "/((?!api/auth|api/cron|api/files|sin-conexion|_next/static|_next/image|favicon.ico|icons|manifest.webmanifest|.*\\.(?:png|jpg|jpeg|gif|svg|webp|ico|css|js|map|txt|woff2?)$).*)",
   ],
 };

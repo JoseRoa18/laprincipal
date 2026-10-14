@@ -85,6 +85,13 @@
       "when": 1791981592316,
       "tag": "0011_split_change",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1791982483686,
+      "tag": "0012_sold_offline",
+      "breakpoints": true
     }
   ]
 }

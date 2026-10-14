@@ -89,16 +89,21 @@ async function assertDocumentFree(dbx: DbOrTx, data: CustomerData, exceptId?: st
  * Create a customer. Plain function (no "use server") so the POS quick-add
  * and the customers screen share it.
  */
-export async function createCustomer(input: CustomerInput, userId?: string | null, dbx: Db = db): Promise<CustomerRow> {
+export async function createCustomer(input: CustomerInput, userId?: string | null, dbx: Db = db, opts: { id?: string } = {}): Promise<CustomerRow> {
   const data = parse(input);
   return dbx.transaction(async (tx) => {
+    // Same id again (an offline registration sent twice): the customer already exists.
+    if (opts.id) {
+      const [existing] = await tx.select().from(customers).where(eq(customers.id, opts.id)).limit(1);
+      if (existing) return existing;
+    }
     await assertDocumentFree(tx, data);
     const priceListId = await resolvePriceList(tx, data);
     let row: CustomerRow;
     try {
       [row] = await tx
         .insert(customers)
-        .values({ ...columns(data), priceListId })
+        .values({ ...(opts.id ? { id: opts.id } : {}), ...columns(data), priceListId })
         .returning();
     } catch (err) {
       if (isUniqueViolation(err)) throw new AppError("CONFLICT", DUPLICATE_MESSAGE, { fields: { docNumber: DUPLICATE_MESSAGE } });

@@ -24,18 +24,20 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatMoney } from "@/lib/format";
 import { displayAmounts } from "@/modules/currency/domain/conversion";
-import type { CartCustomer, PosProduct } from "../../application/schemas";
+import type { CartCustomer } from "../../application/schemas";
 import { CartStoreProvider, cartTotals, exceedsDiscountLimit, posCartStore, quoteCartStore, supervisorIsValid, useCart, useCartStore } from "../cart-store";
 import { CartPanel } from "./cart-panel";
 import { CheckoutDialog } from "./checkout-dialog";
 import { CustomerGate } from "./customer-gate";
 import { fetchHeldSales, HELD_SALES_KEY, HeldSalesDrawer } from "./held-sales-drawer";
 import { HoldDialog } from "./hold-dialog";
-import { ProductSearch, type ProductSearchHandle } from "./product-search";
+import { fetchProducts, ProductSearch, type ProductSearchHandle } from "./product-search";
 import { QuoteDialog } from "./quote-dialog";
 import { SellerSwitchDialog } from "./seller-switch-dialog";
 import { SupervisorDialog } from "./supervisor-dialog";
 import type { PosConfig } from "./types";
+import { isOffline, type PendingSale } from "../offline/offline-store";
+import { OfflineSaleDialog } from "../offline/offline-sale-dialog";
 
 export function PosScreen({ config }: { config: PosConfig }) {
   const store = config.mode === "quote" ? quoteCartStore : posCartStore;
@@ -68,6 +70,8 @@ function PosInner({ config }: { config: PosConfig }) {
   const searchRef = useRef<ProductSearchHandle>(null);
   const appliedInitial = useRef<string | null>(null);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
+  // A sale saved on this device for lack of connection, shown until "Nueva venta".
+  const [offlineSale, setOfflineSale] = useState<{ sale: PendingSale; print: boolean } | null>(null);
   const [holdOpen, setHoldOpen] = useState(false);
   const [quoteOpen, setQuoteOpen] = useState(false);
   const [heldOpen, setHeldOpen] = useState(false);
@@ -102,12 +106,9 @@ function PosInner({ config }: { config: PosConfig }) {
       const ids = store.getState().lines.map((l) => l.productId);
       if (ids.length === 0) return;
       try {
-        const qs = new URLSearchParams({ ids: ids.join(",") });
-        if (listId) qs.set("priceListId", listId);
-        const res = await fetch(`/api/sales/products?${qs.toString()}`, { cache: "no-store" });
-        if (!res.ok) return;
-        const data = (await res.json()) as { products: PosProduct[] };
-        store.getState().applyProducts(data.products);
+        // Offline it re-prices from the saved catalog (technician or public price).
+        const products = await fetchProducts({ ids: ids.join(","), ...(listId ? { priceListId: listId } : {}) });
+        store.getState().applyProducts(products);
       } catch {
         /* keep the cached prices; the server re-prices anyway */
       }
@@ -213,6 +214,10 @@ function PosInner({ config }: { config: PosConfig }) {
   }
 
   async function hold(label: string): Promise<boolean> {
+    if (isOffline()) {
+      toast.error("Sin conexión no se pueden poner ventas en espera: cobra o espera a que vuelva internet.");
+      return false;
+    }
     const s = store.getState();
     const result = await holdSaleAction({
       label,
@@ -329,7 +334,13 @@ function PosInner({ config }: { config: PosConfig }) {
                 onCustomerChange={onCustomerChange}
                 onCheckout={openCheckout}
                 onHold={() => setHoldOpen(true)}
-                onQuote={() => (store.getState().lines.length > 0 ? setQuoteOpen(true) : toast.info("Agrega productos primero."))}
+                onQuote={() =>
+                  isOffline()
+                    ? toast.error("Sin conexión no se pueden guardar cotizaciones.")
+                    : store.getState().lines.length > 0
+                      ? setQuoteOpen(true)
+                      : toast.info("Agrega productos primero.")
+                }
               />
             </aside>
           </div>
@@ -364,7 +375,20 @@ function PosInner({ config }: { config: PosConfig }) {
 
       {isSale ? (
         <>
+          <OfflineSaleDialog
+            sale={offlineSale?.sale ?? null}
+            autoPrint={offlineSale?.print ?? false}
+            onClose={() => {
+              setOfflineSale(null);
+              searchRef.current?.focus();
+            }}
+          />
           <CheckoutDialog
+            onOfflineSaved={(sale, opts) => {
+              setCheckoutOpen(false);
+              store.getState().clear();
+              setOfflineSale({ sale, print: opts.print });
+            }}
             open={checkoutOpen}
             onOpenChange={setCheckoutOpen}
             config={config}

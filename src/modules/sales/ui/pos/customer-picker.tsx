@@ -10,12 +10,36 @@ import { Spinner } from "@/components/ui/spinner";
 import { formatDoc } from "@/modules/customers/domain/document";
 import type { CartCustomer } from "../../application/schemas";
 import type { CustomerSearchResult } from "../../infrastructure/customers-lookup";
+import { normalizeSearch } from "@/modules/catalog/domain/search-text";
+import { isNetworkError, isOffline, useOfflineStore } from "../offline/offline-store";
 import { useDebounced } from "../use-debounced";
 
+/** Customers saved on this device, searched by name, cédula or phone (offline). */
+function savedCustomers(q: string): CustomerSearchResult[] | null {
+  const snapshot = useOfflineStore.getState().snapshot;
+  if (!snapshot) return null;
+  const words = normalizeSearch(q).split(" ").filter(Boolean);
+  const digits = q.replace(/\D/g, "");
+  return snapshot.customers
+    .filter((c) => words.every((w) => normalizeSearch(c.name).includes(w)) || (digits.length >= 4 && (c.docNumber.includes(digits) || (c.phone ?? "").replace(/\D/g, "").includes(digits))))
+    .slice(0, 20)
+    .map((c) => ({ id: c.id, name: c.name, docType: c.docType, docNumber: c.docNumber, phone: c.phone, customerType: c.customerType, priceListId: c.priceListId }));
+}
+
 async function fetchCustomers(q: string): Promise<CustomerSearchResult[]> {
-  const res = await fetch(`/api/sales/customers?q=${encodeURIComponent(q)}`, { cache: "no-store" });
-  if (!res.ok) throw new Error("No se pudo buscar clientes.");
-  return ((await res.json()) as { customers: CustomerSearchResult[] }).customers;
+  if (isOffline()) {
+    const local = savedCustomers(q);
+    if (local) return local;
+  }
+  try {
+    const res = await fetch(`/api/sales/customers?q=${encodeURIComponent(q)}`, { cache: "no-store" });
+    if (!res.ok) throw new Error("No se pudo buscar clientes.");
+    return ((await res.json()) as { customers: CustomerSearchResult[] }).customers;
+  } catch (err) {
+    const local = isNetworkError(err) ? savedCustomers(q) : null;
+    if (!local) throw err;
+    return local;
+  }
 }
 
 /** The sale's customer in the cart, with "Cambiar" to go back to the cédula screen (the lines stay). */

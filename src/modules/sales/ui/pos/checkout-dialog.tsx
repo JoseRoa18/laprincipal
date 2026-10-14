@@ -19,10 +19,11 @@ import { displayAmounts } from "@/modules/currency/domain/conversion";
 import type { CompleteSaleResult } from "../../application/complete-sale";
 import { MIXED_CHANGE_KEY, computePaymentState, remainingIn, type PaymentInput } from "../../domain/payments";
 import type { SaleTotals } from "../../domain/pricing";
-import { useCart, useCartStore, type SupervisorAuth } from "../cart-store";
+import { exceedsDiscountLimit, supervisorIsValid, useCart, useCartStore, type SupervisorAuth } from "../cart-store";
 import type { PosPaymentMethod } from "../../infrastructure/payment-methods";
 import { SupervisorDialog } from "./supervisor-dialog";
 import type { PosConfig } from "./types";
+import { isOffline, useOfflineStore, type PendingSale } from "../offline/offline-store";
 
 interface PaymentRow {
   key: string;
@@ -39,6 +40,8 @@ interface Props {
   config: PosConfig;
   totals: SaleTotals;
   onSuccess: (result: CompleteSaleResult, opts: { print: boolean; whatsapp: boolean }) => void;
+  /** No connection: the sale was saved on this device and will be sent later. */
+  onOfflineSaved: (sale: PendingSale, opts: { print: boolean }) => void;
   /** Rates or prices changed on the server: reload them so the amounts can be reviewed. */
   onStale: () => void;
 }
@@ -46,12 +49,20 @@ interface Props {
 const CURRENCY_LABEL: Record<string, string> = { USD: "$", VES: "Bs", COP: "COP" };
 
 /** "Cobrar": mixed payments in three currencies, remaining and change. */
-export function CheckoutDialog({ open, onOpenChange, config, totals, onSuccess, onStale }: Props) {
+export function CheckoutDialog({ open, onOpenChange, config, totals, onSuccess, onOfflineSaved, onStale }: Props) {
   const [busy, setBusy] = useState(false);
   return (
     <Dialog open={open} onOpenChange={(o) => !busy && onOpenChange(o)}>
       <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-lg">
-        <CheckoutForm config={config} totals={totals} onSuccess={onSuccess} onStale={onStale} onCancel={() => onOpenChange(false)} onBusyChange={setBusy} />
+        <CheckoutForm
+          config={config}
+          totals={totals}
+          onSuccess={onSuccess}
+          onOfflineSaved={onOfflineSaved}
+          onStale={onStale}
+          onCancel={() => onOpenChange(false)}
+          onBusyChange={setBusy}
+        />
       </DialogContent>
     </Dialog>
   );
@@ -61,6 +72,7 @@ function CheckoutForm({
   config,
   totals,
   onSuccess,
+  onOfflineSaved,
   onStale,
   onCancel,
   onBusyChange,
@@ -68,6 +80,7 @@ function CheckoutForm({
   config: PosConfig;
   totals: SaleTotals;
   onSuccess: Props["onSuccess"];
+  onOfflineSaved: Props["onOfflineSaved"];
   onStale: () => void;
   onCancel: () => void;
   onBusyChange: (busy: boolean) => void;
@@ -169,9 +182,7 @@ function CheckoutForm({
     setSubmitting(true);
     onBusyChange(true);
     setError(null);
-    let result: Awaited<ReturnType<typeof completeSaleAction>>;
-    try {
-      result = await completeSaleAction({
+    const payload = {
       lines: lines.map((l) => ({ productId: l.productId, quantity: l.quantity, discountType: l.discountType, discountValue: l.discountValue })),
       customerId: customer?.id ?? null,
       globalDiscount,
@@ -188,13 +199,20 @@ function CheckoutForm({
       clientRequestId: store.getState().checkoutRequestId(),
       clientRates: rateSet,
       expectedTotalUsd: totals.totalUsd.toFixed(2),
-      });
+    };
+    let result: Awaited<ReturnType<typeof completeSaleAction>>;
+    try {
+      if (isOffline()) {
+        await saveOnDevice(payload);
+        return;
+      }
+      result = await completeSaleAction(payload);
     } catch {
-      // No answer (connection lost, server timeout): the sale may or may not exist.
-      setError({
-        code: "INTERNAL",
-        message: "No se pudo confirmar la venta: sin conexión o el servidor no respondió. Revisa la conexión y pulsa Confirmar de nuevo; si ya se registró, no se cobrará dos veces.",
-      });
+      // No answer (connection lost, server timeout): the sale may or may not exist on the
+      // server. It is kept on this device with the same request id, so sending it again
+      // later creates it once or returns the one already made.
+      useOfflineStore.getState().setOnline(false);
+      await saveOnDevice(payload);
       return;
     } finally {
       setSubmitting(false);
@@ -207,6 +225,54 @@ function CheckoutForm({
       return;
     }
     onSuccess(result.data, { print, whatsapp });
+  }
+
+  /** Keep the sale on this device (with what its ticket shows) until the connection is back. */
+  async function saveOnDevice(payload: Record<string, unknown>) {
+    if (!customer || !state) return;
+    if (exceedsDiscountLimit(totals, config.policies.maxDiscountPct) && !(supervisor && supervisorIsValid(supervisor))) {
+      setError({ code: "FORBIDDEN", message: `Sin conexión no se puede autorizar un descuento mayor al ${config.policies.maxDiscountPct} %. Bájalo o espera la conexión.` });
+      return;
+    }
+    const soldAt = new Date().toISOString();
+    const id = payload.clientRequestId as string;
+    const chosen = changeOption?.parts ?? [];
+    const sale = await useOfflineStore.getState().addSale({
+      id,
+      soldAt,
+      customerId: customer.id,
+      input: {
+        ...payload,
+        offline: { soldAt, unitPrices: Object.fromEntries(lines.map((l) => [l.productId, l.unitPriceUsd])), sellerId: config.seller.id },
+      },
+      receipt: {
+        number: "",
+        soldAt,
+        sellerName: config.seller.name,
+        customer: { name: customer.name, doc: customer.doc ?? null },
+        lines: lines.map((l, i) => ({
+          name: l.name,
+          sku: l.sku,
+          quantity: l.quantity,
+          unitSymbol: l.unitSymbol,
+          unitDecimals: l.unitDecimals,
+          unitPriceUsd: l.unitPriceUsd,
+          totalUsd: (totals.lines[i]?.lineTotalUsd ?? D(0)).toFixed(2),
+        })),
+        totals: {
+          subtotalUsd: totals.subtotalUsd.toFixed(2),
+          discountUsd: totals.discountUsd.toFixed(2),
+          taxUsd: totals.taxUsd.toFixed(2),
+          totalUsd: totals.totalUsd.toFixed(2),
+        },
+        payments: parsed
+          .filter((p) => p.valid)
+          .map((p) => ({ name: p.method!.name, currencyCode: p.method!.currencyCode, amount: p.amount!, reference: p.row.reference.trim() || null })),
+        changeParts: state.changeUsd.gt(0) ? chosen.map((c) => ({ currencyCode: c.currency.code, amount: c.amount.toString() })) : [],
+        rates: rateSet,
+      },
+    });
+    onOfflineSaved(sale, { print });
   }
 
   function onAuthorized(auth: SupervisorAuth) {

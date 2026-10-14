@@ -102,6 +102,8 @@ export const sales = pgTable(
     quoteId: uuid("quote_id").references(() => quotes.id),
     /** Id the checkout screen sends: the same checkout sent twice creates one sale. */
     clientRequestId: uuid("client_request_id").unique(),
+    /** Sold while the device had no connection and sent later: `saleDate` is when it happened. */
+    soldOffline: boolean("sold_offline").notNull().default(false),
     voidReason: text("void_reason"),
     voidedBy: uuid("voided_by").references(() => users.id),
     voidedAt: timestamp("voided_at", { withTimezone: true }),

@@ -10,6 +10,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import type { SessionUser } from "@/lib/auth-guards";
 import { isNavActive, mobileNavForRole, type NavItem } from "@/lib/navigation";
 import { cn } from "cn";
+import { forgetOfflineData } from "@/modules/sales/ui/offline/offline-provider";
 
 const ROLE_LABEL: Record<SessionUser["role"], string> = {
   admin: "Administrador",
@@ -102,7 +103,12 @@ export function MobileNav({ user }: { user: SessionUser }) {
               <Button variant="outline" className="h-11" render={<Link href="/configuracion/mi-cuenta" onClick={() => setOpen(false)} />}>
                 <KeyRound /> Mi cuenta y PIN
               </Button>
-              <Button variant="outline" className="text-destructive h-11" disabled={pending} onClick={() => startTransition(() => logoutAction())}>
+              <Button variant="outline" className="text-destructive h-11" disabled={pending} onClick={() =>
+                  startTransition(async () => {
+                    await forgetOfflineData().catch(() => undefined);
+                    await logoutAction();
+                  })
+                }>
                 <LogOut /> {pending ? "Saliendo..." : "Cerrar sesión"}
               </Button>
             </div>

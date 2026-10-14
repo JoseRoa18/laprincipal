@@ -1,0 +1,1 @@
+ALTER TABLE "sales" ADD COLUMN "sold_offline" boolean DEFAULT false NOT NULL;

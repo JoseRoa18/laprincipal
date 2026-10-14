@@ -1,7 +1,7 @@
 import Decimal from "decimal.js";
-import { and, eq } from "drizzle-orm";
-import type { Db } from "@/db/client";
-import { cashSessions, paymentMethods, quoteItems, quotes, saleItems, salePayments, sales, type UserRole } from "@/db/schema";
+import { and, asc, desc, eq, gt, lte, sql } from "drizzle-orm";
+import type { Db, Tx } from "@/db/client";
+import { cashSessions, exchangeRates, paymentMethods, priceHistory, quoteItems, quotes, saleItems, salePayments, sales, type UserRole } from "@/db/schema";
 import { AppError, notFound } from "@/lib/errors";
 import { businessDate, formatQty } from "@/lib/format";
 import { D, toMoneyDb, toQtyDb, toRateDb } from "@/lib/money";
@@ -10,6 +10,9 @@ import { writeAudit } from "@/modules/core/application/audit";
 import { isUniqueViolation } from "@/modules/core/application/db-errors";
 import { getDefaultLocation } from "@/modules/core/application/context";
 import { nextDocumentNumber } from "@/modules/core/application/numbering";
+import { getPriceListIds } from "@/modules/catalog/infrastructure/catalog-options";
+import { getProductsForSale } from "@/modules/catalog/infrastructure/product-lookup";
+import type { RateSet } from "@/modules/currency/domain/conversion";
 import { getRatesSnapshot } from "@/modules/currency/infrastructure/rates";
 import { adjustReserved, applyMovements, lockStock, type MovementInput } from "@/modules/inventory/application/stock";
 import { getSetting } from "@/modules/settings/infrastructure/settings";
@@ -96,13 +99,115 @@ async function findSaleByRequestId(dbx: Db, clientRequestId: string): Promise<Co
   };
 }
 
+/** Offline sales older than this are refused (a device forgotten in a drawer). */
+const OFFLINE_MAX_AGE_DAYS = 30;
+/** A rate the device used must have been the official one within these days before the sale. */
+const OFFLINE_RATE_WINDOW_DAYS = 10;
+
+/**
+ * Rates a device used while offline: each must be the rate in force on the day
+ * of the sale (even an old one, the counter warns about it) or one loaded in
+ * the days before. A stale but real rate is fine; an invented one is not.
+ */
+async function offlineRates(dbx: Db, seen: Record<string, string>, codes: Set<string>, soldAt: Date, fallback: RateSet): Promise<RateSet> {
+  const out: RateSet = { ...fallback };
+  const day = businessDate(soldAt);
+  for (const code of codes) {
+    const rate = seen[code];
+    if (code === "USD" || !rate) continue;
+    if (fallback[code] && D(fallback[code]).eq(D(rate))) {
+      out[code] = rate;
+      continue;
+    }
+    const [row] = await dbx
+      .select({ id: exchangeRates.id })
+      .from(exchangeRates)
+      .where(
+        and(
+          eq(exchangeRates.currencyCode, code),
+          sql`${exchangeRates.rate} = ${rate}::numeric`,
+          sql`${exchangeRates.effectiveDate} between (${day}::date - ${OFFLINE_RATE_WINDOW_DAYS}::int) and ${day}::date`,
+        ),
+      )
+      .limit(1);
+    if (!row) {
+      throw new AppError("CONFLICT", `La tasa de ${code} que usó el equipo sin conexión (1 $ = ${D(rate).toFixed(2)}) no está en el historial de tasas de esos días.`, {
+        reason: "offline_rates",
+      });
+    }
+    out[code] = rate;
+  }
+  return out;
+}
+
+/** Price a product had in a list at a given moment, from the price history. */
+async function priceAt(tx: Tx, productId: string, priceListId: string, at: Date): Promise<string | null> {
+  const [before] = await tx
+    .select({ price: priceHistory.newPriceUsd })
+    .from(priceHistory)
+    .where(and(eq(priceHistory.productId, productId), eq(priceHistory.priceListId, priceListId), lte(priceHistory.changedAt, at)))
+    .orderBy(desc(priceHistory.changedAt))
+    .limit(1);
+  if (before) return before.price;
+  const [after] = await tx
+    .select({ price: priceHistory.oldPriceUsd })
+    .from(priceHistory)
+    .where(and(eq(priceHistory.productId, productId), eq(priceHistory.priceListId, priceListId), gt(priceHistory.changedAt, at)))
+    .orderBy(asc(priceHistory.changedAt))
+    .limit(1);
+  return after?.price ?? null;
+}
+
+/**
+ * Unit prices a device charged while offline, kept when they are the current
+ * price or the price the product had when it was sold; anything else is refused.
+ */
+async function offlinePrices(
+  tx: Tx,
+  unitPrices: Record<string, string>,
+  productIds: string[],
+  priceListId: string,
+  warehouseId: string,
+  soldAt: Date,
+): Promise<Map<string, string>> {
+  const { publicId } = await getPriceListIds(tx);
+  const current = new Map((await getProductsForSale(productIds, { priceListId, warehouseId, dbx: tx })).map((p) => [p.id, p]));
+  const out = new Map<string, string>();
+  for (const id of productIds) {
+    const charged = unitPrices[id];
+    if (!charged) continue;
+    const now = current.get(id);
+    let ok = Boolean(now?.priceUsd && D(now.priceUsd).eq(D(charged)));
+    for (const listId of new Set([priceListId, publicId])) {
+      if (ok) break;
+      const then = await priceAt(tx, id, listId, soldAt);
+      ok = Boolean(then && D(then).eq(D(charged)));
+    }
+    if (!ok) {
+      throw new AppError("CONFLICT", `El precio de "${now?.name ?? "un producto"}" ($ ${D(charged).toFixed(2)}) no era su precio cuando se vendió sin conexión.`, {
+        reason: "offline_prices",
+        productId: id,
+      });
+    }
+    out.set(id, charged);
+  }
+  return out;
+}
+
 async function completeNewSale(dbx: Db, input: CompleteSaleInput, ctx: SaleContext): Promise<CompleteSaleResult> {
   const policies = await getSetting("policies", dbx);
   const location =
     ctx.warehouseId && ctx.branchId ? { warehouseId: ctx.warehouseId, branchId: ctx.branchId } : await getDefaultLocation(dbx);
 
-  const snapshot = await getRatesSnapshot(businessDate(), dbx);
-  if (snapshot.missing.length > 0 && policies.requireRatesToSell) {
+  // Sold without a connection and sent now: it happened at `soldAt`, with the device's saved rates and prices.
+  const offline = input.offline ?? null;
+  const soldAt = offline ? new Date(offline.soldAt) : null;
+  if (soldAt && (soldAt.getTime() > Date.now() + 10 * 60_000 || soldAt.getTime() < Date.now() - OFFLINE_MAX_AGE_DAYS * 86_400_000)) {
+    throw new AppError("VALIDATION", "La fecha de la venta hecha sin conexión no es válida.", { reason: "offline_date" });
+  }
+
+  const snapshot = await getRatesSnapshot(businessDate(soldAt ?? new Date()), dbx);
+  if (!offline && snapshot.missing.length > 0 && policies.requireRatesToSell) {
     throw new AppError("RATES_REQUIRED", `Falta la tasa del día para ${snapshot.missing.join(" y ")}. Cárgala en Configuración → Tasas.`, {
       missing: snapshot.missing,
     });
@@ -110,7 +215,10 @@ async function completeNewSale(dbx: Db, input: CompleteSaleInput, ctx: SaleConte
 
   const session = await getOpenCashSession(dbx, ctx.cashRegisterId);
   if (!session && policies.requireOpenCashSession) {
-    throw new AppError("CASH_SESSION_REQUIRED", "La caja está cerrada. Ábrela antes de cobrar.");
+    throw new AppError(
+      "CASH_SESSION_REQUIRED",
+      offline ? "La caja está cerrada: las ventas hechas sin conexión se envían cuando la abran." : "La caja está cerrada. Ábrela antes de cobrar.",
+    );
   }
 
   const methods = await dbx.select().from(paymentMethods).where(eq(paymentMethods.isActive, true));
@@ -127,8 +235,14 @@ async function completeNewSale(dbx: Db, input: CompleteSaleInput, ctx: SaleConte
 
   // The screen computed the amounts with the rates it loaded; if a rate changed since
   // (BCV update, admin correction), ask to review instead of charging something else.
-  if (input.clientRates) {
-    const used = new Set([...paymentInputs.map((p) => p.currencyCode), ...(input.changeOption ?? "USD").split("+")]);
+  const usedCodes = new Set([...paymentInputs.map((p) => p.currencyCode), ...(input.changeOption ?? "USD").split("+")]);
+  let rateSet = snapshot.rateSet;
+  if (offline) {
+    // Every rate the device had is checked, not only the ones this sale shows: the change
+    // option may be the default one, which uses the peso rate too.
+    rateSet = await offlineRates(dbx, input.clientRates ?? {}, new Set(Object.keys(input.clientRates ?? {})), soldAt!, snapshot.rateSet);
+  } else if (input.clientRates) {
+    const used = usedCodes;
     for (const code of used) {
       const current = snapshot.rateSet[code];
       const seen = input.clientRates[code];
@@ -144,7 +258,8 @@ async function completeNewSale(dbx: Db, input: CompleteSaleInput, ctx: SaleConte
   const { customer, priceListId } = await resolveCustomerAndPriceList(dbx, input.customerId);
   requireIdentifiedCustomer(customer, "cobrar");
   const maxPct = D(policies.maxDiscountPctByRole[ctx.role] ?? 0);
-  const allowNegative = policies.allowNegativeStock && ctx.role === "admin" && input.allowNegativeStock === true;
+  // A sale made without a connection already left the counter: it is recorded even if the stock goes negative.
+  const allowNegative = offline !== null || (policies.allowNegativeStock && ctx.role === "admin" && input.allowNegativeStock === true);
 
   return dbx.transaction(async (tx) => {
     const productIds = [...new Set(input.lines.map((l) => l.productId))];
@@ -165,6 +280,11 @@ async function completeNewSale(dbx: Db, input: CompleteSaleInput, ctx: SaleConte
         priceOverrides.set(item.productId, item.unitPriceUsd);
         if (q.reservesStock) await adjustReserved(tx, item.productId, location.warehouseId, D(item.quantity).neg());
       }
+    }
+
+    if (offline && !quote) {
+      const charged = await offlinePrices(tx, offline.unitPrices, productIds, priceListId, location.warehouseId, soldAt!);
+      for (const [productId, price] of charged) priceOverrides.set(productId, price);
     }
 
     const cart = await priceLines(tx, input.lines, {
@@ -219,7 +339,7 @@ async function completeNewSale(dbx: Db, input: CompleteSaleInput, ctx: SaleConte
     // Payments must cover the total (half-cent tolerance inside computePaymentState).
     let payState;
     try {
-      payState = computePaymentState(totals.totalUsd, paymentInputs, snapshot.rateSet, cashCurrencies, { minCopChange: policies.minCopChange });
+      payState = computePaymentState(totals.totalUsd, paymentInputs, rateSet, cashCurrencies, { minCopChange: policies.minCopChange });
     } catch (err) {
       throw new AppError("RATES_REQUIRED", err instanceof Error ? err.message : "Falta una tasa de cambio.");
     }
@@ -280,8 +400,9 @@ async function completeNewSale(dbx: Db, input: CompleteSaleInput, ctx: SaleConte
         changeAmount: toMoneyDb(changeAmount),
         changeExtraCurrencyCode,
         changeExtraAmount: toMoneyDb(changeExtraAmount),
-        rateVes: toRateDb(snapshot.rateSet.VES ?? 0),
-        rateCop: toRateDb(snapshot.rateSet.COP ?? 0),
+        rateVes: toRateDb(rateSet.VES ?? 0),
+        rateCop: toRateDb(rateSet.COP ?? 0),
+        ...(soldAt ? { saleDate: soldAt, soldOffline: true } : {}),
         notes: input.notes ?? null,
         quoteId: quote?.id ?? null,
         clientRequestId: input.clientRequestId ?? null,
@@ -357,6 +478,7 @@ async function completeNewSale(dbx: Db, input: CompleteSaleInput, ctx: SaleConte
         supervisorId: exceeds ? supervisorId : null,
         quoteId: quote?.id ?? null,
         allowNegativeStock: allowNegative,
+        ...(soldAt ? { soldOffline: true, soldAt: soldAt.toISOString() } : {}),
       },
     });
 

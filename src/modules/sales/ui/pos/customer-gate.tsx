@@ -17,8 +17,14 @@ import { applyFieldErrors } from "@/modules/core/ui/form-errors";
 import { DOC_TYPES, docNumberError, formatDoc, isCompanyDoc, type DocType } from "@/modules/customers/domain/document";
 import { customerInputSchema, type CustomerData, type CustomerInput } from "@/modules/customers/domain/schema";
 import { CustomerFields } from "@/modules/customers/ui/customer-fields";
+import { findCustomerOffline, type OfflineCustomer } from "../../domain/offline";
+import { isNetworkError, isOffline, useOfflineStore } from "../offline/offline-store";
 import type { CartCustomer } from "../../application/schemas";
 import { CustomerSearchDialog } from "./customer-picker";
+
+function offlineToCart(c: Pick<OfflineCustomer, "id" | "name" | "doc" | "phone" | "customerType" | "priceListId">): CartCustomer {
+  return { id: c.id, name: c.name, doc: c.doc, phone: c.phone, customerType: c.customerType, priceListId: c.priceListId };
+}
 
 type Lookup = { status: "idle" } | { status: "found"; customer: CartCustomer } | { status: "missing"; docType: DocType; docNumber: string };
 
@@ -46,12 +52,26 @@ export function CustomerGate({ mode, onSelect }: { mode: "sale" | "quote"; onSel
       return;
     }
     startSearch(async () => {
-      const result = await findCustomerByDocAction({ docType, docNumber });
-      if (!result.ok) {
-        setError(result.error.message);
-        return;
+      // Without a connection, the customers saved on this device answer.
+      const fromDevice = () => {
+        const saved = useOfflineStore.getState().snapshot;
+        if (!saved) return false;
+        const hit = findCustomerOffline(saved.customers, docType, docNumber);
+        setLookup(hit ? { status: "found", customer: offlineToCart(hit) } : { status: "missing", docType, docNumber });
+        return true;
+      };
+      if (isOffline() && fromDevice()) return;
+      try {
+        const result = await findCustomerByDocAction({ docType, docNumber });
+        if (!result.ok) {
+          setError(result.error.message);
+          return;
+        }
+        setLookup(result.data ? { status: "found", customer: result.data } : { status: "missing", docType, docNumber });
+      } catch (err) {
+        if (isNetworkError(err)) useOfflineStore.getState().setOnline(false);
+        if (!(isNetworkError(err) && fromDevice())) setError("No se pudo buscar el cliente: no hay conexión y este equipo aún no tiene la lista guardada.");
       }
-      setLookup(result.data ? { status: "found", customer: result.data } : { status: "missing", docType, docNumber });
     });
   }
 
@@ -191,16 +211,34 @@ function NewCustomer({
     defaultValues: { docType, docNumber, firstName: "", lastName: "", companyName: "", phonePrefix: "", phoneNumber: "", customerType: "public", state: "", municipality: "", parish: "", address: "" },
   });
 
-  const submit = form.handleSubmit(() => {
+  // Without a connection the customer is kept on this device and registered when it comes back.
+  async function saveOnDevice(values: CustomerInput, data: CustomerData) {
+    const id = crypto.randomUUID();
+    const doc = formatDoc(data.docType, data.docNumber);
+    const saved = { id, name: data.name, docType: data.docType, docNumber: data.docNumber, doc, phone: data.phone, customerType: data.customerType, priceListId: null };
+    await useOfflineStore.getState().addCustomer({ id, name: data.name, input: values, createdAt: new Date().toISOString() }, saved);
+    toast.success(`Cliente ${data.name} guardado en este equipo: se registra al volver la conexión`);
+    onCreated(offlineToCart(saved));
+  }
+
+  const submit = form.handleSubmit((data) => {
     startTransition(async () => {
-      const result = await quickCreateCustomerAction(form.getValues());
-      if (!result.ok) {
-        applyFieldErrors(result, form.setError);
-        toast.error(result.error.message);
-        return;
+      const values = form.getValues();
+      if (isOffline()) return saveOnDevice(values, data);
+      try {
+        const result = await quickCreateCustomerAction(values);
+        if (!result.ok) {
+          applyFieldErrors(result, form.setError);
+          toast.error(result.error.message);
+          return;
+        }
+        toast.success(`Cliente ${result.data.name} registrado`);
+        onCreated(result.data);
+      } catch (err) {
+        if (!isNetworkError(err)) throw err;
+        useOfflineStore.getState().setOnline(false);
+        await saveOnDevice(values, data);
       }
-      toast.success(`Cliente ${result.data.name} registrado`);
-      onCreated(result.data);
     });
   });
 

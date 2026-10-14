@@ -12,7 +12,7 @@ import { codeLabel } from "@/modules/catalog/domain/sku";
 import { ProductThumb } from "@/modules/catalog/ui/product-thumb";
 import { displayAmounts, type CurrencyInfo } from "@/modules/currency/domain/conversion";
 import type { PosProduct } from "../../application/schemas";
-import { ProductSearch } from "./product-search";
+import { fetchProducts, ProductSearch } from "./product-search";
 
 /**
  * Price check without a customer: scan or search, see the public and
@@ -39,10 +39,8 @@ export function PriceCheck({
   useEffect(() => {
     if (!product || !techListId) return;
     const controller = new AbortController();
-    fetch(`/api/sales/products?ids=${product.id}&priceListId=${techListId}`, { signal: controller.signal, cache: "no-store" })
-      .then((r) => (r.ok ? (r.json() as Promise<{ products: PosProduct[] }>) : null))
-      .then((data) => {
-        const p = data?.products[0];
+    fetchProducts({ ids: product.id, priceListId: techListId }, controller.signal)
+      .then(([p]) => {
         if (p && p.priceListCode === "TECH" && p.priceUsd) setTech({ productId: p.id, price: p.priceUsd });
       })
       .catch(() => undefined);

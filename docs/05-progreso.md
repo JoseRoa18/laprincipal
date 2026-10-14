@@ -104,6 +104,13 @@ Pendiente: cambio en USD con centavos (decisión del dueño).
 - Ficha y edición de producto: barra fija arriba con foto, nombre, código y código de barras al bajar; en la ficha también precio, existencia y Editar.
 - Migración `0009`: borra `products.part_number` (ya sin uso desde `0008`).
 
+## Modo sin conexión (2026-10-14)
+
+- Vender, Consultar precio y Ventas por enviar abren sin internet (service worker `public/sw.js`, solo en producción). El equipo guarda en IndexedDB el catálogo con precio público y técnico, existencia, códigos y clientes (`/api/sales/offline-snapshot`, cada 5 minutos con conexión).
+- Sin conexión se busca por código o palabras, se identifica o registra al cliente y se cobra con cualquier método (con referencia). La venta queda con número provisional `P-0001`, comprobante provisional imprimible y el indicador "Sin conexión · N por enviar". Si la red se cae al confirmar, la venta también queda en la cola (mismo `client_request_id`: nunca se duplica).
+- Al volver internet se envían solos los clientes y luego las ventas. El servidor (`completeSale` con `offline`) acepta la fecha de la venta, la tasa vigente ese día o de los 10 días previos, el precio que tenía cada producto según el historial y existencia negativa (la mercancía ya salió); numera la venta y la marca `sold_offline` (migración `0012`). Si la caja está cerrada espera a que la abran; un rechazo (precio o tasa que no cuadran, descuento sin autorización) queda en "Ventas por enviar" para revisar.
+- Sin conexión no se puede: poner en espera, guardar cotizaciones, cambiar de vendedor con PIN ni autorizar descuentos por encima del límite. Al cerrar sesión se borran el catálogo guardado y las páginas en caché; las ventas por enviar se conservan.
+
 ## Vuelto mixto y productos sin costo (2026-10-14)
 
 - Vuelto en dólares: los dólares enteros en USD y los centavos en pesos, redondeados a la centena más cercana y nunca menos de 200 pesos (configurable en Políticas: "Vuelto mínimo en pesos"). Es la opción marcada por defecto al cobrar; siguen "Todo en USD" y "Todo en COP". La venta guarda las dos partes (`change_*` y `change_extra_*`, migración `0011`) y el cierre de caja descuenta cada una de su gaveta.

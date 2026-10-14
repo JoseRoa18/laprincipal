@@ -33,7 +33,13 @@ export async function completeSaleAction(input: unknown) {
     const data = parseInput(completeSaleSchema, input);
     if (data.quoteId && !can(user.role, "quote")) throw new AppError("FORBIDDEN", "Solo el administrador convierte cotizaciones en venta.");
     const supervisor = data.supervisorToken ? verifySupervisorToken(data.supervisorToken) : null;
-    const result = await completeSale(db, data, { userId: user.id, sellerId: seller.id, role: seller.role, supervisor });
+    // A sale made offline is sent later, maybe from another session: it stays with whoever sold it.
+    let soldBy = { id: seller.id, role: seller.role };
+    if (data.offline?.sellerId && data.offline.sellerId !== seller.id) {
+      const [u] = await db.select({ id: users.id, role: users.role, isActive: users.isActive }).from(users).where(eq(users.id, data.offline.sellerId)).limit(1);
+      if (u?.isActive && (u.role === "admin" || u.role === "seller")) soldBy = { id: u.id, role: u.role };
+    }
+    const result = await completeSale(db, data, { userId: user.id, sellerId: soldBy.id, role: soldBy.role, supervisor });
     revalidatePath("/ventas");
     revalidatePath("/inicio");
     revalidatePath("/vender");
@@ -115,10 +121,12 @@ export async function clearActingSellerAction() {
 }
 
 /** New customer typed at the counter (sellers too: customers are handled inside the POS). */
-export async function quickCreateCustomerAction(input: unknown) {
+export async function quickCreateCustomerAction(input: unknown, id?: string) {
   return runAction(async () => {
     const user = await assertRole("admin", "seller");
-    const customer = await createQuickCustomer(input as CustomerInput, user.id);
+    // Registered offline: the device chose the id, so sending it twice never duplicates the customer.
+    const customerId = id === undefined ? undefined : parseInput(z.uuid(), id);
+    const customer = await createQuickCustomer(input as CustomerInput, user.id, customerId);
     revalidatePath("/clientes");
     return customer;
   });

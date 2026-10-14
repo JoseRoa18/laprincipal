@@ -24,6 +24,8 @@ Fecha: 2026-09-08. Principio rector: cada pantalla se entiende sin manual. Lo av
 | 2 | (diálogo) | Cambiar vendedor | Elegir usuario y PIN de 4 dígitos. Disponible desde el POS y la barra superior. | Vendedor, Admin |
 | 3 | `/inicio` | Inicio | Ventas de hoy y del mes en USD con equivalentes, transacciones, ticket promedio, productos por comprar, alertas, estado de caja, tasa del día editable. | Todos (según rol) |
 | 4 | `/vender` | Punto de venta | Primero la cédula o RIF del cliente (o registrarlo ahí mismo); luego buscar o escanear, carrito, cantidades, descuentos, ventas en espera, cobrar. | Vendedor, Admin |
+| 4c | `/vender/pendientes` | Ventas por enviar | Ventas y clientes guardados en este equipo sin conexión: estado, reintentar, comprobante provisional, descartar (admin). | Vendedor, Admin |
+| 4d | `/sin-conexion` | Sin conexión | Página que muestra el service worker cuando se abre otra pantalla sin internet. | Todos |
 | 4b | `/vender/consulta` | Consultar precio | Sin cliente: escanear o buscar y ver precio público y técnico en $, Bs y COP, existencia y estante. No vende. | Vendedor, Admin |
 | 5 | (diálogo) | Cobrar | Total en USD, Bs y COP; agregar pagos por método y moneda; saldo pendiente; cambio en USD o COP; imprimir o compartir. | Vendedor, Admin |
 | 5b | `/vender/venta/[id]` | Venta registrada | Cambio a entregar, imprimir ticket, WhatsApp, nueva venta. El vendedor solo abre las suyas del día. | Vendedor, Admin |

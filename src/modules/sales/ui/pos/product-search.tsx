@@ -12,6 +12,7 @@ import { formatMoney, formatQty } from "@/lib/format";
 import { D } from "@/lib/money";
 import { cn } from "cn";
 import type { PosProduct } from "../../application/schemas";
+import { isNetworkError, isOffline, productsFromSnapshot, useOfflineStore } from "../offline/offline-store";
 import { BarcodeScanner } from "./barcode-scanner";
 
 export interface ProductSearchHandle {
@@ -30,12 +31,25 @@ interface Props {
   compact?: boolean;
 }
 
-async function fetchProducts(params: Record<string, string>, signal?: AbortSignal): Promise<PosProduct[]> {
-  const qs = new URLSearchParams(params);
-  const res = await fetch(`/api/sales/products?${qs.toString()}`, { signal, cache: "no-store" });
-  if (!res.ok) throw new Error("No se pudo buscar productos.");
-  const data = (await res.json()) as { products: PosProduct[] };
-  return data.products;
+/** Server search, or the catalog saved on the device when there is no connection. */
+export async function fetchProducts(params: Record<string, string>, signal?: AbortSignal): Promise<PosProduct[]> {
+  const saved = () => productsFromSnapshot(params);
+  if (isOffline()) {
+    const local = saved();
+    if (local) return local;
+  }
+  try {
+    const qs = new URLSearchParams(params);
+    const res = await fetch(`/api/sales/products?${qs.toString()}`, { signal, cache: "no-store" });
+    if (!res.ok) throw new Error("No se pudo buscar productos.");
+    const data = (await res.json()) as { products: PosProduct[] };
+    return data.products;
+  } catch (err) {
+    const local = isNetworkError(err) ? saved() : null;
+    if (!local) throw err;
+    useOfflineStore.getState().setOnline(false);
+    return local;
+  }
 }
 
 /**

@@ -67,6 +67,6 @@ export async function findCartCustomerByDocument(docType: string, docNumber: str
 }
 
 /** New customer from the POS, delegated to the customers module (validation, audit, TECH list, duplicates). */
-export async function createQuickCustomer(input: CustomerInput, userId: string, dbx: Db = db): Promise<CartCustomer> {
-  return toCartCustomer(await createCustomer(input, userId, dbx));
+export async function createQuickCustomer(input: CustomerInput, userId: string, id?: string, dbx: Db = db): Promise<CartCustomer> {
+  return toCartCustomer(await createCustomer(input, userId, dbx, { id }));
 }
