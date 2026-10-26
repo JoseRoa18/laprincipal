@@ -9,6 +9,7 @@ import { ConfirmButton } from "@/components/app/confirm-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { callAction, callActionWithRetry, toastActionError } from "@/lib/action-client";
 import { cn } from "cn";
 import type { ProductImageView } from "../infrastructure/product-detail";
 import { IMAGE_STATUS_LABEL } from "./labels-es";
@@ -49,9 +50,10 @@ export function ProductGallery({
   const selected = images.find((i) => i.id === selectedId) ?? images.find((i) => i.isPrimary) ?? images[0] ?? null;
 
   async function upload(photo: AcceptedPhoto): Promise<boolean> {
-    const res = await uploadProductPhotoAction(photoFormData(productId, photo));
+    // Safe to repeat: the photo id makes a second send return the same photo.
+    const res = await callActionWithRetry(() => uploadProductPhotoAction(photoFormData(productId, photo)));
     if (!res.ok) {
-      toast.error(res.error.message);
+      toastActionError(res.error, "La foto no se subió");
       return false;
     }
     toast.success("Foto guardada");
@@ -68,10 +70,10 @@ export function ProductGallery({
 
   async function generateAi(imageId: string) {
     setAiBusy(true);
-    const res = await enhancePhotoWithAiAction(imageId);
+    const res = await callAction(() => enhancePhotoWithAiAction(imageId));
     setAiBusy(false);
     if (!res.ok) {
-      toast.error(res.error.message);
+      toastActionError(res.error);
       return;
     }
     const processed = base64ToBlob(res.data.processed.base64, res.data.processed.contentType);
@@ -89,10 +91,10 @@ export function ProductGallery({
     fd.set("imageId", aiPreview.imageId);
     fd.set("ai", new File([aiPreview.processed], "ai.webp", { type: aiPreview.processed.type }));
     fd.set("aiThumb", new File([aiPreview.thumb], "ai-thumb.webp", { type: aiPreview.thumb.type }));
-    const res = await applyAiPhotoAction(fd);
+    const res = await callAction(() => applyAiPhotoAction(fd));
     setApplying(false);
     if (!res.ok) {
-      toast.error(res.error.message);
+      toastActionError(res.error);
       return;
     }
     toast.success("Foto de catálogo aplicada");

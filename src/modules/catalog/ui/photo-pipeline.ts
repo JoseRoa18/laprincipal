@@ -1,6 +1,6 @@
 /**
  * Browser-side photo pipeline (no server involved):
- * camera/file → downscale to 1600 px JPEG → background removal (@imgly/background-removal)
+ * camera/file → downscale to 1600 px JPEG → background removal (background-removal.ts, in a worker)
  * → "acabado de estudio": clean mask (specks removed, edge eroded 1 px and feathered), auto-levels,
  *   gentle gray-world white balance, +8 % saturation, mild unsharp mask
  * → pure white 1200×1200 WebP with the part centered at 82 % of the side and a soft contact shadow
@@ -32,7 +32,6 @@ import {
 export const MAX_SIDE = 1600;
 export const PROCESSED_SIZE = 1200;
 export const THUMB_SIZE = 300;
-export const PROCESS_TIMEOUT_MS = 60_000;
 /** Transparent pixels kept around the crop so the feathered edge is never clipped. */
 const EDGE_PAD = 4;
 
@@ -265,36 +264,6 @@ export function isMobileDevice(): boolean {
   if (typeof navigator === "undefined") return false;
   const ua = navigator.userAgent;
   return /Android|iPhone|iPad|iPod|Mobile/i.test(ua) || (navigator.maxTouchPoints > 1 && /Macintosh/.test(ua));
-}
-
-export interface RemovalProgress {
-  stage: "download" | "compute";
-  percent: number;
-}
-
-/**
- * Run @imgly/background-removal in the browser (model downloaded from its CDN on first use).
- * Rejects with Error("timeout") after `timeoutMs`; the caller then keeps the original.
- */
-export async function removeBackgroundWithTimeout(blob: Blob, onProgress: (p: RemovalProgress) => void, timeoutMs = PROCESS_TIMEOUT_MS): Promise<Blob> {
-  const { removeBackground } = await import("@imgly/background-removal");
-  const model = isMobileDevice() ? "isnet_quint8" : "isnet_fp16";
-  const work = removeBackground(blob, {
-    model,
-    output: { format: "image/png", quality: 1 },
-    progress: (key, current, total) => {
-      onProgress({ stage: key.startsWith("fetch") ? "download" : "compute", percent: total > 0 ? Math.min(100, Math.round((current / total) * 100)) : 0 });
-    },
-  });
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  const timeout = new Promise<never>((_, reject) => {
-    timer = setTimeout(() => reject(new Error("timeout")), timeoutMs);
-  });
-  try {
-    return await Promise.race([work, timeout]);
-  } finally {
-    if (timer) clearTimeout(timer);
-  }
 }
 
 export function extensionFor(blob: Blob): string {

@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { setProductCostAction, setProductPricesAction } from "@/app/(app)/productos/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { callAction, toastActionError } from "@/lib/action-client";
 import { formatMoney, parseLocalizedNumber } from "@/lib/format";
 import { D } from "@/lib/money";
 import { suggestTechPrice } from "../domain/pricing";
@@ -63,16 +64,16 @@ function EntryRow({ item, index, mode, marginPct, techMarkdownPct }: { item: Pri
     if (mode === "cost" && !wantsCost) return toast.error("Escribe el costo.");
     startTransition(async () => {
       if (wantsCost) {
-        const result = await setProductCostAction({ productId: item.id, costUsd: cost });
+        const result = await callAction(() => setProductCostAction({ productId: item.id, costUsd: cost }));
         if (!result.ok) {
-          toast.error(result.error.message);
+          toastActionError(result.error);
           return;
         }
       }
       if (wantsPrice) {
-        const result = await setProductPricesAction({ productId: item.id, publicPriceUsd: publicPrice, techPriceUsd: techPrice || undefined });
+        const result = await callAction(() => setProductPricesAction({ productId: item.id, publicPriceUsd: publicPrice, techPriceUsd: techPrice || undefined }));
         if (!result.ok) {
-          toast.error(result.error.message);
+          toastActionError(result.error);
           return;
         }
       }

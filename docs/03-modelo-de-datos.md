@@ -20,6 +20,7 @@ erDiagram
   categories ||--o{ categories : parent
   categories ||--o{ products : has
   brands ||--o{ products : has
+  merchandise_owners ||--o{ products : owns
   units ||--o{ products : has
   taxes ||--o{ products : has
   products ||--o{ product_equivalences : has
@@ -96,11 +97,13 @@ erDiagram
 
 **brands** — `id, name, is_active`. Marca del repuesto (Embraco, Danfoss, Tecumseh, genérico).
 
+**merchandise_owners** — `id, name unique, sort_order, is_active`. De quién es la mercancía: los socios que traen existencia a la tienda ("Teo", "José/Juan"). Cada producto dice de quién es (`products.owner_id`).
+
 **units** — `id, name, symbol, decimals` (Unidad 0, Metro 2, Kilogramo 3, Libra 3, Par 0, Juego 0).
 
 **taxes** — `id, name, rate` (0.16), `is_default, is_active`. IVA 16 % y Exento 0 %.
 
-**products** — `id, sku unique, name, description, category_id, brand_id, unit_id, tax_id, warranty_days, location_code, cost_avg_usd, cost_last_usd, attributes jsonb, search_text, is_active, deleted_at`. `sku` es el código del producto: el número de parte del fabricante o, si no tiene, un código interno `LP-000001` (en pantalla: "N.º de parte" o "Código interno"). Al eliminar un producto sin movimientos su número de parte queda libre (`sku~xxxxxxxx`); los `LP-` nunca se reutilizan. Índices: `sku` único y trigram sobre `search_text`. La antigua columna `part_number` se unió a `sku` en la migración `0008` (los números de parte que no podían ser el código pasaron a equivalencias).
+**products** — `id, sku unique, name, description, category_id, brand_id, owner_id, unit_id, tax_id, warranty_days, location_code, cost_avg_usd, cost_last_usd, attributes jsonb, search_text, is_active, deleted_at`. `sku` es el código del producto: el número de parte del fabricante o, si no tiene, un código interno `LP-000001` (en pantalla: "N.º de parte" o "Código interno"). Al eliminar un producto sin movimientos su número de parte queda libre (`sku~xxxxxxxx`); los `LP-` nunca se reutilizan. Índices: `sku` único y trigram sobre `search_text`. La antigua columna `part_number` se unió a `sku` en la migración `0008` (los números de parte que no podían ser el código pasaron a equivalencias). `owner_id` (dueño de la mercancía) es obligatorio en el formulario y en la importación; es nulo solo en productos cargados antes de existir y que nadie ha asignado ("Sin dueño", migración `0013`).
 
 **product_equivalences** — `id, product_id, code, brand, notes`. Otros códigos con los que se conoce el mismo repuesto. Única `(product_id, code)`; índice trigram sobre `code`.
 

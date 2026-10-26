@@ -123,13 +123,14 @@ function assertUploadSize(formData: FormData, keys: string[]) {
 
 /**
  * Upload one photo (original + optional processed/thumb produced in the browser).
- * FormData fields: productId, status ("processed" | "original_only"), original, processed?, thumb?,
+ * FormData fields: productId, imageId? (browser id, makes a retry idempotent), status ("processed" | "original_only"), original, processed?, thumb?,
  * and optionally choice="ai" with ai + aiThumb (AI catalog version generated before saving).
  */
 export async function uploadProductPhotoAction(formData: FormData) {
   return runAction(async () => {
     const user = await assertRole("admin", "warehouse");
     const productId = parseInput(idSchema, formData.get("productId"));
+    const imageId = formData.get("imageId") ? parseInput(idSchema, formData.get("imageId")) : undefined;
     const status = formData.get("status") === "processed" ? "processed" : "original_only";
     assertUploadSize(formData, ["original", "processed", "thumb", "ai", "aiThumb"]);
     const original = await toImageFile(formData.get("original"));
@@ -138,7 +139,7 @@ export async function uploadProductPhotoAction(formData: FormData) {
     const thumb = await toImageFile(formData.get("thumb"));
     const ai = formData.get("choice") === "ai" ? await toImageFile(formData.get("ai")) : null;
     const aiThumb = ai ? await toImageFile(formData.get("aiThumb")) : null;
-    const row = await addProductImage({ productId, original, processed, thumb, ai, aiThumb, status: processed || ai ? "processed" : "original_only" }, user);
+    const row = await addProductImage({ productId, imageId, original, processed, thumb, ai, aiThumb, status: processed || ai ? "processed" : "original_only" }, user);
     revalidateProducts(productId);
     const storage = getStorage();
     return {

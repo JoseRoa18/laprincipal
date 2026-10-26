@@ -12,13 +12,16 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { callAction, toastActionError } from "@/lib/action-client";
 import { formatDateTime } from "@/lib/format";
 import type { ImportJobView, ImportPreview, UndoImportResult } from "../application/import";
+import type { OwnerOption } from "../infrastructure/catalog-options";
 import { IMPORT_STATUS_LABEL } from "./labels-es";
+import { OwnerPicker } from "./owner-picker";
 
 type Step = { kind: "upload" } | { kind: "preview"; preview: ImportPreview } | { kind: "done"; jobId: string; created: number; skipped: number; undo?: UndoImportResult };
 
-export function ImportWizard({ jobs }: { jobs: ImportJobView[] }) {
+export function ImportWizard({ jobs, owners }: { jobs: ImportJobView[]; owners: OwnerOption[] }) {
   const router = useRouter();
   const [step, setStep] = useState<Step>({ kind: "upload" });
   const [fileName, setFileName] = useState<string | null>(null);
@@ -43,11 +46,11 @@ export function ImportWizard({ jobs }: { jobs: ImportJobView[] }) {
     });
   }
 
-  function apply(jobId: string) {
+  function apply(jobId: string, ownerId: string) {
     startTransition(async () => {
-      const res = await applyImportAction(jobId);
+      const res = await callAction(() => applyImportAction(jobId, ownerId));
       if (!res.ok) {
-        toast.error(res.error.message);
+        toastActionError(res.error);
         return;
       }
       toast.success(`${res.data.created} producto(s) importados`);
@@ -92,7 +95,9 @@ export function ImportWizard({ jobs }: { jobs: ImportJobView[] }) {
         </Card>
       ) : null}
 
-      {step.kind === "preview" ? <PreviewStep preview={step.preview} pending={pending} onApply={() => apply(step.preview.jobId)} onBack={() => setStep({ kind: "upload" })} /> : null}
+      {step.kind === "preview" ? (
+        <PreviewStep preview={step.preview} owners={owners} pending={pending} onApply={(ownerId) => apply(step.preview.jobId, ownerId)} onBack={() => setStep({ kind: "upload" })} />
+      ) : null}
 
       {step.kind === "done" ? (
         <Card>
@@ -194,8 +199,21 @@ export function ImportWizard({ jobs }: { jobs: ImportJobView[] }) {
   );
 }
 
-function PreviewStep({ preview, pending, onApply, onBack }: { preview: ImportPreview; pending: boolean; onApply: () => void; onBack: () => void }) {
+function PreviewStep({
+  preview,
+  owners,
+  pending,
+  onApply,
+  onBack,
+}: {
+  preview: ImportPreview;
+  owners: OwnerOption[];
+  pending: boolean;
+  onApply: (ownerId: string) => void;
+  onBack: () => void;
+}) {
   const [onlyErrors, setOnlyErrors] = useState(false);
+  const [ownerId, setOwnerId] = useState("");
   const rows = onlyErrors ? preview.rows.filter((r) => r.errors.length > 0) : preview.rows;
   return (
     <Card>
@@ -219,8 +237,15 @@ function PreviewStep({ preview, pending, onApply, onBack }: { preview: ImportPre
             <AlertDescription>No se reconocen: {preview.unknownHeaders.join(", ")}. Usa los encabezados de la plantilla.</AlertDescription>
           </Alert>
         ) : null}
+        <div className="space-y-2">
+          <p className="text-sm font-medium">
+            ¿De quién es esta mercancía?<span className="text-destructive"> *</span>
+          </p>
+          <OwnerPicker owners={owners} name="import-owner" value={ownerId} onChange={setOwnerId} disabled={pending} />
+          <p className="text-muted-foreground text-xs">Todos los productos del archivo quedan a nombre de ese dueño.</p>
+        </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button size="lg" className="h-12" onClick={onApply} disabled={pending || preview.okRows === 0}>
+          <Button size="lg" className="h-12" onClick={() => onApply(ownerId)} disabled={pending || preview.okRows === 0 || !ownerId}>
             {pending ? "Importando..." : `Aplicar: importar ${preview.okRows} producto(s)`}
           </Button>
           <Button size="lg" variant="outline" className="h-12" onClick={onBack} disabled={pending}>

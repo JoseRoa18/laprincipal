@@ -26,6 +26,8 @@ export interface AddImageInput {
   ai?: ImageFile | null;
   aiThumb?: ImageFile | null;
   status: "processed" | "original_only";
+  /** Chosen by the browser: sending the same photo again (lost answer, retry) returns the stored one. */
+  imageId?: string;
 }
 
 const EXTENSIONS: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
@@ -44,8 +46,16 @@ export async function addProductImage(input: AddImageInput, user: ActorUser) {
     .where(and(eq(products.id, input.productId), isNull(products.deletedAt)));
   if (!p) throw notFound("El producto");
 
+  if (input.imageId) {
+    const [already] = await db.select().from(productImages).where(eq(productImages.id, input.imageId));
+    if (already) {
+      if (already.productId !== input.productId) throw new AppError("CONFLICT", "Esa foto ya está guardada en otro producto.");
+      return already;
+    }
+  }
+
   const storage = getStorage();
-  const imageId = randomUUID();
+  const imageId = input.imageId ?? randomUUID();
   const base = imageBasePath(input.productId, imageId);
   const stored: string[] = [];
 

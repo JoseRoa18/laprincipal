@@ -57,6 +57,8 @@ export const productFormSchema = z
     categoryId: z.string(),
     brandId: z.string(),
     newBrandName: z.string().trim().max(80, "Máximo 80 caracteres"),
+    /** Whose merchandise it is (merchandise_owners). */
+    ownerId: z.string().min(1, "Elige de quién es la mercancía"),
     unitId: z.string().min(1, "Elige la unidad"),
     taxId: z.string().min(1, "Elige el impuesto"),
     warrantyDays: z
@@ -109,6 +111,7 @@ export function emptyProductForm(defaults: { unitId: string; taxId: string }): P
     categoryId: "",
     brandId: "",
     newBrandName: "",
+    ownerId: "",
     unitId: defaults.unitId,
     taxId: defaults.taxId,
     warrantyDays: "",
@@ -137,6 +140,8 @@ export interface ProductInput {
   brandId: string | null;
   /** Brand to create when brandId is null. */
   newBrandName: string | null;
+  /** Whose merchandise it is. Undefined keeps the current owner on edit. */
+  ownerId?: string | null;
   unitId: string;
   taxId: string;
   warrantyDays: number;
@@ -169,6 +174,7 @@ export function toProductInput(values: ProductFormValues): ProductInput {
     categoryId: orNull(values.categoryId),
     brandId: wantsNewBrand ? null : orNull(values.brandId),
     newBrandName: wantsNewBrand ? orNull(values.newBrandName) : null,
+    ownerId: orNull(values.ownerId),
     unitId: values.unitId,
     taxId: values.taxId,
     warrantyDays: values.warrantyDays === "" ? 0 : Number(values.warrantyDays),

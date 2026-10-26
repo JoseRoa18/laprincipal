@@ -104,6 +104,14 @@ Pendiente: cambio en USD con centavos (decisión del dueño).
 - Ficha y edición de producto: barra fija arriba con foto, nombre, código y código de barras al bajar; en la ficha también precio, existencia y Editar.
 - Migración `0009`: borra `products.part_number` (ya sin uso desde `0008`).
 
+## Carga de inventario sin perder datos y dueño de la mercancía (2026-10-26)
+
+- Formulario de producto (nuevo y editar): lo escrito se guarda en el equipo mientras se llena (campos en localStorage, fotos en IndexedDB) y al instante cuando la app pasa a segundo plano (cámara, WhatsApp). Si la página se recarga, el formulario vuelve con todo y avisa "Recuperamos el producto que estabas cargando" con "Empezar de cero" / "Descartar estos cambios". Se borra al guardar. Un borrador de edición se descarta si el producto cambió mientras tanto.
+- Causa de las recargas: el recorte de fondo dejaba cientos de MB ocupados en la página y el celular cerraba la pestaña al abrir la cámara. Ahora corre en un worker aparte, una foto a la vez, y se cierra al terminar o al pasar a segundo plano. "Conservar original" se puede tocar aunque el recorte no haya terminado.
+- Fotos: aviso inmediato al elegir una ("Preparando la foto…"); si la subida falla por conexión se reintenta sola y luego avisa; el producto ya guardado queda con "Reintentar fotos" / "Seguir sin las fotos" (sin duplicar producto ni fotos: el id de cada foto viaja con ella). Toda acción que no recibe respuesta (sin conexión, app actualizada) avisa con un mensaje en vez de quedarse callada (`src/lib/action-client.ts`).
+- Dueño de la mercancía (`merchandise_owners`, migración `0013`): obligatorio al crear y editar ("Teo" / "José/Juan"), al importar se elige para todo el archivo; se ve en la ficha, en la lista (filtro "Dueño", incluido "Sin dueño") y en el Excel. Lo cargado el 2026-10-25 quedó de Teo y lo anterior (los compresores) de José/Juan; lo cargado después, "Sin dueño" hasta asignarlo.
+- Categorías: por ahora solo Refrigeración y Aires acondicionados (migración `0014`); los otros grupos quedan desactivados, no borrados, y se reactivan en Categorías y marcas. Un producto que ya tenía una de esas categorías la conserva al editarlo.
+
 ## Modo sin conexión (2026-10-14)
 
 - Vender, Consultar precio y Ventas por enviar abren sin internet (service worker `public/sw.js`, solo en producción). El equipo guarda en IndexedDB el catálogo con precio público y técnico, existencia, códigos y clientes (`/api/sales/offline-snapshot`, cada 5 minutos con conexión).

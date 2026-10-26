@@ -4,7 +4,7 @@ import { create } from "zustand";
 import type { CustomerInput } from "@/modules/customers/domain/schema";
 import type { ChangeGiven } from "../../domain/payments";
 import { findByBarcodeOffline, priceOffline, provisionalNumber, searchOffline, type OfflineCustomer, type OfflinePricedProduct, type OfflineSnapshot } from "../../domain/offline";
-import { idbDelete, idbGet, idbSet } from "./idb";
+import { idbDelete, idbGet, idbSet } from "@/lib/idb";
 
 /** What the ticket of a sale saved offline shows until the server numbers it. */
 export interface OfflineReceipt {
@@ -154,9 +154,7 @@ export function isOffline(): boolean {
 }
 
 /** A request that failed for lack of connection (not an HTTP error). */
-export function isNetworkError(err: unknown): boolean {
-  return err instanceof TypeError || (err instanceof Error && /fetch|network|Failed to fetch|Load failed/i.test(err.message));
-}
+export { isNetworkError } from "@/lib/action-client";
 
 /** The POS product endpoint answered from the saved catalog: same params, same result shape. */
 export function productsFromSnapshot(params: Record<string, string>): OfflinePricedProduct[] | null {

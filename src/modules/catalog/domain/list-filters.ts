@@ -15,7 +15,12 @@ export interface ProductListFilter {
   price: PriceFilter;
   /** "missing": products registered without a cost ("Falta costo"). Only for users who see costs. */
   cost: CostFilter;
+  /** Whose merchandise: an owner id, or "none" for products without one. */
+  owner: string | null;
 }
+
+/** URL value of the owner filter for products without an owner. */
+export const NO_OWNER_PARAM = "sin";
 
 export const COST_FILTER_LABELS: Record<CostFilter, string> = {
   all: "Con y sin costo",
@@ -56,5 +61,6 @@ export function parseListFilter(params: Record<string, string | string[] | undef
     active: active === "0" || active === "all" ? active : "1",
     price: str("precio") === "sin" ? "missing" : "all",
     cost: str("costo") === "sin" ? "missing" : "all",
+    owner: str("dueno") === NO_OWNER_PARAM ? "none" : /^[0-9a-f-]{36}$/i.test(str("dueno")) ? str("dueno") : null,
   };
 }

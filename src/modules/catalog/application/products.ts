@@ -4,6 +4,7 @@ import {
   brands,
   categories,
   inventoryMovements,
+  merchandiseOwners,
   priceHistory,
   priceListItems,
   productBarcodes,
@@ -48,6 +49,10 @@ async function assertReferences(tx: Tx, input: ProductInput) {
   if (input.categoryId) {
     const [cat] = await tx.select({ id: categories.id }).from(categories).where(eq(categories.id, input.categoryId));
     if (!cat) throw new AppError("VALIDATION", "La categoría elegida no existe.", { fields: { categoryId: "No existe" } });
+  }
+  if (input.ownerId) {
+    const [owner] = await tx.select({ id: merchandiseOwners.id }).from(merchandiseOwners).where(eq(merchandiseOwners.id, input.ownerId));
+    if (!owner) throw new AppError("VALIDATION", "El dueño elegido no existe.", { fields: { ownerId: "No existe" } });
   }
 }
 
@@ -246,6 +251,7 @@ export async function createProductInTx(
       description: input.description,
       categoryId: input.categoryId,
       brandId,
+      ownerId: input.ownerId ?? null,
       unitId: input.unitId,
       taxId: input.taxId,
       warrantyDays: input.warrantyDays,
@@ -355,6 +361,7 @@ export async function updateProduct(id: string, input: ProductInput, user: Actor
         description: input.description,
         categoryId: input.categoryId,
         brandId,
+        ownerId: input.ownerId === undefined ? before.ownerId : input.ownerId,
         unitId: input.unitId,
         taxId: input.taxId,
         warrantyDays: input.warrantyDays,

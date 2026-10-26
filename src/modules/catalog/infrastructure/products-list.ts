@@ -5,6 +5,7 @@ import { allQueries } from "@/db/parallel";
 import {
   brands,
   categories,
+  merchandiseOwners,
   priceListItems,
   productBarcodes,
   productCompatibilities,
@@ -33,6 +34,7 @@ export interface ProductListRow {
   categoryName: string | null;
   categoryPath: string | null;
   brandName: string | null;
+  ownerName: string | null;
   unitSymbol: string;
   unitDecimals: number;
   locationCode: string | null;
@@ -89,6 +91,8 @@ async function buildConditions(dbx: DbOrTx, filter: ProductListFilter): Promise<
   if (filter.active === "1") conds.push(eq(products.isActive, true));
   if (filter.active === "0") conds.push(eq(products.isActive, false));
   if (filter.brandId) conds.push(eq(products.brandId, filter.brandId));
+  if (filter.owner === "none") conds.push(isNull(products.ownerId));
+  else if (filter.owner) conds.push(eq(products.ownerId, filter.owner));
   if (filter.categoryId) {
     const options = await listCategoryOptions(dbx, { includeInactive: true });
     conds.push(inArray(products.categoryId, categoryWithDescendants(options, filter.categoryId)));
@@ -138,6 +142,7 @@ function listSubquery(dbx: DbOrTx, warehouseId: string, conds: SQL[]) {
       categoryName: sql<string | null>`${categories.name}`.as("category_name"),
       parentCategoryName: sql<string | null>`${parentCat.name}`.as("parent_category_name"),
       brandName: sql<string | null>`${brands.name}`.as("brand_name"),
+      ownerName: sql<string | null>`${merchandiseOwners.name}`.as("owner_name"),
       stockQty: stockLevels.quantity,
       stockReserved: stockLevels.reservedQty,
       stockAvailable: stockAvailable.as("stock_available"),
@@ -155,6 +160,7 @@ function listSubquery(dbx: DbOrTx, warehouseId: string, conds: SQL[]) {
     .leftJoin(categories, eq(categories.id, products.categoryId))
     .leftJoin(parentCat, eq(parentCat.id, categories.parentId))
     .leftJoin(brands, eq(brands.id, products.brandId))
+    .leftJoin(merchandiseOwners, eq(merchandiseOwners.id, products.ownerId))
     .innerJoin(units, eq(units.id, products.unitId))
     .leftJoin(stockLevels, and(eq(stockLevels.productId, products.id), eq(stockLevels.warehouseId, warehouseId)))
     .leftJoin(stockSettings, and(eq(stockSettings.productId, products.id), eq(stockSettings.warehouseId, warehouseId)))
@@ -206,6 +212,7 @@ export async function listProducts(
       categoryName: r.categoryName,
       categoryPath: r.categoryName ? (r.parentCategoryName ? `${r.parentCategoryName} > ${r.categoryName}` : r.categoryName) : null,
       brandName: r.brandName,
+      ownerName: r.ownerName,
       unitSymbol: r.unitSymbol,
       unitDecimals: r.unitDecimals,
       locationCode: r.locationCode,
@@ -271,6 +278,7 @@ export async function listProductsForExport(filter: ProductListFilter, opts: { w
     categoryName: r.categoryName,
     categoryPath: r.categoryName ? (r.parentCategoryName ? `${r.parentCategoryName} > ${r.categoryName}` : r.categoryName) : null,
     brandName: r.brandName,
+    ownerName: r.ownerName,
     unitSymbol: r.unitSymbol,
     unitName: r.unitName,
     unitDecimals: r.unitDecimals,

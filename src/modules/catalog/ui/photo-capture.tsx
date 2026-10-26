@@ -1,7 +1,7 @@
 "use client";
 
 import { Camera, Check, ImageIcon, RotateCcw, Trash2, Undo2, Upload, WandSparkles, X } from "lucide-react";
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type ChangeEvent } from "react";
 import { toast } from "sonner";
 import { enhanceDraftPhotoWithAiAction } from "@/app/(app)/productos/actions";
 import { Badge } from "@/components/ui/badge";
@@ -10,8 +10,10 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
+import { callAction, toastActionError } from "@/lib/action-client";
 import { cn } from "cn";
-import { base64ToBlob, compositeOnWhite, downscaleImage, makeThumb, removeBackgroundWithTimeout } from "./photo-pipeline";
+import { cancelBackgroundRemoval, isQueued, removeBackgroundQueued } from "./background-removal";
+import { base64ToBlob, compositeOnWhite, downscaleImage, makeThumb } from "./photo-pipeline";
 
 const COARSE_POINTER = "(pointer: coarse)";
 function subscribeCoarse(cb: () => void) {
@@ -87,10 +89,43 @@ export function acceptedFromDraft(d: PhotoDraft): AcceptedPhoto | null {
   };
 }
 
-/** Build the FormData expected by uploadProductPhotoAction. */
+/** A photo kept from before a reload (saved on the device), shown as ready to save. */
+function draftFromAccepted(p: AcceptedPhoto): PhotoDraft {
+  return {
+    id: p.id,
+    original: p.original,
+    cutout: null,
+    processed: p.processed,
+    thumb: p.thumb,
+    thumbOriginal: p.processed ? null : p.thumb,
+    status: p.processed ? "processed" : "original_only",
+    stage: "",
+    percent: 100,
+    shadow: true,
+    choice: p.choice,
+    originalUrl: URL.createObjectURL(p.original),
+    processedUrl: p.processed ? URL.createObjectURL(p.processed) : null,
+    ai: p.ai ? { processed: p.ai, thumb: p.aiThumb ?? p.ai, url: URL.createObjectURL(p.ai) } : null,
+    aiBusy: false,
+    error: null,
+    uploading: false,
+  };
+}
+
+function revokeUrls(d: PhotoDraft) {
+  URL.revokeObjectURL(d.originalUrl);
+  if (d.processedUrl) URL.revokeObjectURL(d.processedUrl);
+  if (d.ai) URL.revokeObjectURL(d.ai.url);
+}
+
+/**
+ * Build the FormData expected by uploadProductPhotoAction. The photo id travels
+ * along, so sending the same photo again (lost answer, retry) does not duplicate it.
+ */
 export function photoFormData(productId: string, photo: AcceptedPhoto): FormData {
   const fd = new FormData();
   fd.set("productId", productId);
+  fd.set("imageId", photo.id);
   fd.set("status", photo.processed ? "processed" : "original_only");
   fd.set("choice", photo.choice);
   fd.set("original", new File([photo.original], "original.jpg", { type: photo.original.type || "image/jpeg" }));
@@ -115,14 +150,18 @@ interface PhotoCaptureProps {
    */
   onChange?: (accepted: AcceptedPhoto[], processing: number) => void;
   onAccept?: (photo: AcceptedPhoto) => Promise<boolean>;
+  /** Deferred mode: photos recovered after a reload, shown as ready to save. Read on mount. */
+  initialPhotos?: AcceptedPhoto[];
   /** Server has GEMINI_API_KEY: shows "Estilo catálogo con IA". */
   aiEnabled?: boolean;
   disabled?: boolean;
   className?: string;
 }
 
-export function PhotoCapture({ onChange, onAccept, aiEnabled = false, disabled, className }: PhotoCaptureProps) {
-  const [drafts, setDrafts] = useState<PhotoDraft[]>([]);
+export function PhotoCapture({ onChange, onAccept, initialPhotos, aiEnabled = false, disabled, className }: PhotoCaptureProps) {
+  const [drafts, setDrafts] = useState<PhotoDraft[]>(() => (initialPhotos ?? []).map(draftFromAccepted));
+  /** Photos picked and still being read (a big camera photo takes a moment). */
+  const [reading, setReading] = useState(0);
   const cameraRef = useRef<HTMLInputElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const onChangeRef = useRef(onChange);
@@ -131,6 +170,23 @@ export function PhotoCapture({ onChange, onAccept, aiEnabled = false, disabled, 
   useEffect(() => {
     onChangeRef.current = onChange;
   }, [onChange]);
+
+  // Leaving the screen (or "Guardar y crear otro"): stop the cut-outs still running and free
+  // the previews, which otherwise pile up in memory product after product.
+  const mountedRef = useRef(false);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      setTimeout(() => {
+        if (mountedRef.current) return; // development re-mount (Strict Mode), not a real exit
+        for (const d of draftsRef.current) {
+          if (d.status === "processing") cancelBackgroundRemoval(d.id);
+          revokeUrls(d);
+        }
+      }, 0);
+    };
+  }, []);
 
   useEffect(() => {
     draftsRef.current = drafts;
@@ -161,20 +217,25 @@ export function PhotoCapture({ onChange, onAccept, aiEnabled = false, disabled, 
   const process = useCallback(
     async (id: string, original: Blob) => {
       try {
-        const cutout = await removeBackgroundWithTimeout(original, (p) => {
+        const work = removeBackgroundQueued(id, original, (p) => {
           update(id, {
             stage: p.stage === "download" ? "Descargando el modelo (solo la primera vez)" : "Recortando el fondo",
             percent: p.percent,
           });
         });
+        if (isQueued(id)) update(id, { stage: "En espera: se recorta una foto a la vez" });
+        const cutout = await work;
+        if (!draftsRef.current.some((d) => d.id === id && d.status === "processing")) return;
         update(id, { cutout, stage: "Acabado de estudio", percent: 100 });
         await compose(id, cutout, true);
       } catch (err) {
-        const timedOut = err instanceof Error && err.message === "timeout";
+        const reason = err instanceof Error ? err.message : "";
+        // Discarded or kept as it is while it was being cut out: nothing to report.
+        if (reason === "cancelled" || !draftsRef.current.some((d) => d.id === id && d.status === "processing")) return;
         update(id, {
           status: "original_only",
           stage: "",
-          error: timedOut ? "El recorte tardó más de un minuto; puedes conservar la original." : "No se pudo recortar el fondo; puedes conservar la original.",
+          error: reason === "timeout" ? "El recorte tardó demasiado; puedes conservar la original." : "No se pudo recortar el fondo; puedes conservar la original.",
         });
       }
     },
@@ -203,9 +264,9 @@ export function PhotoCapture({ onChange, onAccept, aiEnabled = false, disabled, 
       update(id, { aiBusy: true });
       const fd = new FormData();
       fd.set("original", new File([draft.original], "original.jpg", { type: draft.original.type || "image/jpeg" }));
-      const res = await enhanceDraftPhotoWithAiAction(fd);
+      const res = await callAction(() => enhanceDraftPhotoWithAiAction(fd));
       if (!res.ok) {
-        toast.error(res.error.message);
+        toastActionError(res.error);
         update(id, { aiBusy: false });
         return;
       }
@@ -226,54 +287,63 @@ export function PhotoCapture({ onChange, onAccept, aiEnabled = false, disabled, 
   );
 
   const handleFiles = useCallback(
-    async (list: FileList | null) => {
-      if (!list || list.length === 0) return;
-      for (const file of Array.from(list)) {
-        let original: Blob;
+    async (files: File[]) => {
+      if (files.length === 0) return;
+      setReading((n) => n + files.length);
+      for (const file of files) {
         try {
-          original = await downscaleImage(file);
-        } catch {
-          toast.error(`No se pudo leer la imagen ${file.name}`);
-          continue;
+          let original: Blob;
+          try {
+            original = await downscaleImage(file);
+          } catch {
+            toast.error(`No se pudo leer la imagen ${file.name}. Prueba con otra foto (JPG o PNG).`);
+            continue;
+          }
+          const id = crypto.randomUUID();
+          const thumbOriginal = await makeThumb(original).catch(() => null);
+          setDrafts((prev) => [
+            ...prev,
+            {
+              id,
+              original,
+              cutout: null,
+              processed: null,
+              thumb: thumbOriginal,
+              thumbOriginal,
+              status: "processing",
+              stage: "Preparando",
+              percent: 0,
+              shadow: true,
+              choice: null,
+              originalUrl: URL.createObjectURL(original),
+              processedUrl: null,
+              ai: null,
+              aiBusy: false,
+              error: null,
+              uploading: false,
+            },
+          ]);
+          void process(id, original);
+        } finally {
+          setReading((n) => n - 1);
         }
-        const id = crypto.randomUUID();
-        const thumbOriginal = await makeThumb(original).catch(() => null);
-        setDrafts((prev) => [
-          ...prev,
-          {
-            id,
-            original,
-            cutout: null,
-            processed: null,
-            thumb: thumbOriginal,
-            thumbOriginal,
-            status: "processing",
-            stage: "Preparando",
-            percent: 0,
-            shadow: true,
-            choice: null,
-            originalUrl: URL.createObjectURL(original),
-            processedUrl: null,
-            ai: null,
-            aiBusy: false,
-            error: null,
-            uploading: false,
-          },
-        ]);
-        void process(id, original);
       }
     },
     [process],
   );
 
+  /** Input change: take the files and clear the input at once, so the same photo can be picked again. */
+  const onPick = (event: ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files ?? []);
+    event.target.value = "";
+    void handleFiles(files);
+  };
+
   const remove = useCallback((id: string) => {
+    cancelBackgroundRemoval(id);
     setDrafts((prev) => {
       const d = prev.find((x) => x.id === id);
-      if (d) {
-        URL.revokeObjectURL(d.originalUrl);
-        if (d.processedUrl) URL.revokeObjectURL(d.processedUrl);
-        if (d.ai) URL.revokeObjectURL(d.ai.url);
-      }
+      if (d) revokeUrls(d);
       return prev.filter((x) => x.id !== id);
     });
   }, []);
@@ -282,15 +352,23 @@ export function PhotoCapture({ onChange, onAccept, aiEnabled = false, disabled, 
     async (id: string, choice: PhotoChoice) => {
       const draft = drafts.find((d) => d.id === id);
       if (!draft) return;
-      const next = { ...draft, choice };
+      // "Conservar original" before the cut-out finished: it is not waited for.
+      const skipping = draft.status === "processing";
+      if (skipping) cancelBackgroundRemoval(id);
+      const next: PhotoDraft = skipping ? { ...draft, choice, status: "original_only", stage: "", error: null } : { ...draft, choice };
       if (!onAccept) {
-        update(id, { choice });
+        update(id, skipping ? { choice, status: "original_only", stage: "", error: null } : { choice });
         return;
       }
       const photo = acceptedFromDraft(next);
       if (!photo) return;
-      update(id, { uploading: true });
-      const ok = await onAccept(photo);
+      update(id, skipping ? { status: "original_only", stage: "", error: null, uploading: true } : { uploading: true });
+      let ok = false;
+      try {
+        ok = await onAccept(photo);
+      } catch {
+        toast.error("No se pudo subir la foto. Intenta de nuevo.");
+      }
       if (ok) remove(id);
       else update(id, { uploading: false });
     },
@@ -303,8 +381,8 @@ export function PhotoCapture({ onChange, onAccept, aiEnabled = false, disabled, 
   const hasCamera = useHasCamera();
   return (
     <div className={cn("space-y-4", className)}>
-      <input ref={cameraRef} type="file" accept="image/*" capture="environment" hidden onChange={(e) => void handleFiles(e.target.files).then(() => (e.target.value = ""))} />
-      <input ref={fileRef} type="file" accept="image/*" multiple hidden onChange={(e) => void handleFiles(e.target.files).then(() => (e.target.value = ""))} />
+      <input ref={cameraRef} type="file" accept="image/*" capture="environment" hidden onChange={onPick} />
+      <input ref={fileRef} type="file" accept="image/*" multiple hidden onChange={onPick} />
 
       <div className="flex flex-col gap-2 sm:flex-row">
         {hasCamera ? (
@@ -329,6 +407,12 @@ export function PhotoCapture({ onChange, onAccept, aiEnabled = false, disabled, 
         Fondo claro y luz pareja mejoran el recorte. La app quita el fondo y aplica un acabado de estudio aquí mismo, en tu dispositivo; la primera vez descarga el modelo
         (unos 40 MB).
       </p>
+
+      {reading > 0 ? (
+        <div role="status" className="text-muted-foreground flex items-center gap-2 rounded-xl border border-dashed p-3 text-sm">
+          <Spinner /> {reading === 1 ? "Preparando la foto…" : `Preparando ${reading} fotos…`}
+        </div>
+      ) : null}
 
       {pending.map((d) => (
         <div key={d.id} className="rounded-xl border p-3">
@@ -398,7 +482,7 @@ export function PhotoCapture({ onChange, onAccept, aiEnabled = false, disabled, 
                 <Button type="button" size="lg" disabled={d.status !== "processed" || d.uploading || d.aiBusy || disabled} onClick={() => void accept(d.id, "processed")}>
                   <Check /> {d.uploading ? "Subiendo..." : "Usar mejorada"}
                 </Button>
-                <Button type="button" size="lg" variant="outline" disabled={d.uploading || d.aiBusy || disabled || d.status === "processing"} onClick={() => void accept(d.id, "original")}>
+                <Button type="button" size="lg" variant="outline" disabled={d.uploading || d.aiBusy || disabled} onClick={() => void accept(d.id, "original")}>
                   <Upload /> Conservar original
                 </Button>
                 {aiEnabled ? (

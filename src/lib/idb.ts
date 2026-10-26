@@ -1,7 +1,8 @@
 /**
- * Tiny key-value store on IndexedDB for what the counter keeps offline (the
- * catalog snapshot and the sales and customers waiting to be sent). Unlike
- * localStorage it holds megabytes and survives a full browser restart.
+ * Tiny key-value store on IndexedDB for what the device keeps for itself: the
+ * counter's offline data (catalog snapshot, sales and customers waiting to be
+ * sent) and the photos of a product form being filled. Unlike localStorage it
+ * holds megabytes and survives a full browser restart.
  */
 const DB_NAME = "lp2050-offline";
 const STORE = "kv";

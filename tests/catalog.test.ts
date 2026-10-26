@@ -8,8 +8,10 @@ import { generateInternalBarcodeFor } from "@/modules/catalog/application/barcod
 import { applyImport, undoImport, validateImportFile } from "@/modules/catalog/application/import";
 import { createProduct, deleteProduct, setProductCost, setProductPrices, updateProduct } from "@/modules/catalog/application/products";
 import { isValidEan13 } from "@/modules/catalog/domain/barcodes";
+import { parseListFilter } from "@/modules/catalog/domain/list-filters";
 import type { ProductInput } from "@/modules/catalog/domain/product-schema";
 import { searchProducts } from "@/modules/catalog/infrastructure/product-lookup";
+import { listProducts } from "@/modules/catalog/infrastructure/products-list";
 import { getDefaultLocation } from "@/modules/core/application/context";
 import { createTestDb, uid, type TestDb } from "./db";
 
@@ -294,6 +296,38 @@ describe.skipIf(SKIP)("catalog integration", () => {
     expect(again.sku).toBe(code);
   });
 
+  it("records whose merchandise each product is, keeps it on edit and filters the list by it", async () => {
+    const [teo, partners] = await db
+      .insert(s.merchandiseOwners)
+      .values([{ name: uid("Teo") }, { name: uid("Socios") }])
+      .returning();
+    const input = productInput(base, { ownerId: teo.id });
+    const p = await createProduct(input, { id: base.userId });
+    created.push(p.id);
+    const orphan = await createProduct(productInput(base), { id: base.userId });
+    created.push(orphan.id);
+    const ownerOf = async (id: string) => (await db.select({ ownerId: s.products.ownerId }).from(s.products).where(eq(s.products.id, id)))[0].ownerId;
+    expect(await ownerOf(p.id)).toBe(teo.id);
+    expect(await ownerOf(orphan.id)).toBeNull();
+
+    // An edit that does not mention it keeps it; one that does changes it.
+    await updateProduct(p.id, { ...input, ownerId: undefined }, { id: base.userId });
+    expect(await ownerOf(p.id)).toBe(teo.id);
+    await updateProduct(p.id, { ...input, ownerId: partners.id }, { id: base.userId });
+    expect(await ownerOf(p.id)).toBe(partners.id);
+
+    await expect(createProduct(productInput(base, { ownerId: crypto.randomUUID() }), { id: base.userId })).rejects.toMatchObject({ code: "VALIDATION" });
+
+    const list = async (dueno: string) => (await listProducts({ ...parseListFilter({ dueno }), q: input.name.split(" ").pop()! }, { warehouseId: base.warehouseId, page: 1, pageSize: 50 })).rows;
+    const byPartners = await list(partners.id);
+    expect(byPartners.map((r) => r.id)).toEqual([p.id]);
+    expect(byPartners[0].ownerName).toBe(partners.name);
+    expect(await list(teo.id)).toHaveLength(0);
+    const withoutOwner = (await listProducts({ ...parseListFilter({ dueno: "sin" }) }, { warehouseId: base.warehouseId, page: 1, pageSize: 500 })).rows;
+    expect(withoutOwner.some((r) => r.id === orphan.id)).toBe(true);
+    expect(withoutOwner.some((r) => r.id === p.id)).toBe(false);
+  });
+
   it("imports an Excel file and undoes it with compensating movements", async () => {
     const [category] = await db.select().from(s.categories).where(eq(s.categories.id, base.categoryId));
     const wb = new ExcelJS.Workbook();
@@ -313,11 +347,13 @@ describe.skipIf(SKIP)("catalog integration", () => {
     expect(preview.errorRows).toBe(1);
     expect(preview.rows[2].errors.length).toBeGreaterThan(0);
 
-    const applied = await applyImport(preview.jobId, { id: base.userId });
+    const [owner] = await db.insert(s.merchandiseOwners).values({ name: uid("Dueño import") }).returning();
+    const applied = await applyImport(preview.jobId, { id: base.userId }, { ownerId: owner.id });
     expect(applied.created).toBe(2);
     expect(applied.skipped).toBe(1);
     const imported = await db.select().from(s.products).where(eq(s.products.name, nameA));
     expect(imported).toHaveLength(1);
+    expect(imported[0].ownerId).toBe(owner.id);
     created.push(imported[0].id);
     const [importedB] = await db.select().from(s.products).where(eq(s.products.name, nameB));
     created.push(importedB.id);

@@ -4,19 +4,22 @@ import { FileSpreadsheet } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { NativeSelect, NativeSelectOptGroup, NativeSelectOption } from "@/components/ui/native-select";
-import { ACTIVE_FILTER_LABELS, COST_FILTER_LABELS, PRICE_FILTER_LABELS, STOCK_FILTER_LABELS, type ProductListFilter } from "../domain/list-filters";
-import type { BrandOption, CategoryOption } from "../infrastructure/catalog-options";
+import { ACTIVE_FILTER_LABELS, COST_FILTER_LABELS, NO_OWNER_PARAM, PRICE_FILTER_LABELS, STOCK_FILTER_LABELS, type ProductListFilter } from "../domain/list-filters";
+import type { BrandOption, CategoryOption, OwnerOption } from "../infrastructure/catalog-options";
 
-/** Category / brand / stock / active selects bound to the URL, plus the Excel export link. */
+/** Category / brand / owner / stock / active selects bound to the URL, plus the Excel export link. */
 export function ProductFilters({
   categories,
   brands,
+  owners = [],
   filter,
   exportHref,
   showCost = false,
 }: {
   categories: CategoryOption[];
   brands: BrandOption[];
+  /** Whose merchandise; only for the users who manage products. */
+  owners?: OwnerOption[];
   filter: ProductListFilter;
   exportHref: string | null;
   /** Users who see costs can list the products without one. */
@@ -63,6 +66,17 @@ export function ProductFilters({
           </NativeSelectOption>
         ))}
       </NativeSelect>
+      {owners.length > 0 ? (
+        <NativeSelect aria-label="Dueño" className={selectClass} value={filter.owner === "none" ? NO_OWNER_PARAM : (filter.owner ?? "")} onChange={(e) => set("dueno", e.target.value)}>
+          <NativeSelectOption value="">Todos los dueños</NativeSelectOption>
+          {owners.map((o) => (
+            <NativeSelectOption key={o.id} value={o.id}>
+              {o.name}
+            </NativeSelectOption>
+          ))}
+          <NativeSelectOption value={NO_OWNER_PARAM}>Sin dueño</NativeSelectOption>
+        </NativeSelect>
+      ) : null}
       <NativeSelect aria-label="Estado de stock" className={selectClass} value={filter.stock} onChange={(e) => set("stock", e.target.value === "all" ? "" : e.target.value)}>
         {Object.entries(STOCK_FILTER_LABELS).map(([value, label]) => (
           <NativeSelectOption key={value} value={value}>

@@ -28,10 +28,12 @@ export async function validateImportAction(formData: FormData) {
   });
 }
 
-export async function applyImportAction(jobId: string) {
+/** `ownerId`: whose merchandise the products of the file are (required). */
+export async function applyImportAction(jobId: string, ownerId: string) {
   return runAction(async () => {
     const user = await assertRole("admin");
-    const result = await applyImport(parseInput(idSchema, jobId), user);
+    const owner = parseInput(z.uuid("Elige de quién es la mercancía"), ownerId);
+    const result = await applyImport(parseInput(idSchema, jobId), user, { ownerId: owner });
     revalidate();
     return result;
   });

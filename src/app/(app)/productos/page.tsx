@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { can, requireUser } from "@/lib/auth-guards";
 import { formatPct, formatQty } from "@/lib/format";
-import { listBrands, listCategoryOptions } from "@/modules/catalog/infrastructure/catalog-options";
+import { listBrands, listCategoryOptions, listOwners } from "@/modules/catalog/infrastructure/catalog-options";
 import { countProductsWithoutPrice, listProducts, parseListFilter } from "@/modules/catalog/infrastructure/products-list";
 import { priceMargin } from "@/modules/catalog/domain/pricing";
 import { LinkRow } from "@/modules/catalog/ui/link-row";
@@ -35,17 +35,20 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
   const filter = parseListFilter(params);
   const location = await getDefaultLocation();
   const canManage = can(user.role, "manage_products");
-  const [{ rows, total }, categories, brands, rates, withoutPrice] = await Promise.all([
+  const [{ rows, total }, categories, brands, owners, rates, withoutPrice] = await Promise.all([
     listProducts(filter, { warehouseId: location.warehouseId, page, pageSize: DEFAULT_PAGE_SIZE }),
     listCategoryOptions(),
     listBrands(),
+    canManage ? listOwners() : Promise.resolve([]),
     getRatesSnapshot(),
     canManage ? countProductsWithoutPrice() : Promise.resolve(0),
   ]);
   const showCosts = can(user.role, "view_costs");
   const hasVes = Boolean(rates.rateSet.VES);
   const bs = (usd: string | null) => (usd && hasVes ? fromUsd(usd, "VES", rates.rateSet) : null);
-  const hasFilters = Boolean(filter.q || filter.categoryId || filter.brandId || filter.stock !== "all" || filter.active !== "1" || filter.price !== "all");
+  const hasFilters = Boolean(filter.q || filter.categoryId || filter.brandId || filter.owner || filter.stock !== "all" || filter.active !== "1" || filter.price !== "all");
+  /** Whose merchandise, for the users who manage products ("Sin dueño" until someone says). */
+  const ownerNote = (name: string | null) => (canManage ? ` · ${name ?? "Sin dueño"}` : "");
 
   const exportParams = new URLSearchParams();
   for (const [k, v] of Object.entries(params)) if (typeof v === "string" && v && k !== "page") exportParams.set(k, v);
@@ -105,8 +108,8 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
 
       <div className="space-y-2">
         <SearchInput placeholder="Nombre, número de parte, equivalencia, modelo o código" autoFocus={false} />
-        <MobileFilters activeCount={[filter.categoryId, filter.brandId, filter.stock !== "all", filter.price !== "all", filter.cost !== "all", filter.active !== "1"].filter(Boolean).length}>
-          <ProductFilters categories={categories} brands={brands} filter={filter} exportHref={total > 0 && canManage ? exportHref : null} showCost={showCosts} />
+        <MobileFilters activeCount={[filter.categoryId, filter.brandId, filter.owner, filter.stock !== "all", filter.price !== "all", filter.cost !== "all", filter.active !== "1"].filter(Boolean).length}>
+          <ProductFilters categories={categories} brands={brands} owners={owners} filter={filter} exportHref={total > 0 && canManage ? exportHref : null} showCost={showCosts} />
         </MobileFilters>
       </div>
 
@@ -159,6 +162,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
                     <p className="text-muted-foreground truncate text-xs">
                       {p.sku}
                       {p.brandName ? ` · ${p.brandName}` : ""}
+                      {ownerNote(p.ownerName)}
                     </p>
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
                       <span>
@@ -222,6 +226,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
                         <p className="text-muted-foreground text-xs">
                           {p.sku}
                           {p.brandName ? ` · ${p.brandName}` : ""}
+                          {ownerNote(p.ownerName)}
                           {!p.isActive ? " · Inactivo" : ""}
                         </p>
                       </TableCell>

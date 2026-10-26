@@ -84,11 +84,13 @@ async function main() {
     "Herramientas y consumibles": [],
     Otros: [],
   };
+  // For now the store only offers these; the rest is there, switched off, to turn on later.
+  const offered = new Set(["Refrigeración", "Aires acondicionados"]);
   for (const [parentName, children] of Object.entries(tree)) {
     const parentSlug = slugify(parentName);
     const [parent] = await db
       .insert(s.categories)
-      .values({ name: parentName, slug: parentSlug })
+      .values({ name: parentName, slug: parentSlug, isActive: offered.has(parentName) })
       .onConflictDoUpdate({ target: s.categories.slug, set: { name: parentName } })
       .returning();
     for (const child of children) {
@@ -98,6 +100,15 @@ async function main() {
         .onConflictDoNothing();
     }
   }
+
+  // --- Whose merchandise (every product says it) ---
+  await db
+    .insert(s.merchandiseOwners)
+    .values([
+      { name: "Teo", sortOrder: 1 },
+      { name: "José/Juan", sortOrder: 2 },
+    ])
+    .onConflictDoNothing();
 
   // --- Adjustment reasons ---
   await db

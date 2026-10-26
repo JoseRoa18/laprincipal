@@ -105,8 +105,11 @@ export interface ApplyImportResult {
   skipped: number;
 }
 
-/** Import every valid row of a ready job in one transaction. Rows with errors are skipped. */
-export async function applyImport(jobId: string, user: ActorUser): Promise<ApplyImportResult> {
+/**
+ * Import every valid row of a ready job in one transaction. Rows with errors are skipped.
+ * `ownerId`: whose merchandise the whole file is.
+ */
+export async function applyImport(jobId: string, user: ActorUser, opts: { ownerId?: string | null } = {}): Promise<ApplyImportResult> {
   const [job] = await db.select().from(importJobs).where(eq(importJobs.id, jobId));
   if (!job) throw notFound("La importación");
   if (job.status !== "ready") throw new AppError("INVALID_STATE", "Esta importación ya fue aplicada o cancelada.");
@@ -125,7 +128,7 @@ export async function applyImport(jobId: string, user: ActorUser): Promise<Apply
     const createdIds: string[] = [];
     for (const row of valid) {
       try {
-        const created = await createProductInTx(tx, row.input!, user, location.warehouseId, { audit: false });
+        const created = await createProductInTx(tx, { ...row.input!, ownerId: opts.ownerId ?? null }, user, location.warehouseId, { audit: false });
         createdIds.push(created.id);
       } catch (err) {
         const message = err instanceof AppError ? err.message : "error inesperado";

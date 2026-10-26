@@ -1,17 +1,18 @@
 import { PageHeader } from "@/components/app/page-header";
 import { requireRole } from "@/lib/auth-guards";
 import { listImportJobs } from "@/modules/catalog/application/import";
+import { listOwners } from "@/modules/catalog/infrastructure/catalog-options";
 import { ImportWizard } from "@/modules/catalog/ui/import-wizard";
 
 export const metadata = { title: "Importar productos" };
 
 export default async function ImportPage() {
   await requireRole("admin");
-  const jobs = await listImportJobs(10);
+  const [jobs, owners] = await Promise.all([listImportJobs(10), listOwners()]);
   return (
     <div className="mx-auto max-w-6xl space-y-4">
       <PageHeader back={{ href: "/productos", label: "Volver a productos" }} title="Importar productos desde Excel" description="Descarga la plantilla, llénala y súbela. Se validan todas las filas antes de guardar. Para archivos grandes, súbelos por partes de unas 300 filas." />
-      <ImportWizard jobs={jobs} />
+      <ImportWizard jobs={jobs} owners={owners} />
     </div>
   );
 }

@@ -56,6 +56,18 @@ export const taxes = pgTable("taxes", {
   ...timestamps(),
 });
 
+/**
+ * Who the merchandise belongs to: the partners who bring stock to the store
+ * ("Teo", "José/Juan"). Every product says whose it is.
+ */
+export const merchandiseOwners = pgTable("merchandise_owners", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull().unique(),
+  sortOrder: integer("sort_order").notNull().default(0),
+  isActive: boolean("is_active").notNull().default(true),
+  ...timestamps(),
+});
+
 export const products = pgTable(
   "products",
   {
@@ -69,6 +81,8 @@ export const products = pgTable(
     description: text("description"),
     categoryId: uuid("category_id").references(() => categories.id),
     brandId: uuid("brand_id").references(() => brands.id),
+    /** Whose merchandise it is. Required by the forms; null only for products loaded before it existed. */
+    ownerId: uuid("owner_id").references(() => merchandiseOwners.id),
     unitId: uuid("unit_id")
       .notNull()
       .references(() => units.id),
@@ -92,6 +106,7 @@ export const products = pgTable(
   },
   (t) => [
     index("products_category_idx").on(t.categoryId),
+    index("products_owner_idx").on(t.ownerId),
     index("products_search_trgm_idx").using("gin", t.searchText.op("gin_trgm_ops")),
   ],
 );

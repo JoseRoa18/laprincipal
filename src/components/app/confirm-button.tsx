@@ -14,6 +14,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { callAction, toastActionError } from "@/lib/action-client";
 import type { ActionResult } from "@/lib/errors";
 
 /**
@@ -54,13 +55,14 @@ export function ConfirmButton({
 
   function run() {
     startTransition(async () => {
-      const result = await action();
+      // Without connection the action would throw and take the whole page to the error screen.
+      const result = await callAction(action);
       if (result.ok) {
         if (successMessage) toast.success(successMessage);
         setOpen(false);
         onSuccess?.();
       } else {
-        toast.error(result.error.message);
+        toastActionError(result.error);
       }
     });
   }

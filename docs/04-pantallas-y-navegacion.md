@@ -34,10 +34,10 @@ Fecha: 2026-09-08. Principio rector: cada pantalla se entiende sin manual. Lo av
 | 8 | `/ventas/[id]/devolver` | Devolución | Elegir líneas y cantidades, motivo, reingreso a stock, forma de reembolso. | Admin |
 | 9 | `/cotizaciones` y `/cotizaciones/[id]` | Cotizaciones | Crear desde el POS o desde cero, vigencia, PDF por WhatsApp, convertir a venta. | Admin |
 | 10 | `/productos` | Productos | Lista con búsqueda por nombre, parte, equivalencia, modelo o código; filtros; estado de stock; acciones masivas. | Todos |
-| 11 | `/productos/nuevo` y `/productos/[id]/editar` | Ficha de producto | Formulario en pasos: foto con IA → datos básicos → compatibilidades y equivalencias → precios y costo → stock y ubicación. Campos avanzados ocultos. | Admin, Almacén |
+| 11 | `/productos/nuevo` y `/productos/[id]/editar` | Ficha de producto | Formulario en pasos: foto con IA → datos básicos (con el dueño de la mercancía) → compatibilidades y equivalencias → precios y costo → stock y ubicación. Campos avanzados ocultos. Lo escrito queda guardado en el equipo hasta guardar: si la página se recarga, vuelve con todo. | Admin, Almacén |
 | 12 | `/productos/[id]` | Detalle de producto | Fotos, stock, precios en tres monedas, kardex, velocidad y semáforo, proveedores, historial de precios. | Todos |
 | 13 | `/productos/etiquetas` | Etiquetas | Seleccionar productos y cantidades; imprimir en rollo o A4. | Admin, Almacén |
-| 14 | `/productos/importar` | Importar | Descargar plantilla, subir Excel, ver errores por fila, aplicar, deshacer. | Admin |
+| 14 | `/productos/importar` | Importar | Descargar plantilla, subir Excel, ver errores por fila, elegir de quién es la mercancía, aplicar, deshacer. | Admin |
 | 15 | `/productos/categorias` | Categorías y marcas | Árbol de categorías y lista de marcas. | Admin, Almacén |
 | 16 | `/inventario` | Existencias | Stock, disponible, mínimo, máximo, cobertura y semáforo; filtros; valorización total. | Todos |
 | 17 | `/inventario/movimientos` | Kardex | Movimientos por producto, tipo, fecha y usuario, con enlace al documento. | Todos |
@@ -62,7 +62,7 @@ Fecha: 2026-09-08. Principio rector: cada pantalla se entiende sin manual. Lo av
 **Registrar un producto desde el celular (menos de un minuto):**
 1. Productos → botón grande "Nuevo producto".
 2. Tomar foto. La app la sube y empieza el recorte en segundo plano.
-3. Escribir nombre y número de parte; elegir categoría; escanear el código de barras del fabricante o dejar que la app genere uno.
+3. Escribir nombre, tocar el dueño de la mercancía (Teo o José/Juan) y el número de parte; elegir categoría; escanear el código de barras del fabricante o dejar que la app genere uno.
 4. Precio Público en USD; el precio Técnico se sugiere con un porcentaje configurable y se puede editar. Costo si se conoce.
 5. Stock inicial y ubicación en estante.
 6. Vista previa de la foto: aceptar o conservar original. Guardar. Botón "Guardar y crear otro".

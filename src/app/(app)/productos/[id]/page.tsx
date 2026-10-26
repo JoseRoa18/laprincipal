@@ -236,6 +236,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
                 <Row label={codeLabel(product.sku)}>{product.sku}</Row>
                 <Row label="Categoría">{product.category ? (product.category.parentName ? `${product.category.parentName} > ${product.category.name}` : product.category.name) : "—"}</Row>
                 <Row label="Marca">{product.brand?.name ?? "—"}</Row>
+                {canManage ? <Row label="Dueño">{product.owner?.name ?? <span className="text-amber-700 dark:text-amber-400">Sin dueño: indícalo en Editar</span>}</Row> : null}
                 <Row label="Unidad">{product.unit.name}</Row>
                 <Row label="Impuesto">{product.tax.name}</Row>
                 <Row label="Garantía">{product.warrantyDays > 0 ? `${product.warrantyDays} días` : "Sin garantía"}</Row>

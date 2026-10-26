@@ -17,6 +17,7 @@ export default async function NewProductPage() {
       <PageHeader back={{ href: "/productos", label: "Volver a productos" }} title="Nuevo producto" description="Foto, datos básicos, precios y stock inicial. Solo el nombre es obligatorio." />
       <ProductForm
         mode="create"
+        userId={user.id}
         initialValues={emptyProductForm({ unitId: options.defaultUnitId, taxId: options.defaultTaxId })}
         options={options}
         canViewCosts={can(user.role, "view_costs")}

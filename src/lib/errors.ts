@@ -10,7 +10,10 @@ export type AppErrorCode =
   | "CASH_SESSION_REQUIRED"
   | "RATES_REQUIRED"
   | "INVALID_STATE"
-  | "INTERNAL";
+  | "INTERNAL"
+  // Set on the client by callAction (src/lib/action-client.ts), never by the server:
+  | "NETWORK"
+  | "OUTDATED";
 
 /**
  * Error with a stable code and a user-facing message in Spanish.

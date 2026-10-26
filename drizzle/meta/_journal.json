@@ -92,6 +92,20 @@
       "when": 1791982483686,
       "tag": "0012_sold_offline",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1793019269153,
+      "tag": "0013_merchandise_owners",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1793019779679,
+      "tag": "0014_only_refrigeration_categories",
+      "breakpoints": true
     }
   ]
 }

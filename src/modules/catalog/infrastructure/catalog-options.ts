@@ -1,7 +1,7 @@
 import { asc, count, eq, isNull, sql } from "drizzle-orm";
 import { db, type DbOrTx } from "@/db/client";
 import { allQueries } from "@/db/parallel";
-import { adjustmentReasons, brands, categories, priceLists, products, taxes, units } from "@/db/schema";
+import { adjustmentReasons, brands, categories, merchandiseOwners, priceLists, products, taxes, units } from "@/db/schema";
 import { getSetting } from "@/modules/settings/infrastructure/settings";
 
 export interface CategoryOption {
@@ -106,6 +106,20 @@ export async function listBrands(dbx: DbOrTx = db, opts: { includeInactive?: boo
     .map((r) => ({ ...r, productCount: Number(r.productCount) }));
 }
 
+export interface OwnerOption {
+  id: string;
+  name: string;
+}
+
+/** Whose merchandise a product can be ("Teo", "José/Juan"). */
+export async function listOwners(dbx: DbOrTx = db): Promise<OwnerOption[]> {
+  return dbx
+    .select({ id: merchandiseOwners.id, name: merchandiseOwners.name })
+    .from(merchandiseOwners)
+    .where(eq(merchandiseOwners.isActive, true))
+    .orderBy(asc(merchandiseOwners.sortOrder), asc(merchandiseOwners.name));
+}
+
 export async function listUnits(dbx: DbOrTx = db) {
   return dbx.select().from(units).orderBy(asc(units.name));
 }
@@ -144,6 +158,7 @@ export async function getInitialStockReasonId(dbx: DbOrTx = db): Promise<string 
 export interface ProductFormOptions {
   categories: CategoryOption[];
   brands: BrandOption[];
+  owners: OwnerOption[];
   units: Array<{ id: string; name: string; symbol: string; decimals: number }>;
   taxes: Array<{ id: string; name: string; rate: string; isDefault: boolean }>;
   defaultUnitId: string;
@@ -153,9 +168,10 @@ export interface ProductFormOptions {
 
 /** Everything the product form needs to render its selects. */
 export async function getProductFormOptions(dbx: DbOrTx = db): Promise<ProductFormOptions> {
-  const [cats, brandRows, unitRows, taxRows, policies] = await allQueries(dbx, [
+  const [cats, brandRows, ownerRows, unitRows, taxRows, policies] = await allQueries(dbx, [
     () => listCategoryOptions(dbx),
     () => listBrands(dbx),
+    () => listOwners(dbx),
     () => listUnits(dbx),
     () => listTaxes(dbx),
     () => getSetting("policies", dbx),
@@ -166,6 +182,7 @@ export async function getProductFormOptions(dbx: DbOrTx = db): Promise<ProductFo
   return {
     categories: cats,
     brands: brandRows,
+    owners: ownerRows,
     units: unitRows.map((u) => ({ id: u.id, name: u.name, symbol: u.symbol, decimals: u.decimals })),
     taxes: taxRows.map((t) => ({ id: t.id, name: t.name, rate: t.rate, isDefault: t.isDefault })),
     defaultUnitId: defaultUnit.id,

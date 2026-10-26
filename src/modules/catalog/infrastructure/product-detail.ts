@@ -6,6 +6,7 @@ import {
   brands,
   categories,
   inventoryMovements,
+  merchandiseOwners,
   priceHistory,
   priceListItems,
   priceLists,
@@ -58,6 +59,8 @@ export interface ProductDetail {
   costLastUsd: string | null;
   category: { id: string; name: string; parentName: string | null } | null;
   brand: { id: string; name: string } | null;
+  /** Whose merchandise it is; null for products loaded before owners existed. */
+  owner: { id: string; name: string } | null;
   unit: { id: string; name: string; symbol: string; decimals: number };
   tax: { id: string; name: string; rate: string };
   images: ProductImageView[];
@@ -133,6 +136,7 @@ export async function getProductDetail(id: string, warehouseId: string, dbx: DbO
       categoryName: categories.name,
       parentCategoryName: parentCat.name,
       brandName: brands.name,
+      ownerName: merchandiseOwners.name,
       unit: units,
       tax: taxes,
       stockQty: stockLevels.quantity,
@@ -144,6 +148,7 @@ export async function getProductDetail(id: string, warehouseId: string, dbx: DbO
     .leftJoin(categories, eq(categories.id, products.categoryId))
     .leftJoin(parentCat, eq(parentCat.id, categories.parentId))
     .leftJoin(brands, eq(brands.id, products.brandId))
+    .leftJoin(merchandiseOwners, eq(merchandiseOwners.id, products.ownerId))
     .innerJoin(units, eq(units.id, products.unitId))
     .innerJoin(taxes, eq(taxes.id, products.taxId))
     .leftJoin(stockLevels, and(eq(stockLevels.productId, products.id), eq(stockLevels.warehouseId, warehouseId)))
@@ -205,6 +210,7 @@ export async function getProductDetail(id: string, warehouseId: string, dbx: DbO
     costLastUsd: p.product.costLastUsd,
     category: p.product.categoryId && p.categoryName ? { id: p.product.categoryId, name: p.categoryName, parentName: p.parentCategoryName } : null,
     brand: p.product.brandId && p.brandName ? { id: p.product.brandId, name: p.brandName } : null,
+    owner: p.product.ownerId && p.ownerName ? { id: p.product.ownerId, name: p.ownerName } : null,
     unit: { id: p.unit.id, name: p.unit.name, symbol: p.unit.symbol, decimals: p.unit.decimals },
     tax: { id: p.tax.id, name: p.tax.name, rate: p.tax.rate },
     images: images.map((img) => ({
@@ -330,6 +336,7 @@ export async function getProductFormData(id: string, warehouseId: string, dbx: D
       categoryId: detail.category?.id ?? "",
       brandId: detail.brand?.id ?? "",
       newBrandName: "",
+      ownerId: detail.owner?.id ?? "",
       unitId: detail.unit.id,
       taxId: detail.tax.id,
       warrantyDays: detail.warrantyDays ? String(detail.warrantyDays) : "",

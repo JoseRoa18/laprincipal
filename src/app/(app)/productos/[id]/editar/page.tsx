@@ -21,6 +21,11 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
   const location = await getDefaultLocation();
   const [data, detail, options] = await Promise.all([getProductFormData(id, location.warehouseId), getProductDetail(id, location.warehouseId), getProductFormOptions()]);
   if (!data || !detail) notFound();
+  // A category taken out of the list (e.g. only refrigeration for now) still shows, so saving keeps it.
+  const inactiveCategory =
+    detail.category && !options.categories.some((c) => c.id === detail.category!.id)
+      ? { id: detail.category.id, label: detail.category.parentName ? `${detail.category.parentName} > ${detail.category.name}` : detail.category.name }
+      : null;
 
   return (
     <>
@@ -39,7 +44,15 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
             <ProductGallery productId={detail.id} productName={detail.name} images={detail.images} canEdit aiEnabled={isAiPhotoEnabled()} />
           </CardContent>
         </Card>
-        <ProductForm mode="edit" productId={data.id} initialValues={data.values} options={options} canViewCosts={can(user.role, "view_costs")} />
+        <ProductForm
+          mode="edit"
+          productId={data.id}
+          userId={user.id}
+          initialValues={data.values}
+          options={options}
+          canViewCosts={can(user.role, "view_costs")}
+          inactiveCategory={inactiveCategory}
+        />
       </div>
     </>
   );

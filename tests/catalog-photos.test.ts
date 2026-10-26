@@ -167,6 +167,21 @@ describe.skipIf(SKIP)("product photos: AI versions next to the cut-out", () => {
     expect(await exists(applied.processedPath)).toBe(false);
   });
 
+  it("stores a photo sent twice with the same id only once (retry after a lost answer)", async () => {
+    const productId = await newProduct();
+    const imageId = crypto.randomUUID();
+    const first = await addProductImage({ productId, imageId, original: jpeg(), processed: webp("processed"), thumb: webp("thumb"), status: "processed" }, actor());
+    const again = await addProductImage({ productId, imageId, original: jpeg(), processed: webp("processed"), thumb: webp("thumb"), status: "processed" }, actor());
+    expect(again.id).toBe(first.id);
+    expect(first.id).toBe(imageId);
+    const rows = await db.select().from(s.productImages).where(eq(s.productImages.productId, productId));
+    expect(rows).toHaveLength(1);
+
+    // The same id cannot land on another product.
+    const other = await newProduct();
+    await expect(addProductImage({ productId: other, imageId, original: jpeg(), status: "original_only" }, actor())).rejects.toMatchObject({ code: "CONFLICT" });
+  });
+
   it("refuses to revert when no AI version is applied", async () => {
     const productId = await newProduct();
     const row = await addProductImage({ productId, original: jpeg(), processed: webp("cutout"), thumb: webp("thumb"), status: "processed" }, actor());
